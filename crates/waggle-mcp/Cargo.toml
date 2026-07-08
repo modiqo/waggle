@@ -23,6 +23,7 @@ ed25519-dalek = { workspace = true }
 [dev-dependencies]
 pollster = { workspace = true }
 waggle-store-sqlite = { path = "../waggle-store-sqlite", version = "0.1.0" }
+waggle-social = { workspace = true }
 criterion = { workspace = true }
 
 [[bench]]

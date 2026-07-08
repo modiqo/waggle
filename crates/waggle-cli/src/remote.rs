@@ -153,7 +153,28 @@ pub fn rewrap(envelope_text: &str, id: &Value) -> String {
 /// no TLS, no client crate: exactly enough for Miniflare and tunnels.
 async fn forward_http(upstream: &str, bearer: &str, line: &str) -> Option<String> {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    let rest = upstream.strip_prefix("http://")?; // https deferred (matrix)
+    if let Some(_rest) = upstream.strip_prefix("https://") {
+        // TLS federation (CP-11): ureq/rustls on a blocking thread — the
+        // daemon's async loop never blocks on a TLS handshake.
+        let url = format!("{}/mcp", upstream.trim_end_matches('/'));
+        let bearer = bearer.to_owned();
+        let line = line.to_owned();
+        return tokio::task::spawn_blocking(move || {
+            ureq::post(&url)
+                .set("authorization", &format!("Bearer {bearer}"))
+                .set("content-type", "application/json")
+                .send_string(&line)
+                .ok()?
+                .into_string()
+                .ok()
+                .map(|s| s.trim().to_owned())
+                .filter(|s| !s.is_empty())
+        })
+        .await
+        .ok()
+        .flatten();
+    }
+    let rest = upstream.strip_prefix("http://")?;
     let (host, base) = rest.split_once('/').map_or((rest, ""), |(h, p)| (h, p));
     let path = format!("/{}", base.trim_end_matches('/'))
         .trim_end_matches('/')

@@ -222,6 +222,11 @@ pub struct AttributionManifest {
     pub content: Option<MediaRef>,
     /// The projections. Always ≥1; exactly one catch-all guaranteed at mint.
     pub variants: Vec<Variant>,
+    /// Capability-URL semantics (CP-11): a private token IS its own
+    /// credential — minted long enough to be unguessable, and refused by
+    /// public surfaces (unfurls, social renderers). Immutable + signed.
+    #[serde(default, skip_serializing_if = "core::ops::Not::not")]
+    pub private: bool,
     /// Author signature over the immutable core (CP-11); set at mint by
     /// hosts that hold an identity. NOT itself part of the signed bytes.
     #[serde(default, skip_serializing_if = "Option::is_none")]

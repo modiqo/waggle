@@ -32,6 +32,7 @@ struct ImmutableCore<'m> {
     parent: Option<Token>,
     content: &'m Option<MediaRef>,
     variants: &'m [Variant],
+    private: bool,
 }
 
 /// The bytes a signature covers.
@@ -52,6 +53,7 @@ pub fn canonical_core_bytes(m: &AttributionManifest) -> Vec<u8> {
         parent: m.parent,
         content: &m.content,
         variants: &m.variants,
+        private: m.private,
     };
     serde_json::to_vec(&core).expect("core fields always serialize")
 }

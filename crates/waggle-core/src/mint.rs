@@ -59,6 +59,7 @@ pub struct MintSpec {
     variants: Vec<Variant>,
     parent: Option<Token>,
     content: Option<crate::MediaRef>,
+    private: bool,
     ttl_ms: Option<u64>,
 }
 
@@ -74,6 +75,7 @@ impl MintSpec {
             variants: Vec::new(),
             parent: None,
             content: None,
+            private: false,
             ttl_ms: None,
         }
     }
@@ -115,6 +117,15 @@ impl MintSpec {
     #[must_use]
     pub fn with_variant(mut self, variant: Variant) -> Self {
         self.variants.push(variant);
+        self
+    }
+
+    /// Mint as a capability URL (CP-11): the token is generated LONG
+    /// (16 chars ≈ 94 bits — possession is the credential) and public
+    /// surfaces refuse to render it.
+    #[must_use]
+    pub fn private(mut self) -> Self {
+        self.private = true;
         self
     }
 
@@ -161,9 +172,10 @@ pub fn mint(
         n => return Err(MintError::DuplicateCatchAll(n)),
     }
 
+    let token_len = if spec.private { 16 } else { opts.token_len };
     let manifest = AttributionManifest {
         schema: MANIFEST_SCHEMA_VERSION,
-        token: Token::generate(opts.token_len, entropy)?,
+        token: Token::generate(token_len, entropy)?,
         target: spec.target,
         sharer: spec.sharer,
         channel: spec.channel,
@@ -171,6 +183,7 @@ pub fn mint(
         meta: spec.meta,
         parent: spec.parent,
         content: spec.content,
+        private: spec.private,
         signature: None, // hosts with an identity sign after mint (trust)
         variants,
         version: 1,

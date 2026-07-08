@@ -1800,6 +1800,7 @@ dependencies = [
  "serde_json",
  "waggle-core",
  "waggle-ops",
+ "waggle-social",
  "waggle-store",
  "waggle-store-sqlite",
 ]

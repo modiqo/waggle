@@ -174,26 +174,11 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             },
             None => Channel::subagent_general(),
         };
-        let mut spec = MintSpec::new(target, sharer, channel);
-        if let Some(parent) = arg_str(args, "parent") {
-            match Token::parse(parent) {
-                Ok(p) => spec = spec.child_of(p),
-                Err(e) => return Envelope::err(format!("parent: {e}"), vec![]),
-            }
-        }
-        spec = match self.mint_extras(spec, args).await {
+        let spec = MintSpec::new(target, sharer, channel);
+        let spec = match self.mint_extras(spec, args).await {
             Ok(s) => s,
             Err(e) => return e,
         };
-        if let Some(path) = arg_str(args, "attach") {
-            match self
-                .attach_variant(path, arg_str(args, "attach-type"))
-                .await
-            {
-                Ok(v) => spec = spec.with_variant(v),
-                Err(e) => return e,
-            }
-        }
         let mut manifest = match mint(spec, &MintOptions::default(), &mut *entropy, now) {
             Ok(m) => m,
             Err(e) => return Envelope::err(e.to_string(), vec![]),
@@ -253,6 +238,29 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         mut spec: MintSpec,
         args: &Map<String, Value>,
     ) -> Result<MintSpec, Envelope> {
+        if let Some(parent) = arg_str(args, "parent") {
+            match Token::parse(parent) {
+                Ok(p) => spec = spec.child_of(p),
+                Err(e) => return Err(Envelope::err(format!("parent: {e}"), vec![])),
+            }
+        }
+        if args
+            .get("private")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+            || arg_str(args, "private") == Some("true")
+        {
+            spec = spec.private();
+        }
+        if let Some(path) = arg_str(args, "attach") {
+            match self
+                .attach_variant(path, arg_str(args, "attach-type"))
+                .await
+            {
+                Ok(v) => spec = spec.with_variant(v),
+                Err(e) => return Err(e),
+            }
+        }
         let snapshot = args
             .get("snapshot")
             .and_then(Value::as_bool)

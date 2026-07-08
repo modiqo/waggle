@@ -25,6 +25,16 @@ pub struct SharePackage {
 impl SharePackage {
     /// Assemble from a manifest and the host's resolver base URL (no
     /// trailing slash needed — one is trimmed).
+    /// `None` for private tokens: a capability URL must never be
+    /// rendered onto a public surface (CP-11).
+    #[must_use]
+    pub fn from_manifest_public(manifest: &AttributionManifest, base_url: &str) -> Option<Self> {
+        (!manifest.private).then(|| Self::from_manifest(manifest, base_url))
+    }
+
+    /// Assemble from a manifest and the host's resolver base URL (no
+    /// trailing slash needed — one is trimmed). Prefer
+    /// [`Self::from_manifest_public`] on public surfaces.
     #[must_use]
     pub fn from_manifest(manifest: &AttributionManifest, base_url: &str) -> Self {
         let token = manifest.token.as_str().to_owned();

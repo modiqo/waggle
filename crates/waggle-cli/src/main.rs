@@ -53,6 +53,9 @@ enum Cmd {
         /// Pin the target's bytes content-addressed at mint: read/search then work anywhere the blobs replicate, immutable by hash.
         #[arg(long)]
         snapshot: bool,
+        /// Mint a capability URL: a 16-char unguessable token (possession IS the credential); public unfurls and social renders refuse it.
+        #[arg(long)]
+        private: bool,
         /// Path to extracted text for a BINARY target (you extracted it with your own abilities): becomes the searchable content while the target stays the original. Mutually exclusive with snapshot.
         #[arg(long)]
         content: Option<String>,
@@ -209,6 +212,7 @@ fn main() {
             channel,
             parent,
             snapshot,
+            private,
             content,
             attach,
             attach_type,
@@ -220,6 +224,7 @@ fn main() {
                 "channel": channel,
                 "parent": parent,
                 "snapshot": if snapshot { Some(true) } else { None },
+                "private": if private { Some(true) } else { None },
                 "content": content,
                 "attach": attach,
                 "attach-type": attach_type,

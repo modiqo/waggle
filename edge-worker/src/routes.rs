@@ -146,6 +146,10 @@ pub async fn unfurl(env: &Env, raw: &str) -> Result<Response> {
         return Response::error("unknown token", 404);
     };
 
+    // Private tokens never render publicly (CP-11 capability URLs).
+    if manifest.private {
+        return Response::error("not found", 404);
+    }
     // Revoked tokens serve NOTHING — 410, and never from cache.
     if manifest.revoked_at.is_some() {
         if let Ok(kv) = env.kv("CACHE") {

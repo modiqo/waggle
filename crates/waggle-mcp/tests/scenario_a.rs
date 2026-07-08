@@ -425,3 +425,57 @@ fn attributed_resolution_signed_tampered_and_mutated() {
         assert_eq!(r2.result["signature"]["status"], "unsigned");
     });
 }
+
+/// CP-11 gate: capability URLs. A private mint yields a LONG token —
+/// possession is the credential — and the manifest carries the flag so
+/// public surfaces refuse to render it.
+#[test]
+fn capability_url_private_tokens() {
+    pollster::block_on(async {
+        let handler = Handler::new(
+            SqliteStore::open_in_memory().unwrap(),
+            Sharer::new("secretive").unwrap(),
+        );
+        let mut e = entropy();
+        let minted = handler
+            .dispatch(
+                "mint",
+                &json!({ "target": "ws://private/briefing.md", "private": true }),
+                Timestamp::from_unix_ms(1),
+                &mut e,
+            )
+            .await;
+        let token = minted.result["token"].as_str().unwrap().to_owned();
+        assert_eq!(
+            token.len(),
+            16,
+            "≈94 bits: unguessable, so possession = access"
+        );
+
+        // Possession works exactly like any token.
+        let resolved = handler
+            .dispatch(
+                "resolve",
+                &json!({ "token": token }),
+                Timestamp::from_unix_ms(2),
+                &mut e,
+            )
+            .await;
+        assert!(resolved.hint.is_none());
+
+        // Public surfaces refuse: the SharePackage constructor for
+        // public rendering returns None on private manifests.
+        let view = pollster::block_on(waggle_store::ReadStore::manifest(
+            handler.store(),
+            waggle_core::Token::parse(&token).unwrap(),
+        ))
+        .unwrap()
+        .unwrap();
+        assert!(view.manifest.private);
+        assert!(
+            waggle_social::SharePackage::from_manifest_public(&view.manifest, "https://x")
+                .is_none(),
+            "capability URLs never render on public surfaces"
+        );
+    });
+}

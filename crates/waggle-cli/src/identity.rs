@@ -39,6 +39,7 @@ fn pubkey_hex(key: &SigningKey) -> String {
 
 /// `waggle identity <show|init>`.
 pub fn run(action: &str) -> i32 {
+    use std::fmt::Write as _;
     match action {
         "show" => {
             if let Some(key) = load() {
@@ -67,7 +68,6 @@ pub fn run(action: &str) -> i32 {
                 return 1;
             }
             let key = SigningKey::from_bytes(&seed);
-            use std::fmt::Write as _;
             if let Some(dir) = path.parent() {
                 let _ = std::fs::create_dir_all(dir);
             }
