@@ -61,6 +61,9 @@ jobs:
         with:
           node-version: 22
       - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
       - name: Install worker-build
         run: cargo install worker-build --locked
       - name: Miniflare matrix (CP-10e)

@@ -6,7 +6,7 @@
 
 use waggle_core::Timestamp;
 use waggle_mcp::Handler;
-use waggle_store::{AppendStore as _, ReadStore as _, StoreError};
+use waggle_store::StoreError;
 use waggle_store_cloudflare::{EdgeStorage, EdgeStore};
 use worker::*;
 
