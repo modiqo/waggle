@@ -16,6 +16,9 @@ crate-type = ["cdylib", "rlib"]
 # workspace see an empty crate (everything is cfg-gated).
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 worker = { version = "0.8", features = ["d1"] }
+sha2 = { workspace = true }
+console_error_panic_hook = "0.1"
+base64 = "0.22"
 waggle-core = { workspace = true }
 waggle-ops = { workspace = true }
 waggle-store = { path = "../crates/waggle-store", version = "0.1.0" }
@@ -30,6 +33,7 @@ getrandom = { workspace = true, features = ["js"] }
 workspace = true
 
 [dev-dependencies]
+base64 = "0.22"
 ureq = "2"
 serde_json = { workspace = true }
 waggle-core = { workspace = true }

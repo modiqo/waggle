@@ -35,12 +35,12 @@ enterprise pricing is bespoke
 open-source pricing pressure
 ";
 
-fn handler_with_blobs(dir: &std::path::Path) -> Handler<SqliteStore> {
+fn handler_with_blobs(dir: &std::path::Path) -> Handler<SqliteStore, BlobStore> {
     Handler::new(
         SqliteStore::open_in_memory().unwrap(),
         Sharer::new("lead").unwrap(),
     )
-    .with_blobs(Box::new(BlobStore::open(&dir.join("blobs")).unwrap()))
+    .with_blobs(BlobStore::open(&dir.join("blobs")).unwrap())
 }
 
 fn check_next(env: &waggle_mcp::Envelope) {

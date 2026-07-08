@@ -6,20 +6,17 @@
 
 use serde_json::{json, Map, Value};
 use waggle_core::{ActorClass, ResolverContext, Stage, Timestamp, Token};
-use waggle_store::{AppendIntent, Store, StoreError};
+use waggle_store::{AppendIntent, BlobSink, Store, StoreError};
 
 use crate::envelope::{Envelope, NextCall, Stats};
 use crate::handlers::{arg_str, infer_content_type, parse_token_arg, store_err, Handler};
 
-impl<S: Store> Handler<S> {
+impl<S: Store, B: BlobSink> Handler<S, B> {
     /// Snapshot the target's bytes into the blob CAS (doc 18 §3).
-    pub(crate) fn snapshot_target(&self, target: &str) -> Result<waggle_core::MediaRef, Envelope> {
-        let Some(blobs) = &self.blobs else {
-            return Err(Envelope::err(
-                "snapshot needs a blob store — the daemon configures one automatically",
-                vec![],
-            ));
-        };
+    pub(crate) async fn snapshot_target(
+        &self,
+        target: &str,
+    ) -> Result<waggle_core::MediaRef, Envelope> {
         let path = local_path(target).ok_or_else(|| {
             Envelope::err(
                 format!("snapshot: `{target}` is not a locally readable file path — snapshot works on file:// targets"),
@@ -27,21 +24,19 @@ impl<S: Store> Handler<S> {
             )
         })?;
         let bytes = read_capped(&path)?;
-        blobs
+        self.blobs
             .put(&bytes, infer_content_type(&path))
+            .await
             .map_err(|e| Envelope::err(e.to_string(), vec![]))
     }
 
     /// Pin a harness-extracted text file as the token's searchable
     /// content (doc 18 §7): the target stays the original binary; this
     /// extraction is what `read`/`search` serve.
-    pub(crate) fn pin_extraction(&self, path: &str) -> Result<waggle_core::MediaRef, Envelope> {
-        let Some(blobs) = &self.blobs else {
-            return Err(Envelope::err(
-                "content needs a blob store — the daemon configures one automatically",
-                vec![],
-            ));
-        };
+    pub(crate) async fn pin_extraction(
+        &self,
+        path: &str,
+    ) -> Result<waggle_core::MediaRef, Envelope> {
         let bytes = read_capped(path)?;
         let content_type = infer_content_type(path);
         if !crate::content::is_text(content_type) {
@@ -50,8 +45,9 @@ impl<S: Store> Handler<S> {
                 vec![],
             ));
         }
-        blobs
+        self.blobs
             .put(&bytes, content_type)
+            .await
             .map_err(|e| Envelope::err(e.to_string(), vec![]))
     }
 
@@ -64,14 +60,10 @@ impl<S: Store> Handler<S> {
             Err(e) => return Err(store_err(&e)),
         };
         let (bytes, content_type) = if let Some(media) = &view.manifest.content {
-            let Some(blobs) = &self.blobs else {
-                return Err(Envelope::err(
-                    "this token's content is a snapshot but the host has no blob store",
-                    vec![],
-                ));
-            };
-            let bytes = blobs
+            let bytes = self
+                .blobs
                 .get(media)
+                .await
                 .map_err(|e| Envelope::err(e.to_string(), vec![]))?;
             (bytes, media.content_type.clone())
         } else if let Some(path) = local_path(view.manifest.target.as_str()) {

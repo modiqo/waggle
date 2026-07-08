@@ -24,6 +24,8 @@ clap = { workspace = true }
 serde_json = { workspace = true }
 pollster = { workspace = true }
 getrandom = { workspace = true }
+base64 = "0.22"
+ureq = "2"
 
 [target.'cfg(unix)'.dependencies]
 tokio = { workspace = true }

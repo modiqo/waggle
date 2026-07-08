@@ -52,6 +52,24 @@ pub trait AppendStore {
     async fn ingest(&self, record: LogRecord) -> Result<bool, StoreError>;
 }
 
+/// The blob-less host: every operation explains itself. The default `B`
+/// for [`crate::BlobSink`] consumers — hosts opt IN to media/snapshots.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct NoBlobs;
+
+impl BlobSink for NoBlobs {
+    async fn put(&self, _: &[u8], _: &str) -> Result<MediaRef, StoreError> {
+        Err(StoreError::Backend(
+            "this host has no blob store — snapshots/attachments need one (the daemon configures one automatically)".into(),
+        ))
+    }
+    async fn get(&self, _: &MediaRef) -> Result<Vec<u8>, StoreError> {
+        Err(StoreError::Backend(
+            "this host has no blob store — the content cannot be fetched here".into(),
+        ))
+    }
+}
+
 /// The full contract. Blanket-implemented — a backend implements the two
 /// halves and gets `Store` for free.
 pub trait Store: ReadStore + AppendStore {}
@@ -63,7 +81,7 @@ impl<T: ReadStore + AppendStore> Store for T {}
 /// the tool layer so `mint --attach` and media resolution work.
 pub trait BlobSink {
     /// Store bytes; identical bytes yield the identical address.
-    fn put(&self, bytes: &[u8], content_type: &str) -> Result<MediaRef, StoreError>;
+    async fn put(&self, bytes: &[u8], content_type: &str) -> Result<MediaRef, StoreError>;
     /// Fetch and integrity-verify the bytes a `MediaRef` names.
-    fn get(&self, media: &MediaRef) -> Result<Vec<u8>, StoreError>;
+    async fn get(&self, media: &MediaRef) -> Result<Vec<u8>, StoreError>;
 }

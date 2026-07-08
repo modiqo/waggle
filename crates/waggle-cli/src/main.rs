@@ -15,6 +15,7 @@ use serde_json::json;
 
 #[cfg(unix)]
 mod daemon;
+mod edge;
 mod init;
 #[cfg(unix)]
 mod remote;
@@ -154,6 +155,17 @@ enum Cmd {
         #[arg(long)]
         token: Option<String>,
     },
+    #[command(about = waggle_ops::EDGE.description)]
+    Edge {
+        /// status | push | smoke.
+        action: String,
+        /// The edge base URL (overrides `WAGGLE_EDGE_URL`), e.g. `https://waggle-edge.you.workers.dev`.
+        #[arg(long)]
+        url: Option<String>,
+        /// The tenant bearer (overrides `WAGGLE_EDGE_BEARER`).
+        #[arg(long)]
+        bearer: Option<String>,
+    },
     #[command(about = waggle_ops::INIT.description)]
     Init {
         /// Target exactly this file instead of auto-detecting convention files.
@@ -179,6 +191,7 @@ enum Cmd {
     },
 }
 
+#[allow(clippy::too_many_lines)] // one arm per catalog verb — the length IS the inventory
 fn main() {
     let cli = Cli::parse();
     // Every verb maps to the same dispatcher the MCP wire uses (09 §2):
@@ -275,6 +288,11 @@ fn main() {
             strip_nulls(json!({ "token": token, "path": path, "max-bytes": max_bytes })),
         ),
         Cmd::Map { token } => run::tool_call("map", strip_nulls(json!({ "token": token }))),
+        Cmd::Edge {
+            action,
+            url,
+            bearer,
+        } => edge::run(&action, url.as_deref(), bearer.as_deref()),
         Cmd::Init { file } => init::run(file.as_deref()),
         Cmd::Daemon { action, idle_secs } => manage_daemon(&action, idle_secs),
         Cmd::Serve { stdio, daemon } => serve(stdio, daemon),

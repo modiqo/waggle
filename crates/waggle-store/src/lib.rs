@@ -53,5 +53,5 @@ pub mod conformance;
 
 pub use error::StoreError;
 pub use memory::MemoryStore;
-pub use traits::{AppendStore, BlobSink, ReadStore, Store};
+pub use traits::{AppendStore, BlobSink, NoBlobs, ReadStore, Store};
 pub use types::{AppendIntent, Appended, ManifestView, MintNonce};

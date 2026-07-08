@@ -17,6 +17,7 @@
 
 use worker::*;
 
+mod blobs;
 #[allow(missing_docs)] // the durable_object macro generates undocumented glue
 mod hive;
 mod routes;
@@ -25,6 +26,7 @@ pub use hive::Hive;
 
 #[event(fetch)]
 async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
+    console_error_panic_hook::set_once();
     let url = req.url()?;
     let path = url.path().to_owned();
 

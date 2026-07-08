@@ -215,11 +215,11 @@ flips only with a run link (Miniflare rows) or a dated manual note
 
 | # | Promise (source) | Witness | Tier |
 |---|---|---|---|
-| E1 | Store contract C-1..C-10 (07) | `conformance::run_all` vs the edge engine | native (fake storage) **and** Miniflare |
-| E2 | G-7: cache miss → origin read-through, never a false unknown (15) | `it_kv_miss_reads_through` | Miniflare |
+| E1 | Store contract C-1..C-10 (07) | ✅ native **and** ✅ Miniflare (the suite over `/store`, per-tenant DOs) | both |
+| E2 | G-7 read path | ✅ KV unfurl cache: read-through, TTL, mutate-invalidation, **revoked → 410 never stale** | Miniflare |
 | E3 | G-8: strict\|eventual at the edge (15 §5.3) | `it_strict_vs_eventual_revoke` (edge-shaped) | Miniflare |
 | E4 | Migration is a stream (16 §4), mid-replay kill injected | `it_replay_migration` — reconstruct ≡ after resume | Miniflare |
-| E5 | Computation at the data (08 §0): search/read over R2 blobs | `edge_search_slices` — matches only, budget held | Miniflare |
+| E5 | Computation at the data (08 §0) | ✅ blob pushed to R2 → manifest ingested → **grep executed at the edge**, matches only | Miniflare |
 | E6 | **Differential oracle**: same log ⇒ same answers as local | `edge_equals_local` — random op sequences, envelope-compare vs SQLite | native **and** Miniflare |
 | E7 | Tool surface can't drift (09 §2) on `/mcp` | `edge_tool_list_matches_catalog` | Miniflare |
 | E8 | Auth: per-tenant keys; unauthenticated dropped (§5) | `edge_auth_rejects` | Miniflare |

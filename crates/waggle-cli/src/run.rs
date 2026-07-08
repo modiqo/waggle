@@ -39,7 +39,7 @@ fn store_path() -> PathBuf {
     PathBuf::from(home).join(".waggle").join("waggle.db")
 }
 
-pub fn open_handler() -> Result<Handler<SqliteStore>, String> {
+pub fn open_handler() -> Result<Handler<SqliteStore, waggle_store_sqlite::BlobStore>, String> {
     let path = store_path();
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|e| format!("store dir {}: {e}", dir.display()))?;
@@ -53,7 +53,7 @@ pub fn open_handler() -> Result<Handler<SqliteStore>, String> {
         .ok()
         .and_then(|s| Sharer::new(&s).ok())
         .unwrap_or_else(|| Sharer::new("session").expect("static slug"));
-    Ok(Handler::new(store, sharer).with_blobs(Box::new(blobs)))
+    Ok(Handler::new(store, sharer).with_blobs(blobs))
 }
 
 /// Route a verb through the running daemon when one owns our store —

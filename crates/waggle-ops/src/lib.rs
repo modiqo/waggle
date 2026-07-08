@@ -306,10 +306,26 @@ pub const INIT: OperationSpec = OperationSpec {
     core_fn: "waggle_cli::init::run",
 };
 
+/// `edge` — interact with a deployed waggle edge (CLI only).
+pub const EDGE: OperationSpec = OperationSpec {
+    name: "edge",
+    surface: Surface::CliOnly,
+    kind: OpKind::RelaxedWrite,
+    description: "Interact with a deployed waggle edge over HTTPS: status (health + tool surface), push (replicate this store's records and snapshot blobs so tokens resolve and grep there), smoke (mint→resolve→funnel round-trip). Configure with WAGGLE_EDGE_URL and WAGGLE_EDGE_BEARER or the flags. Deploying the worker itself is `npx wrangler deploy` (guide 09).",
+    args: &[
+        ArgSpec { name: "action", required: true, doc: "status | push | smoke." },
+        ArgSpec { name: "url", required: false, doc: "The edge base URL (overrides WAGGLE_EDGE_URL), e.g. https://waggle-edge.you.workers.dev." },
+        ArgSpec { name: "bearer", required: false, doc: "The tenant bearer (overrides WAGGLE_EDGE_BEARER)." },
+    ],
+    forward: &[EdgeSpec { to: "map", why: "with the edge reachable, orient from the global map" }],
+    reverse: &[],
+    core_fn: "waggle_cli::edge::run",
+};
+
 /// The catalog. Order is presentation order (CLI help, docs, global map).
 pub const OPERATIONS: &[&OperationSpec] = &[
     &MINT, &RESOLVE, &RECORD, &MUTATE, &FUNNEL, &READ, &SEARCH, &QUERY, &MAP, &INIT, &SERVE,
-    &DAEMON,
+    &DAEMON, &EDGE,
 ];
 
 /// Look an operation up by name.

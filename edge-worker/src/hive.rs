@@ -59,7 +59,6 @@ impl EdgeStorage for DoStorage {
 #[durable_object]
 pub struct Hive {
     state: State,
-    #[allow(dead_code)]
     env: Env,
 }
 
@@ -70,12 +69,17 @@ impl DurableObject for Hive {
 
     async fn fetch(&self, mut req: Request) -> Result<Response> {
         let body = req.text().await?;
+        let blobs = match self.env.bucket("BUCKET") {
+            Ok(b) => crate::blobs::EdgeBlobs::R2(b),
+            Err(_) => crate::blobs::EdgeBlobs::Absent,
+        };
         let handler = Handler::new(
             EdgeStore::new(DoStorage {
                 storage: self.state.storage(),
             }),
             waggle_core::Sharer::new("edge").expect("static slug"),
-        );
+        )
+        .with_blobs(blobs);
         let now = Timestamp::from_unix_ms(Date::now().as_millis());
         let mut entropy = |buf: &mut [u8]| {
             getrandom::getrandom(buf).map_err(|e| waggle_core::EntropyError(e.to_string()))
@@ -100,7 +104,10 @@ impl DurableObject for Hive {
 /// object per call: `{op: "ingest", record}` · `{op: "scan"}` ·
 /// `{op: "scan-token", token, from_seq}` — plus the append ops the
 /// conformance harness drives directly.
-async fn store_rpc<S: waggle_store::Store>(handler: &Handler<S>, body: &str) -> Result<Response> {
+async fn store_rpc<S: waggle_store::Store, B: waggle_store::BlobSink>(
+    handler: &Handler<S, B>,
+    body: &str,
+) -> Result<Response> {
     let msg: serde_json::Value = match serde_json::from_str(body) {
         Ok(v) => v,
         Err(e) => return Response::error(format!("store: bad json: {e}"), 400),
@@ -134,6 +141,23 @@ async fn store_rpc<S: waggle_store::Store>(handler: &Handler<S>, body: &str) -> 
                     .await
                     .map(|records| serde_json::to_value(records).unwrap_or_default()),
                 Err(e) => return Response::error(format!("store: token: {e}"), 400),
+            }
+        }
+        "put-blob" => {
+            // Replication: `waggle edge push` uploads snapshot blobs so
+            // read/search work where the file never existed (doc 18 §3).
+            use base64::Engine as _;
+            let b64 = msg["b64"].as_str().unwrap_or_default();
+            let content_type = msg["content_type"]
+                .as_str()
+                .unwrap_or("application/octet-stream");
+            match base64::engine::general_purpose::STANDARD.decode(b64) {
+                Ok(bytes) => handler
+                    .blobs()
+                    .put(&bytes, content_type)
+                    .await
+                    .map(|media| serde_json::to_value(media).unwrap_or_default()),
+                Err(e) => return Response::error(format!("store: b64: {e}"), 400),
             }
         }
         other => return Response::error(format!("store: unknown op `{other}`"), 400),

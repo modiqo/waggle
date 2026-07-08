@@ -11,3 +11,13 @@ bindings = [{ name = "HIVE", class_name = "Hive" }]
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Hive"]
+
+# Created per account: `npx wrangler kv namespace create CACHE` and
+# `npx wrangler r2 bucket create waggle-blobs` — see docs/guide/09.
+[[kv_namespaces]]
+binding = "CACHE"
+id = "waggle_cache_placeholder"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "waggle-blobs"

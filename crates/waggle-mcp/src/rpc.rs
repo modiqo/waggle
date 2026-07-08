@@ -55,8 +55,8 @@ fn rpc_err(id: &Value, code: i64, message: &str) -> String {
 
 /// Handle one JSON-RPC message. Returns `None` for notifications (no
 /// response on the wire). `now`/`entropy` come from the transport.
-pub async fn handle_message<S: Store, E>(
-    handler: &Handler<S>,
+pub async fn handle_message<S: Store, B: waggle_store::BlobSink, E>(
+    handler: &Handler<S, B>,
     raw: &str,
     now: Timestamp,
     entropy: &mut E,

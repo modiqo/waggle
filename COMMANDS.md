@@ -156,3 +156,15 @@ Manage waggled: status (pid, store, uptime, connections), start (idempotent), st
 
 - forward → `map`: with the daemon up, orient from the global map
 
+## `edge` — CLI only
+
+Interact with a deployed waggle edge over HTTPS: status (health + tool surface), push (replicate this store's records and snapshot blobs so tokens resolve and grep there), smoke (mint→resolve→funnel round-trip). Configure with WAGGLE_EDGE_URL and WAGGLE_EDGE_BEARER or the flags. Deploying the worker itself is `npx wrangler deploy` (guide 09).
+
+| arg | required | doc |
+|---|---|---|
+| `--action` | true | status | push | smoke. |
+| `--url` | false | The edge base URL (overrides WAGGLE_EDGE_URL), e.g. https://waggle-edge.you.workers.dev. |
+| `--bearer` | false | The tenant bearer (overrides WAGGLE_EDGE_BEARER). |
+
+- forward → `map`: with the edge reachable, orient from the global map
+

@@ -144,7 +144,7 @@ fn bind(sock: &Path) -> Result<UnixListener, i32> {
 async fn serve_client<R, W>(
     mut lines: tokio::io::Lines<BufReader<R>>,
     mut write: W,
-    handler: &Handler<SqliteStore>,
+    handler: &Handler<SqliteStore, waggle_store_sqlite::BlobStore>,
     state: &DaemonState,
     sock: &Path,
 ) where
@@ -287,7 +287,11 @@ fn manage_message(line: &str, state: &DaemonState, sock: &Path) -> Option<(Strin
 /// `WAGGLE_TCP_TOKEN` are set — an unauthenticated network listener is
 /// not a mode this daemon has. Every connection must open with the
 /// `waggled/hello` bearer frame or it is dropped without a byte served.
-fn spawn_tcp_listener(handler: &Arc<Handler<SqliteStore>>, state: &Arc<DaemonState>, sock: &Path) {
+fn spawn_tcp_listener(
+    handler: &Arc<Handler<SqliteStore, waggle_store_sqlite::BlobStore>>,
+    state: &Arc<DaemonState>,
+    sock: &Path,
+) {
     let Ok(addr) = std::env::var("WAGGLE_TCP") else {
         return;
     };

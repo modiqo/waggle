@@ -31,30 +31,68 @@ pub fn authorized(req: &Request, env: &Env) -> bool {
             == 0
 }
 
-/// The tenant's hive. v1: one tenant per deployment ("hive"); the
-/// per-tenant id becomes a header/key lookup when multi-tenancy lands.
-fn hive(env: &Env) -> Result<Stub> {
+/// The tenant's hive: one Durable Object per tenant (08 §8). The tenant
+/// comes from the `x-waggle-tenant` header (sanitized slug, default
+/// "hive") — authenticated callers may partition their state; unfurls
+/// always read the default tenant.
+fn hive(env: &Env, tenant: &str) -> Result<Stub> {
     let ns = env.durable_object("HIVE")?;
-    ns.id_from_name("hive")?.get_stub()
+    ns.id_from_name(tenant)?.get_stub()
 }
 
-async fn delegate(env: &Env, path: &str, body: String) -> Result<Response> {
+/// Sanitize a tenant header to a safe DO name.
+fn tenant_of(req: &Request) -> String {
+    req.headers()
+        .get("x-waggle-tenant")
+        .ok()
+        .flatten()
+        .filter(|t| {
+            !t.is_empty()
+                && t.len() <= 32
+                && t.bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        })
+        .unwrap_or_else(|| "hive".to_owned())
+}
+
+async fn delegate(env: &Env, tenant: &str, path: &str, body: String) -> Result<Response> {
     let mut init = RequestInit::new();
     init.with_method(Method::Post).with_body(Some(body.into()));
     let req = Request::new_with_init(&format!("https://hive{path}"), &init)?;
-    hive(env)?.fetch_with_request(req).await
+    hive(env, tenant)?.fetch_with_request(req).await
 }
 
-/// `/mcp`: one JSON-RPC frame per request body, answered by the DO.
+/// `/mcp`: one JSON-RPC frame per request body, answered by the DO. A
+/// successful `mutate` invalidates the token's unfurl cache (E2's
+/// write-path half).
 pub async fn mcp(mut req: Request, env: &Env) -> Result<Response> {
+    let tenant = tenant_of(&req);
     let body = req.text().await?;
-    delegate(env, "/mcp", body).await
+    let invalidate = mutate_token(&body);
+    let resp = delegate(env, &tenant, "/mcp", body).await;
+    if let (Some(token), Ok(kv)) = (invalidate, env.kv("CACHE")) {
+        let _ = kv.delete(&format!("unfurl:{token}")).await;
+    }
+    resp
+}
+
+/// The token a mutate frame targets (for cache invalidation).
+fn mutate_token(body: &str) -> Option<String> {
+    let msg: serde_json::Value = serde_json::from_str(body).ok()?;
+    let params = msg.get("params")?;
+    (params.get("name")?.as_str()? == "mutate").then(|| {
+        params
+            .pointer("/arguments/token")?
+            .as_str()
+            .map(str::to_owned)
+    })?
 }
 
 /// `/store`: the certification/replay RPC, answered by the DO.
 pub async fn store_rpc(mut req: Request, env: &Env) -> Result<Response> {
+    let tenant = tenant_of(&req);
     let body = req.text().await?;
-    delegate(env, "/store", body).await
+    delegate(env, &tenant, "/store", body).await
 }
 
 /// `/t/:token` — the public face: OG meta from the mint snapshot (I-3),
@@ -64,10 +102,19 @@ pub async fn unfurl(env: &Env, raw: &str) -> Result<Response> {
     let Ok(token) = waggle_core::Token::parse(raw) else {
         return Response::error("not a waggle token", 404);
     };
+    // E2: the KV cache tier — read-through with a short TTL; mutations
+    // invalidate; a missing binding just skips caching.
+    let cache_key = format!("unfurl:{token}");
+    if let Ok(kv) = env.kv("CACHE") {
+        if let Ok(Some(hit)) = kv.get(&cache_key).text().await {
+            record_impression(env, &token).await;
+            return Response::from_html(hit);
+        }
+    }
     // Read the manifest through the DO's store RPC (one hop, cache later).
     let body = serde_json::json!({ "op": "scan-token", "token": token.as_str(), "from_seq": 0 })
         .to_string();
-    let mut resp = delegate(env, "/store", body).await?;
+    let mut resp = delegate(env, "hive", "/store", body).await?;
     let text = resp.text().await?;
     let parsed: serde_json::Value = serde_json::from_str(&text).unwrap_or_default();
     let records: Vec<waggle_core::LogRecord> =
@@ -80,6 +127,14 @@ pub async fn unfurl(env: &Env, raw: &str) -> Result<Response> {
         return Response::error("unknown token", 404);
     };
 
+    // Revoked tokens serve NOTHING — 410, and never from cache.
+    if manifest.revoked_at.is_some() {
+        if let Ok(kv) = env.kv("CACHE") {
+            let _ = kv.delete(&cache_key).await;
+        }
+        return Response::error("this token was revoked by its owner", 410);
+    }
+
     // I-3: the snapshot, never a scrape. The same renderer as every tier.
     let package = waggle_social::SharePackage::from_manifest(manifest, "https://example-edge");
     let meta = waggle_social::og_meta(&package);
@@ -90,7 +145,23 @@ pub async fn unfurl(env: &Env, raw: &str) -> Result<Response> {
         package.title,
     );
 
-    // The impression event lands with the KV-cache slice (deviation
-    // noted in the matrix) — unfurls stay read-only in v1.
+    if let Ok(kv) = env.kv("CACHE") {
+        if let Ok(put) = kv.put(&cache_key, html.clone()) {
+            let _ = put.expiration_ttl(60).execute().await;
+        }
+    }
+    record_impression(env, &token).await;
     Response::from_html(html)
+}
+
+/// Every unfurl records an impression — payload-free (I-1), the funnel's
+/// top stage, exactly what the conference-slide scenario counts (05 §4).
+async fn record_impression(env: &Env, token: &waggle_core::Token) {
+    let frame = serde_json::json!({
+        "jsonrpc": "2.0", "id": 0, "method": "tools/call",
+        "params": { "name": "record",
+                    "arguments": { "token": token.as_str(), "stage": "impression" } },
+    })
+    .to_string();
+    let _ = delegate(env, "hive", "/mcp", frame).await;
 }

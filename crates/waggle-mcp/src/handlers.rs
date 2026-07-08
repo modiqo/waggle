@@ -10,19 +10,19 @@ use waggle_core::{
     mint, negotiate, resolve, ActorClass, CanonicalUrl, Change, Channel, ConsumerHint, MintOptions,
     MintSpec, ResolverContext, Sharer, Stage, Timestamp, Token,
 };
-use waggle_store::{AppendIntent, Appended, BlobSink, MintNonce, Store, StoreError};
+use waggle_store::{AppendIntent, Appended, BlobSink, MintNonce, NoBlobs, Store, StoreError};
 
 use crate::envelope::{Envelope, NextCall, Stats};
 use crate::map::{global_map, handoff_line, token_map};
 
 /// The dispatcher: one per store, shared by every transport.
-pub struct Handler<S> {
+pub struct Handler<S, B = NoBlobs> {
     pub(crate) store: S,
     /// Session identity used when `sharer` is omitted (one-call mint).
     pub(crate) default_sharer: Sharer,
-    /// Content-addressed media storage; absent hosts refuse `attach` with
-    /// a hint rather than degrading silently.
-    pub(crate) blobs: Option<Box<dyn BlobSink + Send + Sync>>,
+    /// Content-addressed media storage; the [`NoBlobs`] default refuses
+    /// with a hint rather than degrading silently.
+    pub(crate) blobs: B,
 }
 
 pub(crate) fn arg_str<'a>(args: &'a Map<String, Value>, key: &str) -> Option<&'a str> {
@@ -69,26 +69,36 @@ pub(crate) fn store_err(e: &StoreError) -> Envelope {
     Envelope::err(e.to_string(), next)
 }
 
-impl<S: Store> Handler<S> {
+impl<S: Store> Handler<S, NoBlobs> {
     /// Build a handler over a store with a session identity.
     pub fn new(store: S, default_sharer: Sharer) -> Self {
         Self {
             store,
             default_sharer,
-            blobs: None,
+            blobs: NoBlobs,
         }
     }
+}
 
+impl<S: Store, B: BlobSink> Handler<S, B> {
     /// Attach a blob sidecar — enables `mint --attach` and media variants.
     #[must_use]
-    pub fn with_blobs(mut self, blobs: Box<dyn BlobSink + Send + Sync>) -> Self {
-        self.blobs = Some(blobs);
-        self
+    pub fn with_blobs<B2: BlobSink>(self, blobs: B2) -> Handler<S, B2> {
+        Handler {
+            store: self.store,
+            default_sharer: self.default_sharer,
+            blobs,
+        }
     }
 
     /// The store, for transports needing direct reads.
     pub fn store(&self) -> &S {
         &self.store
+    }
+
+    /// The blob sink, for transports needing direct blob I/O (replication).
+    pub fn blobs(&self) -> &B {
+        &self.blobs
     }
 
     /// Dispatch one tool call. `now` and `entropy` are the transport's —
@@ -158,12 +168,15 @@ impl<S: Store> Handler<S> {
                 Err(e) => return Envelope::err(format!("parent: {e}"), vec![]),
             }
         }
-        spec = match self.mint_extras(spec, args) {
+        spec = match self.mint_extras(spec, args).await {
             Ok(s) => s,
             Err(e) => return e,
         };
         if let Some(path) = arg_str(args, "attach") {
-            match self.attach_variant(path, arg_str(args, "attach-type")) {
+            match self
+                .attach_variant(path, arg_str(args, "attach-type"))
+                .await
+            {
                 Ok(v) => spec = spec.with_variant(v),
                 Err(e) => return e,
             }
@@ -219,7 +232,7 @@ impl<S: Store> Handler<S> {
     }
 
     /// Snapshot + declared variants: the optional halves of mint.
-    fn mint_extras(
+    async fn mint_extras(
         &self,
         mut spec: MintSpec,
         args: &Map<String, Value>,
@@ -238,13 +251,13 @@ impl<S: Store> Handler<S> {
             ));
         }
         if snapshot {
-            let media = self.snapshot_target(spec.target_str())?;
+            let media = self.snapshot_target(spec.target_str()).await?;
             spec = spec.content(media);
         }
         if let Some(path) = extracted {
             // The format boundary (doc 18 §7): the harness extracted this
             // with its own abilities; waggle persists and serves it.
-            let media = self.pin_extraction(path)?;
+            let media = self.pin_extraction(path).await?;
             spec = spec.content(media);
         }
         if let Some(variants) = args.get("variants") {
@@ -265,25 +278,21 @@ impl<S: Store> Handler<S> {
     /// Read `path`, store it content-addressed, and shape the media
     /// variant: images serve vision consumers, audio serves listeners
     /// (rev 2.3) — everyone else falls through to the catch-all.
-    fn attach_variant(
+    async fn attach_variant(
         &self,
         path: &str,
         declared_type: Option<&str>,
     ) -> Result<waggle_core::Variant, Envelope> {
-        let Some(blobs) = &self.blobs else {
-            return Err(Envelope::err(
-                "this host has no blob store — attach needs one (the daemon configures it automatically)",
-                vec![],
-            ));
-        };
         let bytes = std::fs::read(path)
             .map_err(|e| Envelope::err(format!("attach {path}: {e}"), vec![]))?;
         let content_type = declared_type.map_or_else(
             || infer_content_type(path).to_owned(),
             std::borrow::ToOwned::to_owned,
         );
-        let media = blobs
+        let media = self
+            .blobs
             .put(&bytes, &content_type)
+            .await
             .map_err(|e| Envelope::err(e.to_string(), vec![]))?;
         let modality = if content_type.starts_with("audio/") {
             waggle_core::ModalitySet::AUDIO

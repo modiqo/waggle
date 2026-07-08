@@ -37,7 +37,7 @@ fn media_variant_by_modality_end_to_end() {
         SqliteStore::open_in_memory().unwrap(),
         Sharer::new("lead").unwrap(),
     )
-    .with_blobs(Box::new(BlobStore::open(&blobs_dir).unwrap()));
+    .with_blobs(BlobStore::open(&blobs_dir).unwrap());
     let mut e = entropy();
 
     pollster::block_on(async {
