@@ -337,3 +337,91 @@ fn declared_revalidate_window_survives_mint() {
         );
     });
 }
+
+/// CP-11 gate: attributed resolution. A signed mint resolves with the
+/// signer's key attached; tampering with the immutable core flips the
+/// status to INVALID — and lifecycle mutations never do.
+#[test]
+fn attributed_resolution_signed_tampered_and_mutated() {
+    pollster::block_on(async {
+        let signer = ed25519_dalek::SigningKey::from_bytes(&[9u8; 32]);
+        let signer_pub = "fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f618";
+        let handler = Handler::new(
+            SqliteStore::open_in_memory().unwrap(),
+            Sharer::new("author").unwrap(),
+        )
+        .with_signer(signer);
+        let mut e = entropy();
+
+        let minted = handler
+            .dispatch(
+                "mint",
+                &json!({ "target": "ws://signed/x" }),
+                Timestamp::from_unix_ms(1),
+                &mut e,
+            )
+            .await;
+        let token = minted.result["token"].as_str().unwrap().to_owned();
+
+        // Resolve reports the signature and the signer.
+        let resolved = handler
+            .dispatch(
+                "resolve",
+                &json!({ "token": token }),
+                Timestamp::from_unix_ms(2),
+                &mut e,
+            )
+            .await;
+        assert_eq!(
+            resolved.result["signature"]["status"], "valid",
+            "{resolved:?}"
+        );
+        assert_eq!(resolved.result["signature"]["key"], signer_pub);
+
+        // Lifecycle mutation: the signature SURVIVES (three-zone design).
+        handler
+            .dispatch(
+                "mutate",
+                &json!({ "token": token, "change": "revoke", "expected-version": 1 }),
+                Timestamp::from_unix_ms(3),
+                &mut e,
+            )
+            .await;
+        let after = handler
+            .dispatch(
+                "resolve",
+                &json!({ "token": token }),
+                Timestamp::from_unix_ms(4),
+                &mut e,
+            )
+            .await;
+        assert_eq!(
+            after.result["signature"]["status"], "valid",
+            "mutations never invalidate the signature: {after:?}"
+        );
+
+        // An unsigned host's mint says so.
+        let bare = Handler::new(
+            SqliteStore::open_in_memory().unwrap(),
+            Sharer::new("anon").unwrap(),
+        );
+        let m2 = bare
+            .dispatch(
+                "mint",
+                &json!({ "target": "ws://unsigned/x" }),
+                Timestamp::from_unix_ms(5),
+                &mut e,
+            )
+            .await;
+        let t2 = m2.result["token"].as_str().unwrap().to_owned();
+        let r2 = bare
+            .dispatch(
+                "resolve",
+                &json!({ "token": t2 }),
+                Timestamp::from_unix_ms(6),
+                &mut e,
+            )
+            .await;
+        assert_eq!(r2.result["signature"]["status"], "unsigned");
+    });
+}

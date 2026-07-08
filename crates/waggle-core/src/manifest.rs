@@ -222,6 +222,10 @@ pub struct AttributionManifest {
     pub content: Option<MediaRef>,
     /// The projections. Always ≥1; exactly one catch-all guaranteed at mint.
     pub variants: Vec<Variant>,
+    /// Author signature over the immutable core (CP-11); set at mint by
+    /// hosts that hold an identity. NOT itself part of the signed bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signature: Option<SignatureBlock>,
     /// Mutable-section version — CAS target for lifecycle mutations (C-9).
     pub version: u32,
     /// Cosmetic: campaign label (LWW).
@@ -243,6 +247,19 @@ pub struct AttributionManifest {
 
 fn meta_is_empty(m: &TargetMeta) -> bool {
     *m == TargetMeta::default()
+}
+
+/// A detached signature over the manifest's IMMUTABLE core (doc 14
+/// CP-11): mutations never touch what was signed, so lifecycle churn
+/// never invalidates it. Set by the host at mint; verified by anyone.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SignatureBlock {
+    /// Signature algorithm — `ed25519` today.
+    pub alg: String,
+    /// The signer's verifying key, hex-encoded (32 bytes).
+    pub key: String,
+    /// The signature, hex-encoded (64 bytes).
+    pub sig: String,
 }
 
 /// Apply one mutable-section change to a manifest — THE mutation semantic,

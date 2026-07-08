@@ -25,6 +25,7 @@ serde_json = { workspace = true }
 pollster = { workspace = true }
 getrandom = { workspace = true }
 base64 = "0.22"
+ed25519-dalek = { workspace = true }
 ureq = "2"
 
 [target.'cfg(unix)'.dependencies]

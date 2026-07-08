@@ -16,6 +16,7 @@ use serde_json::json;
 #[cfg(unix)]
 mod daemon;
 mod edge;
+mod identity;
 mod init;
 #[cfg(unix)]
 mod remote;
@@ -166,6 +167,11 @@ enum Cmd {
         #[arg(long)]
         bearer: Option<String>,
     },
+    #[command(about = waggle_ops::IDENTITY.description)]
+    Identity {
+        /// show | init.
+        action: String,
+    },
     #[command(about = waggle_ops::INIT.description)]
     Init {
         /// Target exactly this file instead of auto-detecting convention files.
@@ -293,6 +299,7 @@ fn main() {
             url,
             bearer,
         } => edge::run(&action, url.as_deref(), bearer.as_deref()),
+        Cmd::Identity { action } => identity::run(&action),
         Cmd::Init { file } => init::run(file.as_deref()),
         Cmd::Daemon { action, idle_secs } => manage_daemon(&action, idle_secs),
         Cmd::Serve { stdio, daemon } => serve(stdio, daemon),

@@ -171,6 +171,7 @@ pub fn mint(
         meta: spec.meta,
         parent: spec.parent,
         content: spec.content,
+        signature: None, // hosts with an identity sign after mint (trust)
         variants,
         version: 1,
         campaign: None,

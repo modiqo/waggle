@@ -53,7 +53,12 @@ pub fn open_handler() -> Result<Handler<SqliteStore, waggle_store_sqlite::BlobSt
         .ok()
         .and_then(|s| Sharer::new(&s).ok())
         .unwrap_or_else(|| Sharer::new("session").expect("static slug"));
-    Ok(Handler::new(store, sharer).with_blobs(blobs))
+    let handler = Handler::new(store, sharer).with_blobs(blobs);
+    // CP-11: hosts with an identity sign every mint automatically.
+    Ok(match crate::identity::load() {
+        Some(key) => handler.with_signer(key),
+        None => handler,
+    })
 }
 
 /// Route a verb through the running daemon when one owns our store —

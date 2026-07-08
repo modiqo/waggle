@@ -23,6 +23,9 @@ pub struct Handler<S, B = NoBlobs> {
     /// Content-addressed media storage; the [`NoBlobs`] default refuses
     /// with a hint rather than degrading silently.
     pub(crate) blobs: B,
+    /// The host's signing identity (CP-11): present → every mint is
+    /// signed over its immutable core.
+    pub(crate) signer: Option<ed25519_dalek::SigningKey>,
 }
 
 pub(crate) fn arg_str<'a>(args: &'a Map<String, Value>, key: &str) -> Option<&'a str> {
@@ -76,6 +79,7 @@ impl<S: Store> Handler<S, NoBlobs> {
             store,
             default_sharer,
             blobs: NoBlobs,
+            signer: None,
         }
     }
 }
@@ -88,7 +92,16 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             store: self.store,
             default_sharer: self.default_sharer,
             blobs,
+            signer: self.signer,
         }
+    }
+
+    /// Give the host a signing identity: every mint from here on carries
+    /// an Ed25519 signature over its immutable core (CP-11).
+    #[must_use]
+    pub fn with_signer(mut self, signer: ed25519_dalek::SigningKey) -> Self {
+        self.signer = Some(signer);
+        self
     }
 
     /// The store, for transports needing direct reads.
@@ -181,10 +194,13 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 Err(e) => return e,
             }
         }
-        let manifest = match mint(spec, &MintOptions::default(), &mut *entropy, now) {
+        let mut manifest = match mint(spec, &MintOptions::default(), &mut *entropy, now) {
             Ok(m) => m,
             Err(e) => return Envelope::err(e.to_string(), vec![]),
         };
+        if let Some(signer) = &self.signer {
+            manifest.signature = Some(waggle_core::trust::sign_manifest(&manifest, signer));
+        }
         // The idempotency nonce is transport-supplied entropy (C-8).
         let mut nonce_bytes = [0u8; 8];
         if let Err(e) = entropy(&mut nonce_bytes) {
@@ -352,6 +368,13 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             _ => None,
         };
 
+        let signature = match waggle_core::trust::verify_manifest(&view.manifest) {
+            waggle_core::trust::SignatureStatus::Valid { key } => {
+                json!({ "status": "valid", "key": key })
+            }
+            waggle_core::trust::SignatureStatus::Unsigned => json!({ "status": "unsigned" }),
+            waggle_core::trust::SignatureStatus::Invalid => json!({ "status": "INVALID" }),
+        };
         Envelope::ok(
             json!({
                 "disposition": resolution.disposition,
@@ -360,6 +383,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 "target": view.manifest.target.as_str(),
                 "as_of": resolution.as_of,
                 "revalidate_after": resolution.revalidate_after,
+                "signature": signature,
             }),
             vec![
                 NextCall {

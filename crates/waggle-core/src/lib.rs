@@ -50,6 +50,7 @@ mod soa;
 mod target;
 mod time;
 mod token;
+pub mod trust;
 
 pub use context::{negotiate, ConsumerHint, ConsumerKind, ResolverContext};
 pub use entropy::{Entropy, EntropyError};
@@ -58,7 +59,7 @@ pub use fold::{replay, Fold, FunnelFold, LineageFold, ManifestFold};
 pub use log::{Change, LogRecord};
 pub use manifest::{
     apply_change, AttributionManifest, Constraint, Disposition, MatchExpr, ModalitySet, Posture,
-    Variant, VariantBody, MANIFEST_SCHEMA_VERSION,
+    SignatureBlock, Variant, VariantBody, MANIFEST_SCHEMA_VERSION,
 };
 pub use matcher::{select_variant, Selected};
 pub use mint::{mint, MintError, MintOptions, MintSpec};

@@ -25,6 +25,7 @@ qrcodegen = "1.8"
 criterion = { version = "0.5", default-features = false }
 regex = { version = "1", default-features = false, features = ["std", "perf", "unicode-case"] }
 loom = "0.7"
+ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "net", "io-util", "macros", "time"] }
 
 waggle-core = { path = "crates/waggle-core", version = "0.1.0" }

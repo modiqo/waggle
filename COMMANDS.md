@@ -168,3 +168,13 @@ Interact with a deployed waggle edge over HTTPS: status (health + tool surface),
 
 - forward → `map`: with the edge reachable, orient from the global map
 
+## `identity` — CLI only
+
+The host's Ed25519 signing identity: show (public key, or note its absence) | init (generate ~/.waggle/identity; every mint from then on is signed over its immutable core — mutations never invalidate it). Consumers see signature status on every resolve.
+
+| arg | required | doc |
+|---|---|---|
+| `--action` | true | show | init. |
+
+- forward → `mint`: with an identity, mints carry provenance
+

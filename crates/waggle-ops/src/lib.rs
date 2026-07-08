@@ -322,10 +322,24 @@ pub const EDGE: OperationSpec = OperationSpec {
     core_fn: "waggle_cli::edge::run",
 };
 
+/// `identity` — the host's signing identity (CLI only, CP-11).
+pub const IDENTITY: OperationSpec = OperationSpec {
+    name: "identity",
+    surface: Surface::CliOnly,
+    kind: OpKind::RelaxedWrite,
+    description: "The host's Ed25519 signing identity: show (public key, or note its absence) | init (generate ~/.waggle/identity; every mint from then on is signed over its immutable core — mutations never invalidate it). Consumers see signature status on every resolve.",
+    args: &[
+        ArgSpec { name: "action", required: true, doc: "show | init." },
+    ],
+    forward: &[EdgeSpec { to: "mint", why: "with an identity, mints carry provenance" }],
+    reverse: &[],
+    core_fn: "waggle_cli::identity::run",
+};
+
 /// The catalog. Order is presentation order (CLI help, docs, global map).
 pub const OPERATIONS: &[&OperationSpec] = &[
     &MINT, &RESOLVE, &RECORD, &MUTATE, &FUNNEL, &READ, &SEARCH, &QUERY, &MAP, &INIT, &SERVE,
-    &DAEMON, &EDGE,
+    &DAEMON, &EDGE, &IDENTITY,
 ];
 
 /// Look an operation up by name.
