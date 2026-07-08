@@ -21,6 +21,7 @@
 mod envelope;
 mod handlers;
 mod map;
+pub mod query;
 mod rpc;
 
 pub use envelope::{validate_next, Envelope, NextCall, Stats};

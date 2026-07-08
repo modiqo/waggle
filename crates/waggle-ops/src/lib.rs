@@ -126,6 +126,7 @@ pub const RESOLVE: OperationSpec = OperationSpec {
         ArgSpec { name: "context", required: false, doc: "Resolver context (harness metadata, A2A agent card, or explicit JSON); defaults to negotiated." },
     ],
     forward: &[
+        EdgeSpec { to: "query", why: "slice a large manifest by path instead of pulling it whole" },
         EdgeSpec { to: "record", why: "report downstream stages (run, repeat) so the funnel stays honest" },
         EdgeSpec { to: "map", why: "orient: see what this token expects of you next" },
     ],
@@ -184,6 +185,22 @@ pub const FUNNEL: OperationSpec = OperationSpec {
     core_fn: "waggle_store::ReadStore::funnel",
 };
 
+/// `query` — budgeted slices with guidance, never whole-response pulls.
+pub const QUERY: OperationSpec = OperationSpec {
+    name: "query",
+    surface: Surface::Both,
+    kind: OpKind::Read,
+    description: "Slice a token's document (manifest, funnel, lineage) by path instead of pulling it whole. Every response fits max-bytes (default 4 KB); oversized values return their shape plus next paths deeper — walk exactly as far as you need.",
+    args: &[
+        ArgSpec { name: "token", required: true, doc: "The waggle token whose document to slice." },
+        ArgSpec { name: "path", required: false, doc: "JSON-pointer-style path (e.g. /manifest/variants/0); omit for the root shape." },
+        ArgSpec { name: "max-bytes", required: false, doc: "Response budget in bytes (default 4096, floor 64)." },
+    ],
+    forward: &[EdgeSpec { to: "query", why: "follow a next path one level deeper" }],
+    reverse: &[],
+    core_fn: "waggle_mcp::query::slice_at",
+};
+
 /// `map` — "I am here; what are my forward and reverse paths?"
 pub const MAP: OperationSpec = OperationSpec {
     name: "map",
@@ -215,8 +232,9 @@ pub const SERVE: OperationSpec = OperationSpec {
 };
 
 /// The catalog. Order is presentation order (CLI help, docs, global map).
-pub const OPERATIONS: &[&OperationSpec] =
-    &[&MINT, &RESOLVE, &RECORD, &MUTATE, &FUNNEL, &MAP, &SERVE];
+pub const OPERATIONS: &[&OperationSpec] = &[
+    &MINT, &RESOLVE, &RECORD, &MUTATE, &FUNNEL, &QUERY, &MAP, &SERVE,
+];
 
 /// Look an operation up by name.
 pub fn find(name: &str) -> Option<&'static OperationSpec> {

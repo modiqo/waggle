@@ -111,6 +111,7 @@ impl<S: Store> Handler<S> {
             "record" => self.record(args, now).await,
             "mutate" => self.mutate(args, now).await,
             "funnel" => self.funnel(args).await,
+            "query" => self.query(args).await,
             "map" => self.map(args, now).await,
             other => Envelope::err(
                 format!("`{other}` is not a waggle tool — `map` lists what exists"),
@@ -453,6 +454,75 @@ impl<S: Store> Handler<S> {
         )
         .with_stats(Stats {
             records: Some(total),
+            seq: None,
+        })
+    }
+
+    /// The guided query (CP-7): the token's document, sliced under a
+    /// byte budget, with executable paths deeper as `next`.
+    async fn query(&self, args: &Map<String, Value>) -> Envelope {
+        let token = match parse_token_arg(args) {
+            Ok(t) => t,
+            Err(e) => return e,
+        };
+        let view = match self.store.manifest(token).await {
+            Ok(Some(v)) => v,
+            Ok(None) => return store_err(&StoreError::UnknownToken(token)),
+            Err(e) => return store_err(&e),
+        };
+        let funnel = self.store.funnel(token).await.unwrap_or_default();
+        let children = self.store.children(token).await.unwrap_or_default();
+        let doc = json!({
+            "manifest": &*view.manifest,
+            "funnel": funnel.iter().map(|(s, c)| (s.as_str().to_owned(), json!(c)))
+                .collect::<Value>(),
+            "children": children.iter().map(waggle_core::Token::as_str).collect::<Vec<_>>(),
+        });
+        let path = arg_str(args, "path").unwrap_or("");
+        let max_bytes = args
+            .get("max-bytes")
+            .and_then(Value::as_u64)
+            .and_then(|v| usize::try_from(v).ok())
+            .unwrap_or(crate::query::DEFAULT_MAX_BYTES);
+        let Some(slice) = crate::query::slice_at(&doc, path, max_bytes) else {
+            let siblings = crate::query::slice_at(&doc, "", max_bytes)
+                .map(|s| s.next_paths)
+                .unwrap_or_default();
+            return Envelope::err(
+                format!(
+                    "path `{path}` names nothing on {token} — valid roots: {}",
+                    siblings.join(", ")
+                ),
+                vec![NextCall {
+                    tool: "query".into(),
+                    args: json!({ "token": token.as_str() }),
+                    why: "start from the root shape".into(),
+                }],
+            );
+        };
+        let next = slice
+            .next_paths
+            .iter()
+            .take(3)
+            .map(|p| NextCall {
+                tool: "query".into(),
+                args: json!({ "token": token.as_str(), "path": p }),
+                why: "one level deeper".into(),
+            })
+            .collect();
+        #[allow(clippy::cast_possible_truncation)]
+        Envelope::ok(
+            json!({
+                "path": path,
+                "slice": slice.slice,
+                "truncated": slice.truncated,
+                "full_bytes": slice.full_bytes,
+                "next_paths": slice.next_paths,
+            }),
+            next,
+        )
+        .with_stats(Stats {
+            records: Some(slice.full_bytes as u64),
             seq: None,
         })
     }

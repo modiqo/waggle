@@ -27,6 +27,7 @@ Fetch the projection of a waggle token matched to your context (model family, ha
 | `--token` | true | The waggle token to resolve. |
 | `--context` | false | Resolver context (harness metadata, A2A agent card, or explicit JSON); defaults to negotiated. |
 
+- forward → `query`: slice a large manifest by path instead of pulling it whole
 - forward → `record`: report downstream stages (run, repeat) so the funnel stays honest
 - forward → `map`: orient: see what this token expects of you next
 
@@ -65,6 +66,18 @@ A token's funnel: stage counts (impression → resolve → run → repeat) plus 
 
 - forward → `map`: orient: the funnel feeds the map's ranked suggestions
 - forward → `mutate`: a stalled or wrong share can be revoked or superseded
+
+## `query` — CLI + MCP tool
+
+Slice a token's document (manifest, funnel, lineage) by path instead of pulling it whole. Every response fits max-bytes (default 4 KB); oversized values return their shape plus next paths deeper — walk exactly as far as you need.
+
+| arg | required | doc |
+|---|---|---|
+| `--token` | true | The waggle token whose document to slice. |
+| `--path` | false | JSON-pointer-style path (e.g. /manifest/variants/0); omit for the root shape. |
+| `--max-bytes` | false | Response budget in bytes (default 4096, floor 64). |
+
+- forward → `query`: follow a next path one level deeper
 
 ## `map` — CLI + MCP tool
 

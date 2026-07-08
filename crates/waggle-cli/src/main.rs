@@ -85,6 +85,18 @@ enum Cmd {
         #[arg(long)]
         token: String,
     },
+    #[command(about = waggle_ops::QUERY.description)]
+    Query {
+        /// The waggle token whose document to slice.
+        #[arg(long)]
+        token: String,
+        /// JSON-pointer-style path (e.g. /manifest/variants/0); omit for the root shape.
+        #[arg(long)]
+        path: Option<String>,
+        /// Response budget in bytes (default 4096, floor 64).
+        #[arg(long)]
+        max_bytes: Option<u64>,
+    },
     #[command(about = waggle_ops::MAP.description)]
     Map {
         /// Token to orient around; omit for the global map.
@@ -147,6 +159,14 @@ fn main() {
             })),
         ),
         Cmd::Funnel { token } => run::tool_call("funnel", json!({ "token": token })),
+        Cmd::Query {
+            token,
+            path,
+            max_bytes,
+        } => run::tool_call(
+            "query",
+            strip_nulls(json!({ "token": token, "path": path, "max-bytes": max_bytes })),
+        ),
         Cmd::Map { token } => run::tool_call("map", strip_nulls(json!({ "token": token }))),
         Cmd::Serve { stdio, daemon } => serve(stdio, daemon),
     };
