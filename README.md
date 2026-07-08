@@ -53,6 +53,10 @@ serves wrong data forever), **no telemetry** (which subagent actually read
 its input? which stalled?), and **no reach** (it dies at the machine
 boundary).
 
+> The long-form grounding — the handoff matrix across all four agent
+> boundaries, the why-provider-caching-doesn't-transfer argument, and
+> the full dance-to-design mapping — is **[docs/WHY.md](docs/WHY.md)**.
+
 ## How it works
 
 Waggle is the reference, made first-class. A **token** is a ~30-byte
