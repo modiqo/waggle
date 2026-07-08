@@ -21,9 +21,9 @@ console_error_panic_hook = "0.1"
 base64 = "0.22"
 waggle-core = { workspace = true }
 waggle-ops = { workspace = true }
-waggle-store = { path = "../crates/waggle-store", version = "0.1.0" }
-waggle-store-cloudflare = { path = "../crates/waggle-store-cloudflare", version = "0.1.0" }
-waggle-mcp = { path = "../crates/waggle-mcp", version = "0.1.0" }
+waggle-store = { path = "../crates/waggle-store", version = "0.3.0" }
+waggle-store-cloudflare = { path = "../crates/waggle-store-cloudflare", version = "0.3.0" }
+waggle-mcp = { path = "../crates/waggle-mcp", version = "0.3.0" }
 waggle-social = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -37,6 +37,6 @@ base64 = "0.22"
 ureq = "2"
 serde_json = { workspace = true }
 waggle-core = { workspace = true }
-waggle-store = { path = "../crates/waggle-store", version = "0.1.0" }
-waggle-store-sqlite = { path = "../crates/waggle-store-sqlite", version = "0.1.0" }
+waggle-store = { path = "../crates/waggle-store", version = "0.3.0" }
+waggle-store-sqlite = { path = "../crates/waggle-store-sqlite", version = "0.3.0" }
 pollster = { workspace = true }
