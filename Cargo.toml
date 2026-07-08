@@ -20,6 +20,7 @@ getrandom = "0.2"
 clap = { version = "4", features = ["derive"] }
 pollster = "0.4"
 rusqlite = { version = "0.32", features = ["bundled"] }
+sha2 = "0.10"
 
 waggle-core = { path = "crates/waggle-core", version = "0.1.0" }
 waggle-ops = { path = "crates/waggle-ops", version = "0.1.0" }

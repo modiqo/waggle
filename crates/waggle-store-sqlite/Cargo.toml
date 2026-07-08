@@ -16,6 +16,7 @@ waggle-store = { path = "../waggle-store", version = "0.1.0" }
 thiserror = { workspace = true }
 rusqlite = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true }
 
 [dev-dependencies]
 pollster = { workspace = true }

@@ -162,7 +162,7 @@ G-7/G-8 → CP-10.
 | 2 | Sealed matcher | 0.1 | ✅ done | [run 28918472379](https://github.com/modiqo/waggle/actions/runs/28918472379) — vector table (ties/near-misses/multimodal), 10⁴-context determinism, g3 freshness |
 | 3 | Event log & folds | 0.1 | ✅ done | [run 28918829415](https://github.com/modiqo/waggle/actions/runs/28918829415) — R-1..R-3 proptests, one-pass multi-fold, 1M-fold shape |
 | 4 | Store + conformance | 0.1 | ✅ done | [run 28919140836](https://github.com/modiqo/waggle/actions/runs/28919140836) — memory conformance, compile_fail I-4 bound |
-| 5 | SQLite backend | 0.1 | ◐ core landed | conformance ✅ · reopen-durability ✅ · wire replay w/ dupes ✅ · cache invalidation ✅ — remaining: fs-jsonl backend, blob CAS, loom cache suite, crash matrix, flood/budget benches |
+| 5 | SQLite backend | 0.1 | ◐ nearly done | sqlite conformance ✅ · reopen durability ✅ · wire replay w/ dupes ✅ · cache invalidation ✅ · **fs-jsonl conformance ✅ (reopen IS a replay)** · **blob CAS ✅ (roundtrip+corruption, dedupe, GC)** — remaining hardening tail (scheduled with CP-9 bench phase): loom cache suite, crash matrix, flood/budget benches, Parquet compaction |
 | 6 | MCP server + CLI | 0.1 | ☐ not started | scenario-A test run |
 | 7 | Guided queries | 0.1 | ☐ not started | guidance-walk test |
 | 8 | Social renderers | 0.1 | ☐ not started | snapshot suite |

@@ -12,10 +12,14 @@
 //! design doc `13 §7`) accelerates the hot resolve path — a cache over the
 //! anchor, invalidated in-commit, never the correctness mechanism.
 //!
-//! Blob CAS sidecar, Parquet compaction, and the loom-checked cache layer
-//! land in the remainder of CP-5 (tracked in `docs/design/14`).
+//! The blob CAS sidecar ([`BlobStore`], rev 2.3) lives beside the
+//! database: bytes named by SHA-256, atomic writes, free dedupe, verified
+//! reads, mark-and-sweep GC. Parquet compaction and the loom-checked cache
+//! layer are the remaining CP-5 tail (tracked in `docs/design/14`).
 
+mod blobs;
 mod schema;
 mod store;
 
+pub use blobs::BlobStore;
 pub use store::SqliteStore;
