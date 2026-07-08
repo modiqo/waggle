@@ -43,6 +43,13 @@ pub trait AppendStore {
     /// Append one intent. `Ok` means durable per the backend's documented
     /// model (C-1).
     async fn append(&self, intent: AppendIntent) -> Result<Appended, StoreError>;
+
+    /// The replay/migration path (doc `16 §4`): apply an already-sequenced
+    /// record verbatim, idempotently by `(token, seq, kind)` (C-4).
+    /// Returns `true` when newly applied, `false` on a dedup hit. Views
+    /// must converge to fold-equality afterward (R-4). Never used by live
+    /// traffic — live appends state intent and receive sequence.
+    async fn ingest(&self, record: LogRecord) -> Result<bool, StoreError>;
 }
 
 /// The full contract. Blanket-implemented — a backend implements the two

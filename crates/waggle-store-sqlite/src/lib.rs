@@ -1,8 +1,21 @@
-//! # waggle-store-sqlite — the production laptop store (stub, CP-5)
+//! # waggle-store-sqlite — the production laptop store
 //!
-//! `SQLite` in WAL mode is the correctness anchor (design docs `07 §4`,
-//! `13 §8`): WAL snapshot reads provide consistency by construction, the
-//! single-writer committer transaction carries seq assignment, nonce
-//! dedupe, and CAS; an in-memory cache serves the hot resolve path as an
-//! accelerator over the anchor, never as the mechanism. Content-addressed
-//! blob storage for `MediaRef`s lives beside the database.
+//! `SQLite` in WAL mode as the correctness anchor (design docs `07 §4`,
+//! `13 §8`): every append is one transaction carrying seq assignment
+//! (C-3), nonce dedupe via a UNIQUE index (C-8), CAS via
+//! `UPDATE … WHERE version = ?` (C-9), and the revoked-parent check (C-7).
+//! WAL gives many readers that never block the single writer — the
+//! multi-read/multi-write model provided by construction rather than
+//! built (15 §4).
+//!
+//! A read-through manifest cache (`RwLock`; the `perf` arc-swap upgrade is
+//! design doc `13 §7`) accelerates the hot resolve path — a cache over the
+//! anchor, invalidated in-commit, never the correctness mechanism.
+//!
+//! Blob CAS sidecar, Parquet compaction, and the loom-checked cache layer
+//! land in the remainder of CP-5 (tracked in `docs/design/14`).
+
+mod schema;
+mod store;
+
+pub use store::SqliteStore;

@@ -57,8 +57,8 @@ pub use event::{ActorClass, Event, FamilyClass, HarnessClass, Seq};
 pub use fold::{replay, Fold, FunnelFold, LineageFold, ManifestFold};
 pub use log::{Change, LogRecord};
 pub use manifest::{
-    AttributionManifest, Constraint, Disposition, MatchExpr, ModalitySet, Posture, Variant,
-    VariantBody, MANIFEST_SCHEMA_VERSION,
+    apply_change, AttributionManifest, Constraint, Disposition, MatchExpr, ModalitySet, Posture,
+    Variant, VariantBody, MANIFEST_SCHEMA_VERSION,
 };
 pub use matcher::{select_variant, Selected};
 pub use mint::{mint, MintError, MintOptions, MintSpec};

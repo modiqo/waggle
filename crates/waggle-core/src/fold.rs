@@ -6,7 +6,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::log::{Change, LogRecord};
+use crate::log::LogRecord;
 use crate::manifest::AttributionManifest;
 use crate::slug::Stage;
 use crate::token::Token;
@@ -61,27 +61,7 @@ impl Fold for ManifestFold {
                 let Some(m) = self.manifests.get_mut(token) else {
                     return;
                 };
-                match change {
-                    Change::Revoked => {
-                        m.revoked_at = Some(*at);
-                        m.version += 1;
-                    }
-                    Change::Superseded { by } => {
-                        m.superseded_by = Some(*by);
-                        m.version += 1;
-                    }
-                    Change::ExpirySet { expires_at } => {
-                        m.expires_at = *expires_at;
-                        m.version += 1;
-                    }
-                    Change::CampaignSet { campaign } => m.campaign.clone_from(campaign),
-                    Change::LabelSet { key, value } => {
-                        m.labels.insert(key.clone(), value.clone());
-                    }
-                    Change::LabelUnset { key } => {
-                        m.labels.remove(key);
-                    }
-                }
+                crate::manifest::apply_change(m, change, *at);
             }
             LogRecord::Event(_) => {}
         }
@@ -134,6 +114,7 @@ impl Fold for LineageFold {
 mod tests {
     use super::*;
     use crate::event::{ActorClass, Event, Seq};
+    use crate::log::Change;
     use crate::{CanonicalUrl, Channel, MintOptions, MintSpec, ResolverContext, Sharer, Timestamp};
 
     fn minted(tag: u8, parent: Option<Token>) -> AttributionManifest {

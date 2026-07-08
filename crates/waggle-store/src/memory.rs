@@ -33,6 +33,16 @@ struct Inner {
     by_target: BTreeMap<String, Vec<Token>>,
     /// Materialized funnel counts (R-4-checked against the fold).
     funnels: BTreeMap<Token, BTreeMap<Stage, u64>>,
+    /// Ingest dedup: (token, seq, kind) already applied (C-4).
+    seen: std::collections::HashSet<(Token, u32, u8)>,
+}
+
+fn record_kind(rec: &LogRecord) -> u8 {
+    match rec {
+        LogRecord::Minted { .. } => 0,
+        LogRecord::Mutation { .. } => 1,
+        LogRecord::Event(_) => 2,
+    }
 }
 
 /// The reference in-memory backend.
@@ -95,6 +105,7 @@ impl Inner {
             .push(token);
         self.manifests.insert(token, manifest.clone());
         self.next_seq.insert(token, 1);
+        self.seen.insert((token, 0, 0));
         self.records.push(LogRecord::Minted {
             manifest: Box::new(manifest),
         });
@@ -129,29 +140,10 @@ impl Inner {
                 });
             }
         }
-        match &change {
-            Change::Revoked => {
-                manifest.revoked_at = Some(at);
-                manifest.version += 1;
-            }
-            Change::Superseded { by } => {
-                manifest.superseded_by = Some(*by);
-                manifest.version += 1;
-            }
-            Change::ExpirySet { expires_at } => {
-                manifest.expires_at = *expires_at;
-                manifest.version += 1;
-            }
-            Change::CampaignSet { campaign } => manifest.campaign.clone_from(campaign),
-            Change::LabelSet { key, value } => {
-                manifest.labels.insert(key.clone(), value.clone());
-            }
-            Change::LabelUnset { key } => {
-                manifest.labels.remove(key);
-            }
-        }
+        waggle_core::apply_change(manifest, &change, at);
         let version = manifest.version;
         let seq = self.take_seq(token);
+        self.seen.insert((token, seq.0, 1));
         self.records.push(LogRecord::Mutation {
             token,
             at,
@@ -184,6 +176,7 @@ impl Inner {
             .or_default()
             .entry(stage.clone())
             .or_insert(0) += 1;
+        self.seen.insert((*token, seq.0, 2));
         self.records.push(LogRecord::Event(Event {
             token: *token,
             stage: stage.clone(),
@@ -193,6 +186,61 @@ impl Inner {
             variant: *variant,
         }));
         Ok(Appended::Event { seq })
+    }
+}
+
+impl Inner {
+    /// The replay/migration path (16 §4): apply a sequenced record as-is,
+    /// idempotently (C-4). Views rebuild from the token's records so R-4
+    /// holds after any ingest order.
+    fn ingest(&mut self, record: LogRecord) -> bool {
+        let key = (record.token(), record.seq().0, record_kind(&record));
+        if !self.seen.insert(key) {
+            return false;
+        }
+        let token = record.token();
+        self.records.push(record);
+        self.rebuild_token_views(token);
+        true
+    }
+
+    fn rebuild_token_views(&mut self, token: Token) {
+        let mut records: Vec<LogRecord> = self
+            .records
+            .iter()
+            .filter(|r| r.token() == token)
+            .cloned()
+            .collect();
+        records.sort_by_key(|r| (r.seq(), record_kind(r)));
+        let world = waggle_core::reconstruct(records);
+        if let Some(m) = world.manifests.get(&token) {
+            if let Some(parent) = m.parent {
+                let kids = self.children.entry(parent).or_default();
+                if !kids.contains(&token) {
+                    kids.push(token);
+                }
+            }
+            let target_tokens = self
+                .by_target
+                .entry(m.target.as_str().to_owned())
+                .or_default();
+            if !target_tokens.contains(&token) {
+                target_tokens.push(token);
+            }
+            self.manifests.insert(token, m.clone());
+            let next = self
+                .records
+                .iter()
+                .filter(|r| r.token() == token)
+                .map(|r| r.seq().0)
+                .max()
+                .unwrap_or(0)
+                + 1;
+            self.next_seq.insert(token, next);
+        }
+        if let Some(f) = world.funnels.get(&token) {
+            self.funnels.insert(token, f.clone());
+        }
     }
 }
 
@@ -209,6 +257,10 @@ impl AppendStore for MemoryStore {
             } => inner.mutate(token, change, expected_version, at),
             e @ AppendIntent::Event { .. } => inner.event(&e),
         }
+    }
+
+    async fn ingest(&self, record: LogRecord) -> Result<bool, StoreError> {
+        Ok(self.lock()?.ingest(record))
     }
 }
 

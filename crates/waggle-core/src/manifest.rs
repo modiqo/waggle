@@ -239,6 +239,40 @@ fn meta_is_empty(m: &TargetMeta) -> bool {
     *m == TargetMeta::default()
 }
 
+/// Apply one mutable-section change to a manifest — THE mutation semantic,
+/// shared by `ManifestFold`, every backend, and reconstruct so they can
+/// never disagree (R-4's precondition). Lifecycle changes bump `version`
+/// (the C-9 CAS baseline); cosmetic changes don't. CAS checking is the
+/// store's job at its commit point; this function only applies.
+pub fn apply_change(
+    manifest: &mut AttributionManifest,
+    change: &crate::log::Change,
+    at: Timestamp,
+) {
+    use crate::log::Change;
+    match change {
+        Change::Revoked => {
+            manifest.revoked_at = Some(at);
+            manifest.version += 1;
+        }
+        Change::Superseded { by } => {
+            manifest.superseded_by = Some(*by);
+            manifest.version += 1;
+        }
+        Change::ExpirySet { expires_at } => {
+            manifest.expires_at = *expires_at;
+            manifest.version += 1;
+        }
+        Change::CampaignSet { campaign } => manifest.campaign.clone_from(campaign),
+        Change::LabelSet { key, value } => {
+            manifest.labels.insert(key.clone(), value.clone());
+        }
+        Change::LabelUnset { key } => {
+            manifest.labels.remove(key);
+        }
+    }
+}
+
 impl AttributionManifest {
     /// Lifecycle disposition at `now`. Precedence: revoked > superseded >
     /// expired > active (a revoked token stays revoked even if also
