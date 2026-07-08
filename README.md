@@ -144,7 +144,7 @@ are and what your paths forward and back are.
 3. [Variants & media](docs/guide/03-variants-and-media.md) — one token, the right projection per consumer; images by modality
 4. [Lifecycle, attribution & guided query](docs/guide/04-lifecycle-and-query.md) — supersede/revoke with CAS, funnels, slices under byte budgets
 5. [Embedding in Rust](docs/guide/05-embedding-rust.md) — the sans-I/O core, the store contract, reconstruct
-6. [The full lifecycle](docs/guide/06-the-full-lifecycle.md) — one mission followed end to end: lineage, projections, slices, and the correction that reaches late readers
+6. [The full lifecycle](docs/guide/06-the-full-lifecycle.md) — one mission followed end to end: lineage, projections, slices, and the correction that reaches late readers (**`just demo` runs it live**)
 
 Still landing before 0.1: the published handoff benchmark and the
 crates.io release (names are claimed).

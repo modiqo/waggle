@@ -104,6 +104,7 @@ pub const MINT: OperationSpec = OperationSpec {
         ArgSpec { name: "target", required: true, doc: "Canonical URI of the artifact (file path, workspace URI, or URL)." },
         ArgSpec { name: "sharer", required: false, doc: "Who is distributing this; defaults to the session identity." },
         ArgSpec { name: "channel", required: false, doc: "Where this share lives (e.g. subagent/researcher); defaults to subagent/general." },
+        ArgSpec { name: "parent", required: false, doc: "Parent token: forms the delegation tree at mint; revoking the parent tombstones this child." },
         ArgSpec { name: "attach", required: false, doc: "Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all." },
         ArgSpec { name: "attach-type", required: false, doc: "Content type of the attachment; inferred from the extension when omitted." },
     ],

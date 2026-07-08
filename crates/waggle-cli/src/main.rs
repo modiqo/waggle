@@ -42,6 +42,9 @@ enum Cmd {
         /// Where this share lives (e.g. subagent/researcher); defaults to subagent/general.
         #[arg(long)]
         channel: Option<String>,
+        /// Parent token: forms the delegation tree at mint; revoking the parent tombstones this child.
+        #[arg(long)]
+        parent: Option<String>,
         /// Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all.
         #[arg(long)]
         attach: Option<String>,
@@ -123,6 +126,7 @@ fn main() {
             target,
             sharer,
             channel,
+            parent,
             attach,
             attach_type,
         } => run::tool_call(
@@ -131,6 +135,7 @@ fn main() {
                 "target": target,
                 "sharer": sharer,
                 "channel": channel,
+                "parent": parent,
                 "attach": attach,
                 "attach-type": attach_type,
             })),

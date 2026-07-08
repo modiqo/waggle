@@ -11,6 +11,9 @@ and whoever holds the ticket can retrieve exactly the coat, exactly when
 they need it, while the coat-check counter quietly remembers every
 retrieval. The coat never gets photocopied into anyone's pockets.
 
+**Don't just read it — run it:** `just demo` executes all six acts below
+against a throwaway store, printing the real envelopes.
+
 ## The cast
 
 ```

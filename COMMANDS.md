@@ -11,6 +11,7 @@ Create an attributed reference (a waggle token) for an artifact instead of pasti
 | `--target` | true | Canonical URI of the artifact (file path, workspace URI, or URL). |
 | `--sharer` | false | Who is distributing this; defaults to the session identity. |
 | `--channel` | false | Where this share lives (e.g. subagent/researcher); defaults to subagent/general. |
+| `--parent` | false | Parent token: forms the delegation tree at mint; revoking the parent tombstones this child. |
 | `--attach` | false | Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all. |
 | `--attach-type` | false | Content type of the attachment; inferred from the extension when omitted. |
 

@@ -7,6 +7,10 @@ default:
 dev-install:
     cargo install --path crates/waggle-cli --locked --force
 
+# Run the full-lifecycle demo (docs/guide/06) against a throwaway store
+demo:
+    bash scripts/demo.sh
+
 # Run the criterion hot-path benchmarks (see benches/PERF.md)
 bench:
     cargo bench -p waggle-core --bench hot_paths
