@@ -227,4 +227,4 @@ flips only with a run link (Miniflare rows) or a dated manual note
 | E10 | I-1/I-7 at the edge: stored records payload-free, actor classes only | asserted on raw records in E4/E6 fixtures | native + Miniflare |
 | E11 | Perf: resolve p50 < 10 ms local-Miniflare | `edge_resolve_p50` → PERF.md | Miniflare |
 | E12 | wasm build health + worker size logged | existing wasm CI job + edge job | CI |
-| E13 | Real edge ≡ Miniflare | `just edge-smoke` on the operator's workers.dev | manual, dated note |
+| E13 | Real edge ≡ Miniflare | ✅ **2026-07-08** — deployed + smoked on the operator's workers.dev (mint/resolve/record/funnel/unfurl green; ~150-190ms laptop RTT) | manual, dated note |
