@@ -172,7 +172,155 @@ Waggle is a commitment to the third, with four design consequences:
   log stays dark about content (no payload field *exists*), so the
   receipts never become the leak.
 
-## 6 · The arithmetic, honestly
+## 6 · The substrate, concretely — mint, shape, interrogation, ancestry
+
+The paradigm is only as good as its verbs. Here is what holding a token
+actually lets an agent do — each capability real, tested, and shipping
+in the current build.
+
+### Minting: an identity in one call
+
+```
+mint { target: "file:///…/market-report.md", parent: "M9kQ2vRe", snapshot: true }
+→ { token: "7Kp2mQ9x",
+    handoff: "resolve 7Kp2mQ9x via waggle for your working context" }
+```
+
+Three things happened in that call. The artifact got a **name** — eight
+characters, the same eight characters in every tokenizer on earth.
+Behind the name, an **attribution manifest** was written: who minted,
+for which channel, under which parent, with which projections
+(variants). And because of `snapshot`, the artifact's bytes were pinned
+**content-addressed** — SHA-256 named, immutable, independent of the
+file that produced them. The `handoff` line is the entire payload the
+next agent needs. Author identity, content identity, and delegation
+position: established in one call, ~1 ms, before anything is shared.
+
+### Shape before content: the resource describes itself
+
+The consumer's first move is never a blind fetch. It asks what it is
+holding:
+
+```
+read { token: "7Kp2mQ9x" }
+→ { content_type: "text/markdown",
+    total_lines: 4210, total_bytes: 41337,
+    lenses: ["lines", "search", "outline", "section"],
+    outline: [ { line: 1, heading: "Market Report" },
+               { line: 847, heading: "Competitor Pricing" }, … ] }
+```
+
+A few hundred bytes, and the agent knows the resource's size, its type,
+the **lenses** it affords — line windows and regex always; outline and
+sections because this is markdown; JSON pointers when it's structured
+data — and its table of contents with line numbers. Nothing was
+guessed: capabilities are *discovered from the content type*, so the
+loop an agent learns on a report works identically on a lockfile.
+
+### Interrogation: three instruments, one budget discipline
+
+- **`query`** slices the token's *metadata* — manifest, funnel, lineage
+  — by pointer path.
+- **`read`** slices the *content* — a line window, a named section, a
+  JSON path (`/dependencies/react/version` → `"18.3.1"`, ~40 bytes out
+  of a 2 MB lockfile).
+- **`search`** greps the content — regex, context lines, capped match
+  lists with `total_matches` counted in full even when truncated.
+
+All three obey one contract: **no response exceeds `max-bytes`**
+(default 4 KB, floor 64 — a hard invariant, property-tested), every
+response names the bytes it spared you (`"bytes": 41337` in a 256-byte
+reply), and every response carries executable `next` steps — search
+chains into the matching window, windows chain into the next window,
+overviews chain into sections. An agent that only ever follows `next`
+can reach every leaf; that completeness is itself a CI gate.
+
+### Ancestry: the delegation tree is data
+
+Because `parent` is a mint argument, lineage is never reconstructed
+from memory or prose — it is written at the moment delegation happens:
+
+```
+query { token: "M9kQ2vRe", path: "/children" }   → ["7Kp2mQ9x", "Xw4tR8nA"]
+map   { token: "7Kp2mQ9x" }
+→ here: "7Kp2mQ9x — superseded · 2 resolves · 1 run · 0 children"
+  next: [ resolve 9rTq3wXk — "the corrected artifact lives here" ]
+```
+
+`map` is the orientation instrument: *where am I, what are my forward
+and reverse paths* — computed live from the manifest and funnel, so it
+cannot be stale instruction. Revoking a parent tombstones its branch;
+superseding leaves a pointer late readers follow automatically. The
+funnel — resolve, read, run, repeat, as counts with actor classes and
+never payloads — is the receipt trail no orchestrator has today: which
+handoffs were consumed, which stalled, which delivered.
+
+## 7 · The architecture — how the pieces actually sit
+
+```
+Claude Code ─┐  spawns: waggle serve --stdio        (one config line)
+Codex ───────┤  the SHIM: pumps MCP JSON-RPC frames
+Cursor ──────┘  stdin/stdout ⇄ unix socket, adds NOTHING
+                        │
+                        ▼
+                ┌─────────────────┐   the single owner of local state:
+                │     waggled      │   auto-started by the first shim,
+                │  (tokio daemon)  │   shared by every harness on the box
+                └────────┬────────┘
+                         │  one dispatcher — the CLI verbs and the MCP
+                         ▼  tools are projections of ONE operations catalog
+                ┌─────────────────┐
+                │  Handler + lens  │  mint · resolve · record · mutate ·
+                │     engines      │  funnel · read · search · query · map
+                └────────┬────────┘
+                         │
+              ┌──────────┴───────────┐
+              ▼                      ▼
+      SQLite (WAL)              blob CAS
+      append-only event log    content-addressed bytes
+      + materialized views     (snapshots, media)
+      — the log is the truth;  — immutable by hash;
+        every view rebuilds      replicates to the edge
+        from it, byte-exact
+```
+
+Walk one resolve through it. A subagent in Codex calls the `resolve`
+tool. Its harness wrote the frame to the shim's stdin; the shim pushed
+it through the unix socket (filesystem-permissioned — no port, no
+credential, no other user); `waggled` looked the manifest up (39 ns on
+a cache hit, backed by the WAL anchor), ran the **sealed matcher**
+against the caller's declared context — model family, harness,
+modalities, posture — selected *its* variant deterministically, stamped
+`as_of` and `revalidate_after`, appended a payload-free resolve event
+to the log, and returned the envelope. Measured, end to end through the
+socket: **p50 323 µs**. The caller never touched a file, never learned
+where the bytes live, and the author's funnel just incremented.
+
+Three properties of this shape do the heavy lifting:
+
+- **One owner, many doors.** Every harness on the machine converses
+  with the same daemon, so cross-harness handoff on one box is not a
+  feature — it is the default. (Tested: a Claude-Code-like client mints,
+  a Codex-like client resolves the same token through its own shim.)
+- **The log is the truth; everything else is a fold.** Manifest tables,
+  funnel counts, lineage — all materialized views over an append-only,
+  payload-free event log, rebuildable byte-for-byte (`reconstruct` is
+  shuffle-immune and duplicate-immune, property-tested). Which is why
+  **migration is a stream**: `export` the JSONL, `replay` it elsewhere,
+  and the destination *is* the source — same tokens, same history, same
+  receipts.
+- **The remote tier is the same frames over a longer wire.** Because
+  the shim adds no semantics, "across machines" is transport plus
+  replication, not new architecture: authenticated HTTP to the owner's
+  daemon or an edge worker; snapshot blobs replicated (content-addressed,
+  so any replica's answer is hash-provable); the same `search` call,
+  answered where the bytes live, matches traveling back (doc 08 §0).
+  An agent's loop — mint, hand off, resolve, interrogate, report — is
+  **identical at all three radii**. That is the substrate claim: learn
+  it once inside a harness, and nothing changes when the other end of
+  the handoff moves to another harness, or another continent.
+
+## 8 · The arithmetic, honestly
 
 One 40 KB report, five consumers, five turns each:
 
