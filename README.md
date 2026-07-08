@@ -3,14 +3,16 @@
 </h1>
 
 <p align="center">
-  <em>Agents already pass references. Waggle makes the reference intelligent.</em>
+  <em>Tracked file paths for agents.</em><br>
+  You already hand subagents <code>/tmp/result.md</code> — waggle makes that
+  reference attributed, resolvable from any harness, revocable, and counted.
 </p>
 
 <p align="center">
   <a href="#the-dance">Why "waggle"</a> ·
   <a href="#the-problem">The problem</a> ·
   <a href="#how-it-works">How it works</a> ·
-  <a href="#getting-started">Getting started</a> ·
+  <a href="#the-sixty-second-demo">The demo</a> ·
   <a href="#status">Status</a> ·
   <a href="docs/README.md">All docs</a>
 </p>
@@ -53,9 +55,10 @@ agents, and summarizing results for handoffs."* Their words: **"Each handoff
 loses context."** Roughly 37% of multi-agent failures trace to exactly this
 seam.
 
-The workaround every practitioner reaches for is the file path —
-`/tmp/analysis.md`, pasted in prose. A path *is* a 30-byte reference, and
-that instinct is correct. But a path has **no attribution** (who made this,
+Waggle's competitor is not another protocol. It is
+`"Here's /tmp/analysis.md. Use it."` — and that instinct is *correct*: a
+path is a 30-byte reference, which is exactly the right size for a
+handoff. But a path has **no attribution** (who made this,
 from what), **no adaptation** (the 4k-context model gets the same 9,000
 tokens as the frontier model), **no lifecycle** (a stale path silently
 serves wrong data forever), **no telemetry** (which subagent actually read
@@ -99,46 +102,57 @@ in Claude Code, Codex, Cursor, or anything MCP-speaking — no SDK, no
 language bindings, no accounts. Locally it is one binary and a SQLite
 file.
 
-## Getting started
+## The sixty-second demo
 
-Sixty seconds to a first handoff:
+Install once (every harness on the machine shares the same daemon and
+the same tokens):
 
 ```bash
 cargo install waggle-cli                          # on crates.io
-claude mcp add waggle -- waggle serve --stdio     # the tools, self-documenting
+claude mcp add waggle -- waggle serve --stdio     # ...and the same line in Codex/Cursor
 waggle init                                       # the 5-line stub, into CLAUDE.md/AGENTS.md
-waggle identity init                              # optional: sign every mint you make
-
-waggle mint --target "file://$PWD/README.md" --snapshot
 ```
 
-```json
-{
-  "result": {
-    "token": "b2uQyZUC",
-    "handoff": "resolve b2uQyZUC via waggle for your working context",
-    "variants": 1
-  },
-  "next": [
-    { "tool": "resolve", "args": { "token": "b2uQyZUC" },
-      "why": "self-check the projection consumers will receive" }
-  ]
-}
-```
-
-That `handoff` line is what you give a teammate — human or agent — instead
-of the file's contents. `--snapshot` pinned the bytes content-addressed,
-which unlocks the surgical verbs:
+**1 — mint.** In your Claude Code session (or by hand):
 
 ```bash
-waggle resolve --token b2uQyZUC                    # the projection, signed-by reported
-waggle search  --token b2uQyZUC --pattern "TODO"   # grep THROUGH the token; matches travel, the file stays
-waggle read    --token b2uQyZUC --lines 40-80      # a window, never the whole artifact
-waggle funnel  --token b2uQyZUC                    # who looked, who ran — counts only
-waggle mutate  --token b2uQyZUC --change revoke --expected-version 1
+waggle mint --target "file://$PWD/q3-report.md" --snapshot
+#  → { "token": "b2uQyZUC",
+#      "handoff": "resolve b2uQyZUC via waggle for your working context" }
 ```
 
-And when the handoff must outlive your laptop, one deploy
+**2 — hand off that one line.** To a Codex session, a Cursor agent, a
+teammate — instead of the file's contents.
+
+**3 — the other side works, surgically.** No re-paste, no re-upload;
+`--snapshot` pinned the bytes, so this works even after the file changes
+or from a machine that never had it:
+
+```bash
+waggle resolve --token b2uQyZUC                    # its own projection, signed-by reported
+waggle search  --token b2uQyZUC --pattern "pricing"  # grep THROUGH the token — matches travel, the file stays
+waggle read    --token b2uQyZUC --lines 40-80      # a window, never the whole artifact
+```
+
+**4 — you stay in control.** Found an error in the report? The
+correction reaches every holder of the token — including caches and
+public pages, which answer 410:
+
+```bash
+waggle mutate --token b2uQyZUC --change revoke --expected-version 1
+```
+
+**5 — and you can *see* the handoff working:**
+
+```bash
+waggle funnel --token b2uQyZUC
+#  { "resolve": 1, "read": 2, "run": 1 }   ← it resolved, searched twice, ran with it
+```
+
+That's the product. Counts only — the funnel never sees content.
+`just demo` runs the whole arc live against a throwaway store.
+
+When the handoff must outlive your laptop, one deploy
 ([guide 09](docs/guide/09-the-edge.md)) and one command:
 
 ```bash
