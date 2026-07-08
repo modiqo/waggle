@@ -13,6 +13,7 @@
   <a href="#the-problem">The problem</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#the-sixty-second-demo">The demo</a> ·
+  <a href="#wiring-it-into-claude-code-codex--cursor">Harness setup</a> ·
   <a href="#status">Status</a> ·
   <a href="docs/README.md">All docs</a>
 </p>
@@ -184,6 +185,73 @@ Every response carries executable `next` steps; `waggle map` answers
 "where am I?" live. The **[documentation map](docs/README.md)** holds
 the ten guides in reading order — from the five-minute loop to minting
 on a laptop and grepping on Cloudflare.
+
+## Wiring it into Claude Code, Codex & Cursor
+
+Two things make a harness waggle-fluent: the **MCP server** (the tools)
+and the **convention-file stub** (the one standing instruction). Both
+are one command each.
+
+**Claude Code**
+
+```bash
+claude mcp add waggle -- waggle serve --stdio
+waggle init        # in each repo where agents work
+```
+
+**Codex** — add to `~/.codex/config.toml` (AGENTS.md is covered by the
+same `waggle init`):
+
+```toml
+[mcp_servers.waggle]
+command = "waggle"
+args = ["serve", "--stdio"]
+```
+
+**Cursor** — add to `.cursor/mcp.json` (`.cursorrules` is covered by
+`waggle init`):
+
+```json
+{ "mcpServers": { "waggle": { "command": "waggle", "args": ["serve", "--stdio"] } } }
+```
+
+All three land on the **same daemon and the same tokens** — what a
+Claude Code session mints, a Codex session resolves.
+
+### How the agents get instructed
+
+`waggle init` writes this stub into `CLAUDE.md`, `AGENTS.md`, and
+`.cursorrules` (idempotent — it manages its own marked block):
+
+```markdown
+## Artifact handoffs (waggle)
+When passing work products between agents or subagents, do not paste file
+contents. Call waggle's `mint` with the artifact's path and hand over the
+`handoff` line from the result. Consumers call `resolve` with the token.
+When minting a binary artifact (PDF, image, audio), extract its text with
+your own abilities first and pass it via `content`.
+If unsure what to do with a token, call `map`.
+```
+
+That is the **entire** standing instruction — deliberately. Everything
+else is taught in-band, at the moment it's needed: every tool response
+carries up to three executable `next` steps, and `map` answers "where am
+I, what are my paths?" computed live from actual state. Instructions in
+convention files rot; envelopes can't.
+
+**The orchestrator pattern**, in practice: when you (or your top-level
+agent) delegate, the subagent's prompt contains the handoff line and
+nothing else about the artifact —
+
+> Your working context: **resolve b2uQyZUC via waggle**. Use waggle's
+> `search`/`read` to pull only the slices you need; call
+> `record --stage run` when you've used it.
+
+The subagent finds the tools already mounted, pulls its own projection,
+and the funnel shows you it happened. (This exact flow — orchestrator
+mints, a fresh subagent answers a research question through the token
+alone, funnel reads `{resolve: 1, read: 5, run: 1}` — is how this repo
+dogfoods itself.)
 
 | Crate | Role |
 |---|---|
