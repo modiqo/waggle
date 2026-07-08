@@ -224,13 +224,27 @@ impl<S: Store> Handler<S> {
         mut spec: MintSpec,
         args: &Map<String, Value>,
     ) -> Result<MintSpec, Envelope> {
-        if args
+        let snapshot = args
             .get("snapshot")
             .and_then(Value::as_bool)
             .unwrap_or(false)
-            || arg_str(args, "snapshot") == Some("true")
-        {
+            || arg_str(args, "snapshot") == Some("true");
+        let extracted = arg_str(args, "content");
+        if snapshot && extracted.is_some() {
+            return Err(Envelope::err(
+                "pass one of snapshot/content: snapshot pins the TARGET's own bytes; \
+                 content pins your EXTRACTION of a binary target",
+                vec![],
+            ));
+        }
+        if snapshot {
             let media = self.snapshot_target(spec.target_str())?;
+            spec = spec.content(media);
+        }
+        if let Some(path) = extracted {
+            // The format boundary (doc 18 §7): the harness extracted this
+            // with its own abilities; waggle persists and serves it.
+            let media = self.pin_extraction(path)?;
             spec = spec.content(media);
         }
         if let Some(variants) = args.get("variants") {

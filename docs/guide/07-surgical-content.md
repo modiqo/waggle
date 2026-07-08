@@ -129,6 +129,39 @@ class, and nothing else**. Never the pattern, never the matched text
 learns *"my report was searched four times before anyone ran with it"* —
 content stays dark to analytics.
 
+## Binary artifacts: extract once at mint — the PDF story
+
+Waggle **never decodes formats** — no bundled PDF parsers, no OCR. The
+division of labor (design doc 18 §7): *you* (the minting agent) are
+multimodal — you read the PDF with your own abilities, once. Waggle
+persists, serves, and attributes that extraction forever:
+
+```bash
+$ waggle mint --target "file://$PWD/q3-report.pdf" \
+              --content q3-report.extracted.md
+# → token faBV9rNK   (target stays the binary; the extraction is the searchable content)
+
+$ waggle search --token faBV9rNK --pattern '(?i)revenue grew'
+{ "matches": [ { "line": 4, "text": "Revenue grew 34% quarter over quarter." } ],
+  "total_matches": 1 }
+
+$ waggle read --token faBV9rNK
+{ "content_type": "text/markdown", "lenses": ["lines","search","outline","section"], … }
+```
+
+The economics are the point: the expensive multimodal read happens
+**once, at check-in**, by the agent best equipped to do it. Every
+downstream consumer — any machine, any harness — gets 40-byte answers
+out of it. Five subagents re-reading a 60-page PDF with vision calls is
+the token-waste problem in its most expensive form; this is its
+inverse. Same pattern for voice: transcribe once, `--content` the
+transcript, `--attach` the audio for consumers with ears.
+
+Guard rails, tested: `--snapshot` and `--content` together are refused
+(the hint names the difference — snapshot pins the *target's* bytes,
+content pins *your extraction*), and passing a binary as the
+"extraction" is refused with the fix.
+
 ## Formats at a glance
 
 | Content | Lenses | Notes |
@@ -136,7 +169,8 @@ content stays dark to analytics.
 | `md` | lines · search · outline · section | headings inside code fences ignored |
 | `json` | lines · search · path | pointer lens = the `query` engine on parsed content |
 | `txt`, code, csv, logs, `yaml` | lines · search | universal — how `rg` treats them anyway |
-| images, audio, other binary | — | refused with a hint: fetch the `MediaRef`, or mint an extracted-text variant |
+| `pdf`, `docx`, voice | via `--content` (your extraction) | extract once at mint; original rides as `--attach` for vision/audio consumers |
+| images, audio, other binary | — | refused with a hint: `MediaRef` fetch, or `--content` an extraction |
 
 Errors always name the fix: a bad section returns the outline; a bad
 pointer returns the valid roots; a token with no readable content says

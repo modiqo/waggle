@@ -32,6 +32,29 @@ impl<S: Store> Handler<S> {
             .map_err(|e| Envelope::err(e.to_string(), vec![]))
     }
 
+    /// Pin a harness-extracted text file as the token's searchable
+    /// content (doc 18 §7): the target stays the original binary; this
+    /// extraction is what `read`/`search` serve.
+    pub(crate) fn pin_extraction(&self, path: &str) -> Result<waggle_core::MediaRef, Envelope> {
+        let Some(blobs) = &self.blobs else {
+            return Err(Envelope::err(
+                "content needs a blob store — the daemon configures one automatically",
+                vec![],
+            ));
+        };
+        let bytes = read_capped(path)?;
+        let content_type = infer_content_type(path);
+        if !crate::content::is_text(content_type) {
+            return Err(Envelope::err(
+                format!("content `{path}` is {content_type} — pass the extracted TEXT (md/txt/json), not another binary"),
+                vec![],
+            ));
+        }
+        blobs
+            .put(&bytes, content_type)
+            .map_err(|e| Envelope::err(e.to_string(), vec![]))
+    }
+
     /// Fetch the token's content per doc 18 §3: snapshot blob first, then
     /// the live local target. Returns `(text, content_type)`.
     async fn content_of(&self, token: Token) -> Result<(String, String), Envelope> {

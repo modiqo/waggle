@@ -48,6 +48,9 @@ enum Cmd {
         /// Pin the target's bytes content-addressed at mint: read/search then work anywhere the blobs replicate, immutable by hash.
         #[arg(long)]
         snapshot: bool,
+        /// Path to extracted text for a BINARY target (you extracted it with your own abilities): becomes the searchable content while the target stays the original. Mutually exclusive with snapshot.
+        #[arg(long)]
+        content: Option<String>,
         /// Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all.
         #[arg(long)]
         attach: Option<String>,
@@ -167,6 +170,7 @@ fn main() {
             channel,
             parent,
             snapshot,
+            content,
             attach,
             attach_type,
         } => run::tool_call(
@@ -177,6 +181,7 @@ fn main() {
                 "channel": channel,
                 "parent": parent,
                 "snapshot": if snapshot { Some(true) } else { None },
+                "content": content,
                 "attach": attach,
                 "attach-type": attach_type,
             })),

@@ -29,6 +29,8 @@ instruction you need in `CLAUDE.md` / `AGENTS.md` is:
 When passing work products between agents or subagents, do not paste file
 contents. Call waggle's `mint` with the artifact's path and hand over the
 `handoff` line from the result. Consumers call `resolve` with the token.
+When minting a binary artifact (PDF, image, audio), extract its text
+with your own abilities first and pass it via `content`.
 If unsure what to do with a token, call `map`.
 ```
 

@@ -295,3 +295,92 @@ fn json_pointer_lens_and_refusals() {
     });
     std::fs::remove_dir_all(&dir).ok();
 }
+
+#[test]
+fn binary_target_with_extracted_content_the_pdf_story() {
+    // Doc 18 §7: the harness extracted the PDF once at mint; the token
+    // serves surgical access to the extraction forever, while the target
+    // stays the original binary.
+    let dir = std::env::temp_dir().join(format!("waggle-extract-{}", std::process::id()));
+    std::fs::remove_dir_all(&dir).ok();
+    std::fs::create_dir_all(&dir).unwrap();
+    let pdf = dir.join("q3-report.pdf");
+    std::fs::write(&pdf, b"%PDF-1.7 ...binary noise...").unwrap();
+    let extracted = dir.join("q3-report.extracted.md");
+    std::fs::write(&extracted, REPORT).unwrap();
+
+    let handler = handler_with_blobs(&dir);
+    let mut e = entropy();
+    pollster::block_on(async {
+        let minted = handler
+            .dispatch(
+                "mint",
+                &json!({
+                    "target": format!("file://{}", pdf.display()),
+                    "content": extracted.to_str().unwrap(),
+                }),
+                Timestamp::from_unix_ms(1),
+                &mut e,
+            )
+            .await;
+        assert!(minted.hint.is_none(), "{minted:?}");
+        let token = minted.result["token"].as_str().unwrap().to_owned();
+
+        // Search hits the EXTRACTION even though the target is binary.
+        let found = handler
+            .dispatch(
+                "search",
+                &json!({ "token": token, "pattern": "bespoke" }),
+                Timestamp::from_unix_ms(2),
+                &mut e,
+            )
+            .await;
+        assert!(found.hint.is_none(), "{found:?}");
+        assert_eq!(found.result["total_matches"], 1);
+
+        // The overview reports the extraction's type and lenses.
+        let over = handler
+            .dispatch(
+                "read",
+                &json!({ "token": token }),
+                Timestamp::from_unix_ms(3),
+                &mut e,
+            )
+            .await;
+        assert_eq!(over.result["content_type"], "text/markdown");
+
+        // snapshot + content together: refused with the distinction named.
+        let both = handler
+            .dispatch(
+                "mint",
+                &json!({
+                    "target": format!("file://{}", pdf.display()),
+                    "snapshot": true,
+                    "content": extracted.to_str().unwrap(),
+                }),
+                Timestamp::from_unix_ms(4),
+                &mut e,
+            )
+            .await;
+        assert!(both
+            .hint
+            .as_ref()
+            .unwrap()
+            .contains("one of snapshot/content"));
+
+        // Passing a binary as the "extraction": refused with the fix.
+        let bad = handler
+            .dispatch(
+                "mint",
+                &json!({
+                    "target": format!("file://{}", pdf.display()),
+                    "content": pdf.to_str().unwrap(),
+                }),
+                Timestamp::from_unix_ms(5),
+                &mut e,
+            )
+            .await;
+        assert!(bad.hint.as_ref().unwrap().contains("extracted TEXT"));
+    });
+    std::fs::remove_dir_all(&dir).ok();
+}

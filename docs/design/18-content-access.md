@@ -88,7 +88,50 @@ Remotely (token-gated TCP, edge) a token becomes a **read capability**
 for its content — scoped to `manifest.content` blobs (never live
 filesystem reads for remote callers), governed by CP-11 signing.
 
-## 7 · Gates (CP-7.5)
+## 7 · The format boundary: who decodes PDF, docx, images, voice
+
+**Waggle does not decode formats. Ever.** The boundary is principled,
+not provisional, and it is division of labor — not delegation:
+
+- **Extraction is the harness's job, once, at mint.** The minting agent
+  is multimodal — it reads PDFs and images natively, better than any
+  bundled Rust extractor will (tables, layout, scans, accents). It
+  extracts with its own abilities and passes the text to waggle.
+- **Persistence, integrity, serving, and attribution of that extraction
+  are waggle's job, forever.** `mint --content <extracted.txt>` stores
+  the extraction content-addressed and pins it as `manifest.content`;
+  every downstream consumer gets budgeted `read`/`search` against it, on
+  any machine, with `read`-stage receipts.
+
+Why not bundle extractors (rejected explicitly): a format treadmill
+(pdf, docx, pptx, epub, HEIC, …), mediocre quality exactly where it
+matters, binary bloat against the plumbing ethos — and it duplicates a
+capability the models improve at without us shipping a byte.
+
+Why not leave it wholly to consumers (rejected explicitly): N consumers
+× M machines re-reading a 60-page PDF with vision calls is the
+token-waste problem in its most expensive form. **Extract once at
+check-in; search forever.**
+
+The three mint shapes, spelled out:
+
+| Artifact | Call | `manifest.content` | Variants |
+|---|---|---|---|
+| text file | `mint --snapshot` | the target's own bytes | catch-all |
+| PDF/docx | `mint --content extracted.txt` (harness extracted it) | the extraction | `--attach` the original for vision/human consumers |
+| voice memo | `mint --content transcript.txt --attach memo.m4a` | the transcript | audio `MediaRef` for listeners |
+
+`--snapshot` and `--content` are mutually exclusive (both claim
+`manifest.content`); passing both is refused with the distinction named.
+The agent-stub instruction (17, one added sentence): *"when minting a
+binary artifact, extract its text with your own abilities and pass it
+via content."* Every multimodal harness becomes an extraction worker for
+the network — for free.
+
+Roadmap here (small, format-agnostic): byte-range reads on `MediaRef`
+blobs (audio segments, resumable pulls — ranges, never decoding).
+
+## 8 · Gates (CP-7.5)
 
 - lens-0 unit suite: window clamping, 1-based inclusive ranges, regex
   matching with context, `total_matches` honesty under truncation,
@@ -96,7 +139,9 @@ filesystem reads for remote callers), governed by CP-11 signing.
 - lens-1: markdown outline/section extraction; JSON pointer ≡ `slice_at`
   on parsed content (delegation test);
 - integration: mint a real file → search → read-the-match window over
-  dispatch; **snapshot immortality** (mint --snapshot, delete the file,
+  dispatch; **the binary story**: mint a PDF-shaped target with
+  `--content extracted.txt` → search hits the extraction while the
+  target stays binary; `--snapshot`+`--content` together refused; **snapshot immortality** (mint --snapshot, delete the file,
   search still answers from the CAS, hash-verified); binary refusal with
   hint; funnel shows `read` counts; `envelope_next_valid` over every
   response;
