@@ -58,6 +58,7 @@ pub struct MintSpec {
     meta: TargetMeta,
     variants: Vec<Variant>,
     parent: Option<Token>,
+    content: Option<crate::MediaRef>,
     ttl_ms: Option<u64>,
 }
 
@@ -72,6 +73,7 @@ impl MintSpec {
             meta: TargetMeta::default(),
             variants: Vec::new(),
             parent: None,
+            content: None,
             ttl_ms: None,
         }
     }
@@ -98,6 +100,21 @@ impl MintSpec {
     #[must_use]
     pub fn child_of(mut self, parent: Token) -> Self {
         self.parent = Some(parent);
+        self
+    }
+
+    /// The target URI this spec will mint (hosts snapshot from it).
+    #[must_use]
+    pub fn target_str(&self) -> &str {
+        self.target.as_str()
+    }
+
+    /// Pin the artifact's bytes: a content-addressed snapshot taken at
+    /// mint (doc `18 §3`). Enables `read`/`search` anywhere the blobs
+    /// replicate, immutable by hash.
+    #[must_use]
+    pub fn content(mut self, media: crate::MediaRef) -> Self {
+        self.content = Some(media);
         self
     }
 
@@ -144,6 +161,7 @@ pub fn mint(
         minted_at: now,
         meta: spec.meta,
         parent: spec.parent,
+        content: spec.content,
         variants,
         version: 1,
         campaign: None,

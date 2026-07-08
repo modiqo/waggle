@@ -12,6 +12,7 @@ Create an attributed reference (a waggle token) for an artifact instead of pasti
 | `--sharer` | false | Who is distributing this; defaults to the session identity. |
 | `--channel` | false | Where this share lives (e.g. subagent/researcher); defaults to subagent/general. |
 | `--parent` | false | Parent token: forms the delegation tree at mint; revoking the parent tombstones this child. |
+| `--snapshot` | false | Pin the target's bytes content-addressed at mint: read/search then work anywhere the blobs replicate, immutable by hash. |
 | `--attach` | false | Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all. |
 | `--attach-type` | false | Content type of the attachment; inferred from the extension when omitted. |
 
@@ -28,6 +29,7 @@ Fetch the projection of a waggle token matched to your context (model family, ha
 | `--token` | true | The waggle token to resolve. |
 | `--context` | false | Resolver context (harness metadata, A2A agent card, or explicit JSON); defaults to negotiated. |
 
+- forward → `search`: interrogate the content before ingesting any of it
 - forward → `query`: slice a large manifest by path instead of pulling it whole
 - forward → `record`: report downstream stages (run, repeat) so the funnel stays honest
 - forward → `map`: orient: see what this token expects of you next
@@ -67,6 +69,35 @@ A token's funnel: stage counts (impression → resolve → run → repeat) plus 
 
 - forward → `map`: orient: the funnel feeds the map's ranked suggestions
 - forward → `mutate`: a stalled or wrong share can be revoked or superseded
+
+## `read` — CLI + MCP tool
+
+Read the token's CONTENT surgically: a line window, a markdown section, or a JSON pointer path — never the whole artifact. With no address: the overview (size, content type, available lenses, outline). Every response fits max-bytes and names the bytes you avoided.
+
+| arg | required | doc |
+|---|---|---|
+| `--token` | true | The waggle token whose content to read. |
+| `--lines` | false | Line window, 1-based inclusive (e.g. 120-180). |
+| `--section` | false | Markdown heading whose section to read (text/markdown lens). |
+| `--path` | false | JSON pointer into parsed content (application/json lens), e.g. /dependencies/react. |
+| `--max-bytes` | false | Response budget in bytes (default 4096, floor 64). |
+
+- forward → `read`: continue the window or follow the outline deeper
+- forward → `record`: report run when the content did its job
+
+## `search` — CLI + MCP tool
+
+Grep the token's CONTENT: regex matches with line numbers and context, capped and budgeted — the matches travel, the artifact stays put. total_matches is counted in full even when the list is truncated. Works wherever the content's blobs replicate.
+
+| arg | required | doc |
+|---|---|---|
+| `--token` | true | The waggle token whose content to search. |
+| `--pattern` | true | Regex (Rust syntax; (?i) prefix for case-insensitive). |
+| `--context` | false | Context lines around each match (default 2). |
+| `--max-matches` | false | Maximum matches returned (default 5, cap 50). |
+| `--max-bytes` | false | Response budget in bytes (default 4096, floor 64). |
+
+- forward → `read`: open a match's neighborhood as a line window
 
 ## `query` — CLI + MCP tool
 

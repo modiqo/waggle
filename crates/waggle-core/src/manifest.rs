@@ -214,6 +214,12 @@ pub struct AttributionManifest {
     /// Parent token when this was minted as a delegation child (lineage).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent: Option<Token>,
+    /// The artifact's bytes at mint, content-addressed (doc `18 §3`) —
+    /// set by snapshot minting, immutable like the rest of the core.
+    /// `read`/`search` prefer this over the live target: what you grep is
+    /// what was minted, wherever the blobs replicate.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<MediaRef>,
     /// The projections. Always ≥1; exactly one catch-all guaranteed at mint.
     pub variants: Vec<Variant>,
     /// Mutable-section version — CAS target for lifecycle mutations (C-9).

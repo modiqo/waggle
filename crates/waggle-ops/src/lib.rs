@@ -105,6 +105,7 @@ pub const MINT: OperationSpec = OperationSpec {
         ArgSpec { name: "sharer", required: false, doc: "Who is distributing this; defaults to the session identity." },
         ArgSpec { name: "channel", required: false, doc: "Where this share lives (e.g. subagent/researcher); defaults to subagent/general." },
         ArgSpec { name: "parent", required: false, doc: "Parent token: forms the delegation tree at mint; revoking the parent tombstones this child." },
+        ArgSpec { name: "snapshot", required: false, doc: "Pin the target's bytes content-addressed at mint: read/search then work anywhere the blobs replicate, immutable by hash." },
         ArgSpec { name: "attach", required: false, doc: "Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all." },
         ArgSpec { name: "attach-type", required: false, doc: "Content type of the attachment; inferred from the extension when omitted." },
     ],
@@ -127,6 +128,7 @@ pub const RESOLVE: OperationSpec = OperationSpec {
         ArgSpec { name: "context", required: false, doc: "Resolver context (harness metadata, A2A agent card, or explicit JSON); defaults to negotiated." },
     ],
     forward: &[
+        EdgeSpec { to: "search", why: "interrogate the content before ingesting any of it" },
         EdgeSpec { to: "query", why: "slice a large manifest by path instead of pulling it whole" },
         EdgeSpec { to: "record", why: "report downstream stages (run, repeat) so the funnel stays honest" },
         EdgeSpec { to: "map", why: "orient: see what this token expects of you next" },
@@ -186,6 +188,47 @@ pub const FUNNEL: OperationSpec = OperationSpec {
     core_fn: "waggle_store::ReadStore::funnel",
 };
 
+/// `read` — ranged content access through the token (doc 18).
+pub const READ: OperationSpec = OperationSpec {
+    name: "read",
+    surface: Surface::Both,
+    kind: OpKind::RelaxedWrite,
+    description: "Read the token's CONTENT surgically: a line window, a markdown section, or a JSON pointer path — never the whole artifact. With no address: the overview (size, content type, available lenses, outline). Every response fits max-bytes and names the bytes you avoided.",
+    args: &[
+        ArgSpec { name: "token", required: true, doc: "The waggle token whose content to read." },
+        ArgSpec { name: "lines", required: false, doc: "Line window, 1-based inclusive (e.g. 120-180)." },
+        ArgSpec { name: "section", required: false, doc: "Markdown heading whose section to read (text/markdown lens)." },
+        ArgSpec { name: "path", required: false, doc: "JSON pointer into parsed content (application/json lens), e.g. /dependencies/react." },
+        ArgSpec { name: "max-bytes", required: false, doc: "Response budget in bytes (default 4096, floor 64)." },
+    ],
+    forward: &[
+        EdgeSpec { to: "read", why: "continue the window or follow the outline deeper" },
+        EdgeSpec { to: "record", why: "report run when the content did its job" },
+    ],
+    reverse: &[],
+    core_fn: "waggle_mcp::content::read",
+};
+
+/// `search` — grep through the token (doc 18).
+pub const SEARCH: OperationSpec = OperationSpec {
+    name: "search",
+    surface: Surface::Both,
+    kind: OpKind::RelaxedWrite,
+    description: "Grep the token's CONTENT: regex matches with line numbers and context, capped and budgeted — the matches travel, the artifact stays put. total_matches is counted in full even when the list is truncated. Works wherever the content's blobs replicate.",
+    args: &[
+        ArgSpec { name: "token", required: true, doc: "The waggle token whose content to search." },
+        ArgSpec { name: "pattern", required: true, doc: "Regex (Rust syntax; (?i) prefix for case-insensitive)." },
+        ArgSpec { name: "context", required: false, doc: "Context lines around each match (default 2)." },
+        ArgSpec { name: "max-matches", required: false, doc: "Maximum matches returned (default 5, cap 50)." },
+        ArgSpec { name: "max-bytes", required: false, doc: "Response budget in bytes (default 4096, floor 64)." },
+    ],
+    forward: &[
+        EdgeSpec { to: "read", why: "open a match's neighborhood as a line window" },
+    ],
+    reverse: &[],
+    core_fn: "waggle_mcp::content::search",
+};
+
 /// `query` — budgeted slices with guidance, never whole-response pulls.
 pub const QUERY: OperationSpec = OperationSpec {
     name: "query",
@@ -234,7 +277,7 @@ pub const SERVE: OperationSpec = OperationSpec {
 
 /// The catalog. Order is presentation order (CLI help, docs, global map).
 pub const OPERATIONS: &[&OperationSpec] = &[
-    &MINT, &RESOLVE, &RECORD, &MUTATE, &FUNNEL, &QUERY, &MAP, &SERVE,
+    &MINT, &RESOLVE, &RECORD, &MUTATE, &FUNNEL, &READ, &SEARCH, &QUERY, &MAP, &SERVE,
 ];
 
 /// Look an operation up by name.

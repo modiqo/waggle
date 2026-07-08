@@ -45,6 +45,9 @@ enum Cmd {
         /// Parent token: forms the delegation tree at mint; revoking the parent tombstones this child.
         #[arg(long)]
         parent: Option<String>,
+        /// Pin the target's bytes content-addressed at mint: read/search then work anywhere the blobs replicate, immutable by hash.
+        #[arg(long)]
+        snapshot: bool,
         /// Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all.
         #[arg(long)]
         attach: Option<String>,
@@ -88,6 +91,42 @@ enum Cmd {
         #[arg(long)]
         token: String,
     },
+    #[command(about = waggle_ops::READ.description)]
+    Read {
+        /// The waggle token whose content to read.
+        #[arg(long)]
+        token: String,
+        /// Line window, 1-based inclusive (e.g. 120-180).
+        #[arg(long)]
+        lines: Option<String>,
+        /// Markdown heading whose section to read (text/markdown lens).
+        #[arg(long)]
+        section: Option<String>,
+        /// JSON pointer into parsed content (application/json lens), e.g. /dependencies/react.
+        #[arg(long)]
+        path: Option<String>,
+        /// Response budget in bytes (default 4096, floor 64).
+        #[arg(long)]
+        max_bytes: Option<u64>,
+    },
+    #[command(about = waggle_ops::SEARCH.description)]
+    Search {
+        /// The waggle token whose content to search.
+        #[arg(long)]
+        token: String,
+        /// Regex (Rust syntax; (?i) prefix for case-insensitive).
+        #[arg(long)]
+        pattern: String,
+        /// Context lines around each match (default 2).
+        #[arg(long)]
+        context: Option<u64>,
+        /// Maximum matches returned (default 5, cap 50).
+        #[arg(long)]
+        max_matches: Option<u64>,
+        /// Response budget in bytes (default 4096, floor 64).
+        #[arg(long)]
+        max_bytes: Option<u64>,
+    },
     #[command(about = waggle_ops::QUERY.description)]
     Query {
         /// The waggle token whose document to slice.
@@ -127,6 +166,7 @@ fn main() {
             sharer,
             channel,
             parent,
+            snapshot,
             attach,
             attach_type,
         } => run::tool_call(
@@ -136,6 +176,7 @@ fn main() {
                 "sharer": sharer,
                 "channel": channel,
                 "parent": parent,
+                "snapshot": if snapshot { Some(true) } else { None },
                 "attach": attach,
                 "attach-type": attach_type,
             })),
@@ -164,6 +205,38 @@ fn main() {
             })),
         ),
         Cmd::Funnel { token } => run::tool_call("funnel", json!({ "token": token })),
+        Cmd::Read {
+            token,
+            lines,
+            section,
+            path,
+            max_bytes,
+        } => run::tool_call(
+            "read",
+            strip_nulls(json!({
+                "token": token,
+                "lines": lines,
+                "section": section,
+                "path": path,
+                "max-bytes": max_bytes,
+            })),
+        ),
+        Cmd::Search {
+            token,
+            pattern,
+            context,
+            max_matches,
+            max_bytes,
+        } => run::tool_call(
+            "search",
+            strip_nulls(json!({
+                "token": token,
+                "pattern": pattern,
+                "context": context,
+                "max-matches": max_matches,
+                "max-bytes": max_bytes,
+            })),
+        ),
         Cmd::Query {
             token,
             path,

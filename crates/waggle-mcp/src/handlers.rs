@@ -17,19 +17,19 @@ use crate::map::{global_map, handoff_line, token_map};
 
 /// The dispatcher: one per store, shared by every transport.
 pub struct Handler<S> {
-    store: S,
+    pub(crate) store: S,
     /// Session identity used when `sharer` is omitted (one-call mint).
-    default_sharer: Sharer,
+    pub(crate) default_sharer: Sharer,
     /// Content-addressed media storage; absent hosts refuse `attach` with
     /// a hint rather than degrading silently.
-    blobs: Option<Box<dyn BlobSink + Send + Sync>>,
+    pub(crate) blobs: Option<Box<dyn BlobSink + Send + Sync>>,
 }
 
-fn arg_str<'a>(args: &'a Map<String, Value>, key: &str) -> Option<&'a str> {
+pub(crate) fn arg_str<'a>(args: &'a Map<String, Value>, key: &str) -> Option<&'a str> {
     args.get(key).and_then(Value::as_str)
 }
 
-fn parse_token_arg(args: &Map<String, Value>) -> Result<Token, Envelope> {
+pub(crate) fn parse_token_arg(args: &Map<String, Value>) -> Result<Token, Envelope> {
     let Some(raw) = arg_str(args, "token") else {
         return Err(Envelope::err(
             "missing `token` — pass the waggle token you were handed",
@@ -48,7 +48,7 @@ fn parse_token_arg(args: &Map<String, Value>) -> Result<Token, Envelope> {
     })
 }
 
-fn store_err(e: &StoreError) -> Envelope {
+pub(crate) fn store_err(e: &StoreError) -> Envelope {
     // Every store error already names its fix (07 §5); the envelope adds
     // the recovery step where one exists.
     let next = match e {
@@ -111,6 +111,8 @@ impl<S: Store> Handler<S> {
             "record" => self.record(args, now).await,
             "mutate" => self.mutate(args, now).await,
             "funnel" => self.funnel(args).await,
+            "read" => self.read_content(args, now).await,
+            "search" => self.search_content(args, now).await,
             "query" => self.query(args).await,
             "map" => self.map(args, now).await,
             other => Envelope::err(
@@ -156,21 +158,10 @@ impl<S: Store> Handler<S> {
                 Err(e) => return Envelope::err(format!("parent: {e}"), vec![]),
             }
         }
-        if let Some(variants) = args.get("variants") {
-            match serde_json::from_value::<Vec<waggle_core::Variant>>(variants.clone()) {
-                Ok(vs) => {
-                    for v in vs {
-                        spec = spec.variant(v.match_expr, v.body);
-                    }
-                }
-                Err(e) => {
-                    return Envelope::err(
-                        format!("variants: {e} — an array of {{match, body}} objects"),
-                        vec![],
-                    )
-                }
-            }
-        }
+        spec = match self.mint_extras(spec, args) {
+            Ok(s) => s,
+            Err(e) => return e,
+        };
         if let Some(path) = arg_str(args, "attach") {
             match self.attach_variant(path, arg_str(args, "attach-type")) {
                 Ok(v) => spec = spec.variant(v.match_expr, v.body),
@@ -225,6 +216,36 @@ impl<S: Store> Handler<S> {
             Ok(_) => Envelope::err("store returned a non-mint receipt for a mint", vec![]),
             Err(e) => store_err(&e),
         }
+    }
+
+    /// Snapshot + declared variants: the optional halves of mint.
+    fn mint_extras(
+        &self,
+        mut spec: MintSpec,
+        args: &Map<String, Value>,
+    ) -> Result<MintSpec, Envelope> {
+        if args
+            .get("snapshot")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+            || arg_str(args, "snapshot") == Some("true")
+        {
+            let media = self.snapshot_target(spec.target_str())?;
+            spec = spec.content(media);
+        }
+        if let Some(variants) = args.get("variants") {
+            let vs = serde_json::from_value::<Vec<waggle_core::Variant>>(variants.clone())
+                .map_err(|e| {
+                    Envelope::err(
+                        format!("variants: {e} — an array of {{match, body}} objects"),
+                        vec![],
+                    )
+                })?;
+            for v in vs {
+                spec = spec.variant(v.match_expr, v.body);
+            }
+        }
+        Ok(spec)
     }
 
     /// Read `path`, store it content-addressed, and shape the media
@@ -548,13 +569,20 @@ impl<S: Store> Handler<S> {
 }
 
 /// Extension → content type, for the common media cases.
-fn infer_content_type(path: &str) -> &'static str {
+pub(crate) fn infer_content_type(path: &str) -> &'static str {
     match path
         .rsplit('.')
         .next()
         .map(str::to_ascii_lowercase)
         .as_deref()
     {
+        Some("md" | "markdown") => "text/markdown",
+        Some("json") => "application/json",
+        Some("yaml" | "yml") => "application/yaml",
+        Some("rs") => "text/x-rust",
+        Some("py") => "text/x-python",
+        Some("ts" | "tsx" | "js" | "jsx") => "text/x-script",
+        Some("txt" | "csv" | "log" | "toml" | "ini" | "cfg") => "text/plain",
         Some("png") => "image/png",
         Some("jpg" | "jpeg") => "image/jpeg",
         Some("gif") => "image/gif",

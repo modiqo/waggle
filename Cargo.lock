@@ -966,6 +966,7 @@ dependencies = [
  "criterion",
  "getrandom 0.2.17",
  "pollster",
+ "regex",
  "serde",
  "serde_json",
  "waggle-core",

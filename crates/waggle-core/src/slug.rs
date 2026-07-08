@@ -141,6 +141,11 @@ well_known_stages![
     (click, "click", "A human followed the link."),
     (resolve, "resolve", "A consumer fetched a projection."),
     (
+        read,
+        "read",
+        "A consumer read or searched the content surgically."
+    ),
+    (
         assess,
         "assess",
         "The consumer inspected before committing."
