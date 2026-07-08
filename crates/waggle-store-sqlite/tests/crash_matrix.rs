@@ -131,8 +131,11 @@ fn killed_writers_never_lose_an_acked_write() {
         // R-4 after crash: materialized funnel ≡ fold over the log.
         let world = waggle_core::reconstruct(records);
         let funnel = pollster::block_on(store.funnel(token)).unwrap();
+        // A kill can land before ANY event acked (only the mint) — the
+        // fold then has no funnel entry, and the store must agree: empty.
         assert_eq!(
-            funnel, world.funnels[&token],
+            funnel,
+            world.funnels.get(&token).cloned().unwrap_or_default(),
             "round {round}: views diverged from the log after crash"
         );
 
