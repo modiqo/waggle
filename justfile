@@ -7,6 +7,12 @@ default:
 dev-install:
     cargo install --path crates/waggle-cli --locked --force
 
+# Run the criterion hot-path benchmarks (see benches/PERF.md)
+bench:
+    cargo bench -p waggle-core --bench hot_paths
+    cargo bench -p waggle-store-sqlite --bench store_paths
+    cargo bench -p waggle-mcp --bench query_paths
+
 # Format everything
 fmt:
     cargo fmt --all

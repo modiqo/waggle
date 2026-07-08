@@ -20,3 +20,8 @@ workspace = true
 
 [dev-dependencies]
 proptest = "1"
+criterion = { workspace = true }
+
+[[bench]]
+name = "hot_paths"
+harness = false

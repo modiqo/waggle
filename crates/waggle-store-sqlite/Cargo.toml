@@ -20,6 +20,11 @@ sha2 = { workspace = true }
 
 [dev-dependencies]
 pollster = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "store_paths"
+harness = false
 
 [lints]
 workspace = true

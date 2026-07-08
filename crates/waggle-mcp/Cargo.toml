@@ -21,6 +21,11 @@ getrandom = { workspace = true }
 [dev-dependencies]
 pollster = { workspace = true }
 waggle-store-sqlite = { path = "../waggle-store-sqlite", version = "0.1.0" }
+criterion = { workspace = true }
+
+[[bench]]
+name = "query_paths"
+harness = false
 
 [lints]
 workspace = true

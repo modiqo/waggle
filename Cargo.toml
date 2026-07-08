@@ -22,6 +22,7 @@ pollster = "0.4"
 rusqlite = { version = "0.32", features = ["bundled"] }
 sha2 = "0.10"
 qrcodegen = "1.8"
+criterion = { version = "0.5", default-features = false }
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "net", "io-util", "macros", "time"] }
 
 waggle-core = { path = "crates/waggle-core", version = "0.1.0" }

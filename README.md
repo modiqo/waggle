@@ -146,7 +146,13 @@ below is a passing test in CI (three-OS matrix + wasm; ~105 tests;
   **blob sidecar** with verified reads and GC;
 - `waggle serve --stdio` is a **working MCP server**: the test spawns the
   real binary, speaks the protocol through its pipes, and reads the writes
-  back from a second process.
+  back from a second process — and `waggled` (unix socket) serves **many
+  harnesses over one store**: the two-clients test has a Claude-like and a
+  Codex-like session exchanging a token through their own shims;
+- **measured, not promised** ([benches/PERF.md](benches/PERF.md)):
+  cache-hit resolve read **39 ns**, durable event append **39 µs**
+  (real fsync), a million-event funnel fold in **334 µs** — every
+  design-budget beaten with 25–30× headroom.
 
 Try it from this checkout:
 
