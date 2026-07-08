@@ -7,11 +7,14 @@
   <a href="#the-dance">Why "waggle"</a> ·
   <a href="#the-problem">The problem</a> ·
   <a href="#how-it-works">How it works</a> ·
+  <a href="#getting-started">Getting started</a> ·
   <a href="#status">Status</a> ·
-  <a href="docs/design/">Design docs</a>
+  <a href="docs/README.md">All docs</a>
 </p>
 
----
+<p align="center">
+  <img src="docs/assets/hero.svg" alt="The handoff, before and after: pasting the whole artifact to every subagent, versus handing off a 30-byte token that each consumer resolves into its own projection" width="940">
+</p>
 
 ## The dance
 
@@ -36,13 +39,12 @@ cross-vendor agents discovering each other over open protocols. And every
 one of these handoffs, today, works the same way: **forward the context and
 hope**.
 
-The costs are measured, not hypothetical. Multi-agent systems consume ~15×
+The costs are measured, not hypothetical. Multi-agent systems consume ~15x
 the tokens of a chat session — with the overhead attributed by the vendor
 itself to *"duplicating context across agents, coordination messages between
 agents, and summarizing results for handoffs."* Their words: **"Each handoff
 loses context."** Roughly 37% of multi-agent failures trace to exactly this
-seam. (Sources and adversarial verification of every number:
-[docs/design/12-research-appendix.md](docs/design/12-research-appendix.md).)
+seam.
 
 The workaround every practitioner reaches for is the file path —
 `/tmp/analysis.md`, pasted in prose. A path *is* a 30-byte reference, and
@@ -60,75 +62,47 @@ boundary).
 ## How it works
 
 Waggle is the reference, made first-class. A **token** is a ~30-byte
-attributed name for an artifact, minted in one call:
+attributed name for an artifact, minted in one call. Behind it, an
+**attribution manifest**: who minted it (Ed25519-signed when the host
+holds an identity), for which channel, from which parent (delegation
+forms a lineage tree), with **variants** — different projections for
+different consumers. When an agent resolves the token it presents its
+context, and a **sealed, deterministic matcher** returns *its*
+projection. Everything that happens afterward is an event in an
+append-only log — payload-free by construction, so funnels count without
+ever seeing your data.
 
-```
-mint { target: "ws://analysis/market-report.md" }
-  → wg:7Kp2…
-  → next: hand off with — "resolve wg:7Kp2 via waggle for your working context"
-```
+<p align="center">
+  <img src="docs/assets/loop.svg" alt="The author's loop: mint, hand off one 30-byte line, consumers resolve their own projections, work is recorded as payload-free counts, the funnel reports, and a revocation travels to every replica" width="940">
+</p>
 
-Behind the token, an **attribution manifest**: who minted it, for which
-channel, from which parent (delegation forms a lineage tree), with
-**variants** — different projections for different consumers. When an agent
-resolves the token it presents its context (model family, harness,
-modalities, posture — or an A2A Agent Card), and a **sealed, deterministic
-matcher** returns *its* projection: the section index for the frontier
-model, the executive summary for the small one, the fail-closed instructions
-for the CI runner, the image for the vision agent and the transcript for the
-one without eyes.
+The reference doesn't stop at the process boundary. Every harness on a
+machine shares one daemon; daemons federate across machines; and the
+same tokens graduate to Cloudflare's edge by **replaying the log** —
+migration is a stream, because the log is the truth. Pinned snapshots
+replicate with the records, so `search` greps *at the edge* against
+content whose source file never left your laptop.
 
-Everything that happens — every resolve, every downstream stage, every
-revocation — is an **event in an append-only log**. Funnels are folds over
-that log; any statistic is exactly reconstructable; and events carry **no
-payload by construction** — the type system, not a policy page, keeps your
-data out of the analytics.
-
-```text
-one waggle token
-├── for humans     unfurls in Slack, renders as a QR, 301s in a browser
-├── for agents     resolves to the variant matched to what they are
-├── for the author attribution, funnel, revoke/supersede — observability
-│                  no orchestrator has today
-└── for the swarm  a lineage tree: who handed what to whom, replayable
-```
+<p align="center">
+  <img src="docs/assets/reach.svg" alt="One token at three radii: every harness on one machine through waggled; across machines through federation; and on Cloudflare's edge where grep runs remotely while the source files never leave" width="940">
+</p>
 
 **Consumption is protocol-shaped**: waggle is an MCP server. One config line
 in Claude Code, Codex, Cursor, or anything MCP-speaking — no SDK, no
-language bindings, no accounts. Locally it is one binary and a SQLite file
-(`waggled`, the daemon every harness on your machine shares). The same
-tokens later graduate to the edge (Cloudflare Workers) by **replaying the
-log** — migration is a stream, because the log is the truth.
-
-```bash
-# the bootstrap, in its entirety
-cargo install waggle-cli                          # v0.1.0, on crates.io
-claude mcp add waggle -- waggle serve --stdio     # the tools, self-documenting
-waggle init                                       # the 5-line stub, into CLAUDE.md/AGENTS.md
-```
-
-`waggle init` installs the *entire* out-of-band instruction — five
-sentences in your repo's harness convention files (idempotent; re-run to
-refresh). Everything past that, the tools teach in-band: every response
-carries executable next steps, and `map` answers "where am I?" live.
-
-Behind that line, `waggle serve --stdio` is a shim onto **`waggled`** — a
-shared daemon on a unix socket that owns the store. Every harness on your
-machine lands on the same tokens: what a Claude Code session mints, a
-Codex session resolves.
-
-> **Lost?** The [documentation map](docs/README.md) categorizes everything:
-> the why, the guides in reading order, the reference surfaces, and the
-> design corpus.
+language bindings, no accounts. Locally it is one binary and a SQLite
+file.
 
 ## Getting started
 
-Sixty seconds from a checkout:
+Sixty seconds to a first handoff:
 
 ```bash
-cargo install waggle-cli     # or: just dev-install, from a checkout
-waggle init                  # make this repo agent-fluent (CLAUDE.md / AGENTS.md stub)
-waggle mint --target "file:///$PWD/README.md"
+cargo install waggle-cli                          # on crates.io
+claude mcp add waggle -- waggle serve --stdio     # the tools, self-documenting
+waggle init                                       # the 5-line stub, into CLAUDE.md/AGENTS.md
+waggle identity init                              # optional: sign every mint you make
+
+waggle mint --target "file://$PWD/README.md" --snapshot
 ```
 
 ```json
@@ -146,32 +120,33 @@ waggle mint --target "file:///$PWD/README.md"
 ```
 
 That `handoff` line is what you give a teammate — human or agent — instead
-of the file's contents. Then walk the loop the way a consumer would:
-`waggle resolve --token …` → `waggle record --token … --stage run` →
-`waggle funnel --token …` → `waggle map --token …`. Every response carries
-executable `next` steps; if you're ever unsure, `map` tells you where you
-are and what your paths forward and back are.
+of the file's contents. `--snapshot` pinned the bytes content-addressed,
+which unlocks the surgical verbs:
 
-**The guide** (real commands, real outputs):
+```bash
+waggle resolve --token b2uQyZUC                    # the projection, signed-by reported
+waggle search  --token b2uQyZUC --pattern "TODO"   # grep THROUGH the token; matches travel, the file stays
+waggle read    --token b2uQyZUC --lines 40-80      # a window, never the whole artifact
+waggle funnel  --token b2uQyZUC                    # who looked, who ran — counts only
+waggle mutate  --token b2uQyZUC --change revoke --expected-version 1
+```
 
-1. [Five minutes to your first handoff](docs/guide/01-five-minutes.md) — mint → resolve → record → funnel → map
-2. [Wiring into Claude Code & any MCP harness](docs/guide/02-claude-code.md) — one config line, the 5-line agent stub, the orchestrator pattern
-3. [Variants & media](docs/guide/03-variants-and-media.md) — one token, the right projection per consumer; images by modality
-4. [Lifecycle, attribution & guided query](docs/guide/04-lifecycle-and-query.md) — supersede/revoke with CAS, funnels, slices under byte budgets
-5. [Embedding in Rust](docs/guide/05-embedding-rust.md) — the sans-I/O core, the store contract, reconstruct
-6. [The full lifecycle](docs/guide/06-the-full-lifecycle.md) — one mission followed end to end: lineage, projections, slices, and the correction that reaches late readers (**`just demo` runs it live**)
-7. [Surgical content access](docs/guide/07-surgical-content.md) — grep through the token: `search`/`read` with lenses, budgets, and snapshots that outlive the file
-8. [Running waggled & federation](docs/guide/08-daemon-and-federation.md) — lifecycle verbs, stop-vs-purge, the env knobs, two-machine setup, strict vs eventual freshness
-9. [The edge](docs/guide/09-the-edge.md) — deploy waggle to Cloudflare in 5 minutes; `waggle edge status|push|smoke`; what syncs, what it costs, how to leave
-10. [The edge, walked through](docs/guide/10-edge-walkthrough.md) — every command against a real account, with diagrams: mint on a laptop, grep on Cloudflare, revoke and watch it travel
+And when the handoff must outlive your laptop, one deploy
+([guide 09](docs/guide/09-the-edge.md)) and one command:
 
-Landing next: the published handoff benchmark (0.1.x) and the network
-tier — remote subagents through a forwarding resolver, then the
-Cloudflare edge (0.2).
+```bash
+waggle edge push     # records + snapshots replicate; the FILES never leave
+waggle edge status   # {"health":"ok","tools":9}
+```
+
+Every response carries executable `next` steps; `waggle map` answers
+"where am I?" live. The **[documentation map](docs/README.md)** holds
+the ten guides in reading order — from the five-minute loop to minting
+on a laptop and grepping on Cloudflare.
 
 | Crate | Role |
 |---|---|
-| `waggle-core` | sans-I/O domain: tokens, time-as-value, entropy injection |
+| `waggle-core` | sans-I/O domain: tokens, manifests, matcher, log, trust |
 | `waggle-ops` | the operations catalog — one source, four projections |
 | `waggle-agent` | resolver-context extraction (harness metadata, A2A cards) |
 | `waggle-social` | the human face: unfurls, share packages, QR |
@@ -183,7 +158,6 @@ Cloudflare edge (0.2).
 just dev-install   # build & install the CLI from this checkout
 just preflight     # fmt-check · clippy -D warnings · file-size lint · tests · wasm
 ```
-
 
 ## What makes it credible
 
@@ -207,37 +181,34 @@ implementation):
   parity tests that fail the build on drift. The tools teach the agent
   themselves (`map`: *"I am here — what are my forward and reverse paths?"*)
   so instruction cannot rot the way skills do.
-- **Adversarially reviewed before code** — the concurrency model survived a
-  scenario-by-scenario attack (eight gaps found, fixed, and test-specified);
-  the market claims survived a 103-agent verification pass that killed seven
-  circulating statistics we now refuse to cite.
+- **Verified against real infrastructure** — the edge tier shipped against
+  a published completeness matrix; a differential oracle holds the edge
+  byte-identical to SQLite over the same operations; and the end-to-end
+  walkthrough on a real Cloudflare account caught (and fixed, and
+  regression-locked) a cache-invalidation bug no local tier could see.
 
 ## Status
 
-**v0.1.0 — released** ([crates.io](https://crates.io/crates/waggle-cli)). The full local loop works end to end and every claim
-below is a passing test in CI (three-OS matrix + wasm; ~105 tests;
-[execution plan](docs/design/14-execution-plan.md) tracks each gate):
+**v0.1.0 on [crates.io](https://crates.io/crates/waggle-cli)**; the 0.3
+feature set is complete on `main` and every claim is a passing test in CI
+(three-OS matrix + wasm + the live Miniflare edge matrix; ~170 tests):
 
-- **mint → handoff → resolve → record → funnel → map** over MCP and CLI —
-  scenario A from the design docs runs as an integration test on real
-  JSON-RPC frames over the real SQLite store;
-- the **sealed matcher** serves each consumer its variant (selection-vector
-  table + determinism over 10⁴ random contexts);
-- the **event log reconstructs** (shuffle-immune, duplicate-immune,
-  snapshot+suffix ≡ full — R-1..R-4 as property tests);
-- three backends pass one **conformance suite** (memory, SQLite/WAL,
-  JSONL journal), with CAS mutations, idempotent mint, revoked-parent
-  rejection, and export→replay migration proven — plus a content-addressed
-  **blob sidecar** with verified reads and GC;
-- `waggle serve --stdio` is a **working MCP server**: the test spawns the
-  real binary, speaks the protocol through its pipes, and reads the writes
-  back from a second process — and `waggled` (unix socket) serves **many
-  harnesses over one store**: the two-clients test has a Claude-like and a
-  Codex-like session exchanging a token through their own shims;
-- **measured, not promised** ([benches/PERF.md](benches/PERF.md)):
-  cache-hit resolve read **39 ns**, durable event append **39 µs**
-  (real fsync), a million-event funnel fold in **334 µs** — every
-  design-budget beaten with 25–30× headroom.
+- **the full loop** — mint / resolve / record / mutate / funnel / read /
+  search / query / map over MCP and CLI, one shared daemon per machine;
+- **surgical content** — snapshots pinned content-addressed at mint;
+  grep and windowed reads through the token under byte budgets;
+- **federation** — daemon-to-daemon over TCP or HTTPS, strict vs
+  eventual freshness, the CLI transparent through all tiers;
+- **the edge** — a Durable Object per tenant running the same certified
+  engine; `waggle edge push` replicates records and snapshots;
+  resolve p50 1.2 ms through the full HTTP-worker-DO path;
+- **trust** — Ed25519 signatures over the immutable core (mutations
+  never invalidate, by construction); capability-URL private tokens;
+- **the spec** — normative document plus conformance vectors generated
+  from the implementation, drift-checked in CI;
+- **measured, not promised** ([benches/PERF.md](benches/PERF.md)) —
+  39 ns cache-hit resolves, 39 us durable appends (real fsync), a
+  million-event funnel fold in 334 us.
 
 ## License
 

@@ -3,7 +3,7 @@
 Criterion benchmarks (`just bench`), release mode. Latest run:
 **2026-07-07, Apple Silicon (darwin 25.5), Rust 1.8x.** Numbers are the
 criterion midpoint estimate. Budgets from
-[design doc 13 §6](../docs/design/13-engineering-standards.md).
+the engineering standards (design workspace).
 
 | Path | Measured | Budget | Headroom |
 |---|---:|---:|---:|
@@ -36,4 +36,4 @@ Reading the table:
 Not yet measured here: the **handoff benchmark** (context-forwarding vs.
 token-referenced orchestration across ≥2 model families — the CP-9 public
 number, needs live model APIs) and the loom/crash-point suites. Tracked in
-[the execution plan](../docs/design/14-execution-plan.md).
+the execution plan (design workspace).

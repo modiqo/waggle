@@ -44,12 +44,10 @@ where your question is.
 
 ## How was it designed? *(the design docs — the contract)*
 
-The [design corpus](design/) predates the code and governs it; the
-[execution plan](design/14-execution-plan.md) tracks every checkpoint
-with exit evidence. By concern:
+The [design corpus](design/) predates the code and governs it. By
+concern:
 
-- **Foundations** — [00 index](design/00-index.md) · [01 prior art](design/01-prior-art.md) · [02 domain model](design/02-domain-model.md) · [12 research appendix](design/12-research-appendix.md)
-- **Architecture** — [03 core architecture](design/03-core-architecture.md) · [04 event sourcing](design/04-event-sourcing.md) · [07 storage interface](design/07-storage-interface.md) · [09 crate layout](design/09-crate-layout.md) · [15 concurrency model](design/15-concurrency-model.md) · [16 deployment topologies](design/16-deployment-topologies.md)
+- **The domain** — [02 domain model](design/02-domain-model.md) · [03 core architecture](design/03-core-architecture.md) · [04 event sourcing](design/04-event-sourcing.md)
 - **The agent experience** — [06 agent coordination](design/06-agent-coordination.md) · [17 agent fluency](design/17-agent-fluency.md) · [18 content access](design/18-content-access.md) · [05 social minting](design/05-social-minting.md)
-- **The edge** — [08 cloudflare foundation](design/08-cloudflare-foundation.md) (incl. the E1–E13 completeness matrix)
-- **Process & standards** — [13 engineering standards](design/13-engineering-standards.md) · [14 execution plan](design/14-execution-plan.md) · [10 roadmap](design/10-roadmap-adoption.md) · [11 standard track](design/11-standard-track.md)
+- **Storage & concurrency** — [07 storage interface](design/07-storage-interface.md) · [15 concurrency model](design/15-concurrency-model.md) · [16 deployment topologies](design/16-deployment-topologies.md)
+- **The edge** — [08 cloudflare foundation](design/08-cloudflare-foundation.md) (incl. the E1-E13 completeness matrix)

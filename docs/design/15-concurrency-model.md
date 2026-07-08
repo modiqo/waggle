@@ -72,39 +72,39 @@ obligation reopens. (A3)
 
 | ID | Scenario | Example | Verdict → resolution |
 |---|---|---|---|
-| A1 | read–read, same token | 8 subagents resolve `wg:7Kp2` | ✅ immutable Arcs |
-| A2 | reader vs interning | funnel fold reads stage table while a new custom stage is interned | ❌ → **G-1** committer-owned interning, tables in snapshot |
-| A3 | torn tail read | fold scans tail during append | ✅ watermark release/acquire + fixed-width rows (I-1 coupling, §2) |
-| A4 | manifest/event read skew | funnel sees "revoked" manifest but no revocation event | ❌ → **G-2** unified `ReadState` |
-| A5 | reader during segment seal | tail seals mid-fold | ✅ given G-2 (segment directory is in the snapshot) |
-| A6 | long-held stale resolution | agent acts 12 min after resolve; token revoked at minute 3 | ❌ contract gap → **G-3** `as_of` + `revalidate_after` |
-| B1 | multi-write, disjoint tokens | 50 subagents record on 50 tokens | ✅ queue + committer |
-| B2 | multi-write, same token | two `record(run)` race | ✅ committer seq; counts commutative |
-| B3 | lost update on lifecycle | two `superseded_by` writes; LWW drops one silently | ❌ → **G-4** CAS (`expected_version`) for lifecycle mutations |
-| B4 | retry after lost ack | crash between fsync and ack; agent retries mint → duplicate token | ❌ → **G-5** idempotent mint via `mint_nonce` |
-| B5 | backpressure starvation | analytics storm queues ahead of a mint | ❌ → **G-6** two-lane intake |
-| C1 | read-your-mint cross-PoP | mint in Frankfurt; CI subagent resolves in Oregon 200 ms later; KV miss | ❌ → **G-7** authoritative read-through before `UnknownToken` |
-| C2 | stale revocation at edge | Oregon serves Active seconds after revoke | ❌ → **G-8** `strict\|eventual` resolve levels, manifest-mandatable |
+| A1 | read–read, same token | 8 subagents resolve `wg:7Kp2` | yes immutable Arcs |
+| A2 | reader vs interning | funnel fold reads stage table while a new custom stage is interned | no → **G-1** committer-owned interning, tables in snapshot |
+| A3 | torn tail read | fold scans tail during append | yes watermark release/acquire + fixed-width rows (I-1 coupling, §2) |
+| A4 | manifest/event read skew | funnel sees "revoked" manifest but no revocation event | no → **G-2** unified `ReadState` |
+| A5 | reader during segment seal | tail seals mid-fold | yes given G-2 (segment directory is in the snapshot) |
+| A6 | long-held stale resolution | agent acts 12 min after resolve; token revoked at minute 3 | no contract gap → **G-3** `as_of` + `revalidate_after` |
+| B1 | multi-write, disjoint tokens | 50 subagents record on 50 tokens | yes queue + committer |
+| B2 | multi-write, same token | two `record(run)` race | yes committer seq; counts commutative |
+| B3 | lost update on lifecycle | two `superseded_by` writes; LWW drops one silently | no → **G-4** CAS (`expected_version`) for lifecycle mutations |
+| B4 | retry after lost ack | crash between fsync and ack; agent retries mint → duplicate token | no → **G-5** idempotent mint via `mint_nonce` |
+| B5 | backpressure starvation | analytics storm queues ahead of a mint | no → **G-6** two-lane intake |
+| C1 | read-your-mint cross-PoP | mint in Frankfurt; CI subagent resolves in Oregon 200 ms later; KV miss | no → **G-7** authoritative read-through before `UnknownToken` |
+| C2 | stale revocation at edge | Oregon serves Active seconds after revoke | no → **G-8** `strict\|eventual` resolve levels, manifest-mandatable |
 | C3 | cross-PoP mutation race | revoke (Frankfurt) vs mint_child (Oregon) | resolved by G-4 + two-path writes (08): lifecycle → origin CAS, never the queue |
-| D1 | compaction vs readers/writers | Parquet rewrite during live traffic | ✅ two-phase commit, Arc-held segments — now stated for fs too |
-| D2 | snapshot-while-writing | snapshot during burst | ✅ given G-2 (serialize one ReadState) |
-| D3 | second process | accidental second server | ✅ advisory lock, explicit error |
+| D1 | compaction vs readers/writers | Parquet rewrite during live traffic | yes two-phase commit, Arc-held segments — now stated for fs too |
+| D2 | snapshot-while-writing | snapshot during burst | yes given G-2 (serialize one ReadState) |
+| D3 | second process | accidental second server | yes advisory lock, explicit error |
 
 ## 4. Gap tracking table
 
-*Status legend: design ✅ = specified in docs · tests ✅ = test spec below ·
-impl/verified ☐ = flips during the mapped checkpoint (14).*
+*Status legend: design yes = specified in docs · tests yes = test spec below ·
+impl/verified [ ] = flips during the mapped checkpoint (14).*
 
 | Gap | Fix (one line) | Mechanism (rev 2.2) | Design | Tests spec'd | Impl | Verified | CP |
 |---|---|---|---|---|---|---|---|
-| **G-1** | committer-owned interning; tables immutable to readers | SQLite single-writer txn *(by construction)* + cache | ✅ | ✅ | ☐ | ☐ | CP-3/5 |
-| **G-2** | one consistent snapshot per read | WAL snapshot txns *(by construction)*; `ReadState` survives as the cache design | ✅ | ✅ | ☐ | ☐ | CP-5 |
-| **G-3** | `Resolution.as_of` + `revalidate_after` (variant-configurable) | core contract (02, 09) | ✅ | ✅ | ☐ | ☐ | CP-2 |
-| **G-4** | CAS lifecycle mutations (`expected_version` → `Conflict`); LWW only cosmetic | `UPDATE … WHERE version = ?` *(by construction)* | ✅ | ✅ | ☐ | ☐ | CP-4/5 |
-| **G-5** | idempotent mint via `mint_nonce` (retry returns original) | `UNIQUE(sharer, nonce)` *(by construction)* | ✅ | ✅ | ☐ | ☐ | CP-4/5/6 |
-| **G-6** | two-lane committer intake, durable-first + anti-starvation | ours — the committer task (13 §8) | ✅ | ✅ | ☐ | ☐ | CP-5 |
-| **G-7** | KV miss never authoritative — origin read-through | ours — edge worker (08) | ✅ | ✅ | ☐ | ☐ | CP-10 |
-| **G-8** | `strict\|eventual` resolve consistency, manifest-mandatable | ours — edge worker (08) | ✅ | ✅ | ☐ | ☐ | CP-10 |
+| **G-1** | committer-owned interning; tables immutable to readers | SQLite single-writer txn *(by construction)* + cache | yes | yes | [ ] | [ ] | CP-3/5 |
+| **G-2** | one consistent snapshot per read | WAL snapshot txns *(by construction)*; `ReadState` survives as the cache design | yes | yes | [ ] | [ ] | CP-5 |
+| **G-3** | `Resolution.as_of` + `revalidate_after` (variant-configurable) | core contract (02, 09) | yes | yes | [ ] | [ ] | CP-2 |
+| **G-4** | CAS lifecycle mutations (`expected_version` → `Conflict`); LWW only cosmetic | `UPDATE … WHERE version = ?` *(by construction)* | yes | yes | [ ] | [ ] | CP-4/5 |
+| **G-5** | idempotent mint via `mint_nonce` (retry returns original) | `UNIQUE(sharer, nonce)` *(by construction)* | yes | yes | [ ] | [ ] | CP-4/5/6 |
+| **G-6** | two-lane committer intake, durable-first + anti-starvation | ours — the committer task (13 §8) | yes | yes | [ ] | [ ] | CP-5 |
+| **G-7** | KV miss never authoritative — origin read-through | ours — edge worker (08) | yes | yes | [ ] | [ ] | CP-10 |
+| **G-8** | `strict\|eventual` resolve consistency, manifest-mandatable | ours — edge worker (08) | yes | yes | [ ] | [ ] | CP-10 |
 
 *"By construction" never waives a test: the §5 suites run against the SQLite
 backend regardless — the contract outranks the mechanism.*

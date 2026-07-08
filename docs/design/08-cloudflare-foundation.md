@@ -102,13 +102,13 @@ GET  /api/manifest/{t} ▶ the retrievable attribution manifest (public)      �
 
 | Binding | Role | v1? |
 |---|---|---|
-| **KV** | token → manifest view (read-hot); dedupe window; short-lived caches | ✅ |
-| **Queues** | the append path; decouples redirects from durability | ✅ |
-| **R2** | the log: raw NDJSON + compacted Parquet — the reconstruct substrate | ✅ |
-| **Analytics Engine** | approximate real-time counters (`funnel_hint`) — powers live dashboards/conference walls | ✅ |
+| **KV** | token → manifest view (read-hot); dedupe window; short-lived caches | yes |
+| **Queues** | the append path; decouples redirects from durability | yes |
+| **R2** | the log: raw NDJSON + compacted Parquet — the reconstruct substrate | yes |
+| **Analytics Engine** | approximate real-time counters (`funnel_hint`) — powers live dashboards/conference walls | yes |
 | **D1** | relational views (`tokens_for_target`, sharer reports) as data grows | v2 — v1 keeps these as KV secondary indexes with documented limits |
-| **Rate-limit binding** | mint + event ingestion abuse control | ✅ (same binding pattern as rote's ingest worker) |
-| **Cache API** | OG pages, QR SVGs, text cards | ✅ |
+| **Rate-limit binding** | mint + event ingestion abuse control | yes (same binding pattern as rote's ingest worker) |
+| **Cache API** | OG pages, QR SVGs, text cards | yes |
 
 **Consistency, revised (rev 2.1 — the C1/C2 scenarios in 15 §3 broke the
 rev-2 story):**
@@ -215,11 +215,11 @@ flips only with a run link (Miniflare rows) or a dated manual note
 
 | # | Promise (source) | Witness | Tier |
 |---|---|---|---|
-| E1 | Store contract C-1..C-10 (07) | ✅ native **and** ✅ Miniflare (the suite over `/store`, per-tenant DOs) | both |
-| E2 | G-7 read path | ✅ KV unfurl cache: read-through, TTL, mutate-invalidation, **revoked → 410 never stale** | Miniflare |
+| E1 | Store contract C-1..C-10 (07) | yes native **and** yes Miniflare (the suite over `/store`, per-tenant DOs) | both |
+| E2 | G-7 read path | yes KV unfurl cache: read-through, TTL, mutate-invalidation, **revoked → 410 never stale** | Miniflare |
 | E3 | G-8: strict\|eventual at the edge (15 §5.3) | `it_strict_vs_eventual_revoke` (edge-shaped) | Miniflare |
 | E4 | Migration is a stream (16 §4), mid-replay kill injected | `it_replay_migration` — reconstruct ≡ after resume | Miniflare |
-| E5 | Computation at the data (08 §0) | ✅ blob pushed to R2 → manifest ingested → **grep executed at the edge**, matches only | Miniflare |
+| E5 | Computation at the data (08 §0) | yes blob pushed to R2 → manifest ingested → **grep executed at the edge**, matches only | Miniflare |
 | E6 | **Differential oracle**: same log ⇒ same answers as local | `edge_equals_local` — random op sequences, envelope-compare vs SQLite | native **and** Miniflare |
 | E7 | Tool surface can't drift (09 §2) on `/mcp` | `edge_tool_list_matches_catalog` | Miniflare |
 | E8 | Auth: per-tenant keys; unauthenticated dropped (§5) | `edge_auth_rejects` | Miniflare |
@@ -227,4 +227,4 @@ flips only with a run link (Miniflare rows) or a dated manual note
 | E10 | I-1/I-7 at the edge: stored records payload-free, actor classes only | asserted on raw records in E4/E6 fixtures | native + Miniflare |
 | E11 | Perf: resolve p50 < 10 ms local-Miniflare | `edge_resolve_p50` → PERF.md | Miniflare |
 | E12 | wasm build health + worker size logged | existing wasm CI job + edge job | CI |
-| E13 | Real edge ≡ Miniflare | ✅ **2026-07-08** — deployed + smoked on the operator's workers.dev (mint/resolve/record/funnel/unfurl green; ~150-190ms laptop RTT) | manual, dated note |
+| E13 | Real edge ≡ Miniflare | yes **2026-07-08** — deployed + smoked on the operator's workers.dev (mint/resolve/record/funnel/unfurl green; ~150-190ms laptop RTT) | manual, dated note |

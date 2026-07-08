@@ -17,8 +17,12 @@ edge-test:
     set -euo pipefail
     PORT=43811
     rm -rf edge-worker/.wrangler/state   # fresh hive per run — DO storage persists
+    # .dev.vars is gitignored (it's the local-secret slot) — provision the
+    # dev tenant token on machines that lack it (CI runners).
+    [ -f edge-worker/.dev.vars ] || echo "TENANT_TOKEN=dev-tenant-token-0123456789abcdef" > edge-worker/.dev.vars
     (cd edge-worker && npx --yes wrangler dev --port $PORT >/tmp/wrangler-edge.log 2>&1 &)
     for i in $(seq 1 420); do curl -sf http://127.0.0.1:$PORT/health >/dev/null && break; sleep 1; done
+    curl -sf http://127.0.0.1:$PORT/health >/dev/null || { echo "wrangler never became healthy:"; tail -40 /tmp/wrangler-edge.log; exit 1; }
     WAGGLE_EDGE_TESTS=1 WAGGLE_EDGE_EXTERNAL_PORT=$PORT cargo test -p waggle-edge-worker --test miniflare -- --nocapture
     WAGGLE_EDGE_URL=http://127.0.0.1:$PORT WAGGLE_EDGE_BEARER=dev-tenant-token-0123456789abcdef cargo test -p waggle-cli --test federation e3_three_tier -- --nocapture
     pkill -f "wrangler dev" || true

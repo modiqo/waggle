@@ -93,12 +93,12 @@ The case rests on first-party, adversarially-verified evidence (12):
   than single agents**, with the overhead vendor-attributed to *"duplicating
   context across agents, coordination messages between agents, and
   summarizing results for handoffs"* — **"Each handoff loses context"**
-  (Anthropic, ✅ 3–0).
+  (Anthropic, yes 3–0).
 - **~36.9% of multi-agent failures** trace to inter-agent misalignment /
-  context loss at handoffs (MAST taxonomy, ✅).
+  context loss at handoffs (MAST taxonomy, yes).
 - Shared-artifact coordination cut tokens **43–72%** vs. message-forwarding
-  with better quality (LbMAS blackboard, ✅ medium — preprint); simulated
-  reference/invalidation schemes suggest more (✅ low — simulation).
+  with better quality (LbMAS blackboard, yes medium — preprint); simulated
+  reference/invalidation schemes suggest more (yes low — simulation).
 
 What a token changes mechanically: the orchestrator shares **one ~30-byte
 reference**, not N tailored context dumps; each subagent pulls **its own
