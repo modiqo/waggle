@@ -162,7 +162,7 @@ enum Cmd {
     },
     #[command(about = waggle_ops::DAEMON.description)]
     Daemon {
-        /// status | start | stop | restart.
+        /// status | start | stop | restart | purge (kill EVERY waggled of yours, even zombies whose sockets/pidfiles are gone).
         action: String,
         /// For start/restart: exit after this many seconds with no connections (shim auto-starts default to 1800).
         #[arg(long)]

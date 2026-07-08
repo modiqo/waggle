@@ -151,7 +151,7 @@ Manage waggled: status (pid, store, uptime, connections), start (idempotent), st
 
 | arg | required | doc |
 |---|---|---|
-| `--action` | true | status | start | stop | restart. |
+| `--action` | true | status | start | stop | restart | purge (kill EVERY waggled of yours, even zombies whose sockets/pidfiles are gone). |
 | `--idle-secs` | false | For start/restart: exit after this many seconds with no connections (shim auto-starts default to 1800). |
 
 - forward → `map`: with the daemon up, orient from the global map

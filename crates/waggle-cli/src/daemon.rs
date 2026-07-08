@@ -543,6 +543,61 @@ fn do_stop(sock: &Path) -> i32 {
     1
 }
 
+/// The last resort for zombies: find EVERY `waggle serve --daemon`
+/// process owned by this user — including ones whose sockets and
+/// pidfiles were deleted (test debris, removed temp dirs) that `stop`
+/// cannot reach — TERM them, escalate to KILL for survivors. Stale
+/// socket files are handled by the next start's rebind.
+fn purge() -> i32 {
+    let out = std::process::Command::new("pgrep")
+        .args([
+            "-u",
+            &std::env::var("USER").unwrap_or_default(),
+            "-f",
+            "waggle serve --daemon",
+        ])
+        .output();
+    let pids: Vec<u32> = match out {
+        Ok(o) => String::from_utf8_lossy(&o.stdout)
+            .lines()
+            .filter_map(|l| l.trim().parse().ok())
+            .filter(|p| *p != std::process::id())
+            .collect(),
+        Err(e) => {
+            eprintln!("waggle daemon purge: pgrep: {e}");
+            return 1;
+        }
+    };
+    if pids.is_empty() {
+        println!("{}", serde_json::json!({ "purged": [], "count": 0 }));
+        return 0;
+    }
+    for pid in &pids {
+        let _ = std::process::Command::new("kill")
+            .args(["-TERM", &pid.to_string()])
+            .status();
+    }
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    let mut killed = Vec::new();
+    for pid in &pids {
+        let alive = std::process::Command::new("kill")
+            .args(["-0", &pid.to_string()])
+            .status()
+            .is_ok_and(|s| s.success());
+        if alive {
+            let _ = std::process::Command::new("kill")
+                .args(["-KILL", &pid.to_string()])
+                .status();
+            killed.push(*pid);
+        }
+    }
+    println!(
+        "{}",
+        serde_json::json!({ "purged": pids, "count": pids.len(), "needed_sigkill": killed })
+    );
+    0
+}
+
 /// `waggle daemon <status|start|stop|restart>` — exit 0 on success/true,
 /// 1 when status finds nothing running or stop had nothing to stop.
 pub fn manage(action: &str, idle_secs: Option<u64>) -> i32 {
@@ -580,6 +635,7 @@ pub fn manage(action: &str, idle_secs: Option<u64>) -> i32 {
             }
         }
         "stop" => do_stop(&sock),
+        "purge" => purge(),
         "restart" => {
             let _ = do_stop(&sock);
             match start_detached(idle_secs) {
@@ -591,7 +647,9 @@ pub fn manage(action: &str, idle_secs: Option<u64>) -> i32 {
             }
         }
         other => {
-            eprintln!("waggle daemon: `{other}` — actions are status | start | stop | restart");
+            eprintln!(
+                "waggle daemon: `{other}` — actions are status | start | stop | restart | purge"
+            );
             2
         }
     }

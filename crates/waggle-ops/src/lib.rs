@@ -284,7 +284,7 @@ pub const DAEMON: OperationSpec = OperationSpec {
     kind: OpKind::Read,
     description: "Manage waggled: status (pid, store, uptime, connections), start (idempotent), stop (graceful over the socket; terminates orphans by pidfile), restart. Pidfile + idle exit make lingering orphans structurally unlikely.",
     args: &[
-        ArgSpec { name: "action", required: true, doc: "status | start | stop | restart." },
+        ArgSpec { name: "action", required: true, doc: "status | start | stop | restart | purge (kill EVERY waggled of yours, even zombies whose sockets/pidfiles are gone)." },
         ArgSpec { name: "idle-secs", required: false, doc: "For start/restart: exit after this many seconds with no connections (shim auto-starts default to 1800)." },
     ],
     forward: &[EdgeSpec { to: "map", why: "with the daemon up, orient from the global map" }],
