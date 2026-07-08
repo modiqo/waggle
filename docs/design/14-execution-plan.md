@@ -160,8 +160,8 @@ G-7/G-8 → CP-10.
 | 0 | Scaffold & CI teeth | 0.1 | ✅ done | [run 28917719272](https://github.com/modiqo/waggle/actions/runs/28917719272) — 3-OS matrix + wasm + docs-drift green, commit `1c408ce`; parity guard fails-on-rogue proven by test |
 | 1 | Core types & manifests | 0.1 | ✅ done | [run 28918237617](https://github.com/modiqo/waggle/actions/runs/28918237617) — 54 tests incl. properties P1..P8; largest file 354/750 |
 | 2 | Sealed matcher | 0.1 | ✅ done | [run 28918472379](https://github.com/modiqo/waggle/actions/runs/28918472379) — vector table (ties/near-misses/multimodal), 10⁴-context determinism, g3 freshness |
-| 3 | Event log & folds | 0.1 | ◐ in progress | R-1..R-3 + bench baseline |
-| 4 | Store + conformance | 0.1 | ☐ not started | conformance run (memory) |
+| 3 | Event log & folds | 0.1 | ✅ done | [run 28918829415](https://github.com/modiqo/waggle/actions/runs/28918829415) — R-1..R-3 proptests, one-pass multi-fold, 1M-fold shape |
+| 4 | Store + conformance | 0.1 | ◐ in progress | conformance run (memory) |
 | 5 | fs backend | 0.1 | ☐ not started | conformance + crash test |
 | 6 | MCP server + CLI | 0.1 | ☐ not started | scenario-A test run |
 | 7 | Guided queries | 0.1 | ☐ not started | guidance-walk test |

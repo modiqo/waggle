@@ -13,6 +13,7 @@ categories.workspace = true
 [dependencies]
 waggle-core = { workspace = true }
 thiserror = { workspace = true }
+pollster = { workspace = true }
 
 [lints]
 workspace = true
