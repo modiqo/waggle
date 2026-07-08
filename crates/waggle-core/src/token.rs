@@ -107,6 +107,20 @@ impl Token {
     }
 }
 
+impl PartialOrd for Token {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Token {
+    /// Lexicographic by string form — deterministic map ordering is what
+    /// R-1's byte-identical serialization rests on.
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.as_str().cmp(other.as_str())
+    }
+}
+
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())

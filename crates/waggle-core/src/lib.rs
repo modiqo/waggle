@@ -37,25 +37,35 @@
 
 mod context;
 mod entropy;
+mod event;
+mod fold;
+mod log;
 mod manifest;
 mod matcher;
 mod mint;
+mod reconstruct;
 mod resolve;
 mod slug;
+mod soa;
 mod target;
 mod time;
 mod token;
 
 pub use context::{negotiate, ConsumerHint, ConsumerKind, ResolverContext};
 pub use entropy::{Entropy, EntropyError};
+pub use event::{ActorClass, Event, FamilyClass, HarnessClass, Seq};
+pub use fold::{replay, Fold, FunnelFold, LineageFold, ManifestFold};
+pub use log::{Change, LogRecord};
 pub use manifest::{
     AttributionManifest, Constraint, Disposition, MatchExpr, ModalitySet, Posture, Variant,
     VariantBody, MANIFEST_SCHEMA_VERSION,
 };
 pub use matcher::{select_variant, Selected};
 pub use mint::{mint, MintError, MintOptions, MintSpec};
+pub use reconstruct::{apply_suffix, reconstruct, WorldState};
 pub use resolve::{resolve, Resolution, DEFAULT_REVALIDATE_MS};
 pub use slug::{Channel, Sharer, SlugError, Stage};
+pub use soa::{EventLog, InternTables, StageId, TokenId};
 pub use target::{
     CanonicalUrl, MediaRef, Sha256Error, Sha256Hex, TargetError, TargetMeta,
     INLINE_THRESHOLD_BYTES, MANIFEST_SIZE_CAP_BYTES,
