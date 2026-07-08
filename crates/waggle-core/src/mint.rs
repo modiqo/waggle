@@ -86,7 +86,11 @@ impl MintSpec {
     /// Add a variant. Declaration order is selection tie-break order.
     #[must_use]
     pub fn variant(mut self, match_expr: MatchExpr, body: VariantBody) -> Self {
-        self.variants.push(Variant { match_expr, body });
+        self.variants.push(Variant {
+            match_expr,
+            body,
+            revalidate_after_ms: None,
+        });
         self
     }
 
@@ -173,6 +177,7 @@ fn synthesized_catch_all(target: &CanonicalUrl, meta: &TargetMeta) -> Variant {
             content_type: "text/markdown".into(),
             data: description,
         },
+        revalidate_after_ms: None,
     }
 }
 

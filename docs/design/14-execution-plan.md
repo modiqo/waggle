@@ -158,8 +158,8 @@ G-7/G-8 → CP-10.
 | CP | Title | Phase | Status | Exit evidence |
 |---|---|---|---|---|
 | 0 | Scaffold & CI teeth | 0.1 | ✅ done | [run 28917719272](https://github.com/modiqo/waggle/actions/runs/28917719272) — 3-OS matrix + wasm + docs-drift green, commit `1c408ce`; parity guard fails-on-rogue proven by test |
-| 1 | Core types & manifests | 0.1 | ◐ in progress | coverage + doc report |
-| 2 | Sealed matcher | 0.1 | ☐ not started | vector-suite run |
+| 1 | Core types & manifests | 0.1 | ✅ done | [run 28918237617](https://github.com/modiqo/waggle/actions/runs/28918237617) — 54 tests incl. properties P1..P8; largest file 354/750 |
+| 2 | Sealed matcher | 0.1 | ◐ in progress | vector-suite run |
 | 3 | Event log & folds | 0.1 | ☐ not started | R-1..R-3 + bench baseline |
 | 4 | Store + conformance | 0.1 | ☐ not started | conformance run (memory) |
 | 5 | fs backend | 0.1 | ☐ not started | conformance + crash test |

@@ -35,20 +35,26 @@
 //! assert_eq!(token.as_str().len(), 8);
 //! ```
 
+mod context;
 mod entropy;
 mod manifest;
+mod matcher;
 mod mint;
+mod resolve;
 mod slug;
 mod target;
 mod time;
 mod token;
 
+pub use context::{negotiate, ConsumerHint, ConsumerKind, ResolverContext};
 pub use entropy::{Entropy, EntropyError};
 pub use manifest::{
     AttributionManifest, Constraint, Disposition, MatchExpr, ModalitySet, Posture, Variant,
     VariantBody, MANIFEST_SCHEMA_VERSION,
 };
+pub use matcher::{select_variant, Selected};
 pub use mint::{mint, MintError, MintOptions, MintSpec};
+pub use resolve::{resolve, Resolution, DEFAULT_REVALIDATE_MS};
 pub use slug::{Channel, Sharer, SlugError, Stage};
 pub use target::{
     CanonicalUrl, MediaRef, Sha256Error, Sha256Hex, TargetError, TargetMeta,

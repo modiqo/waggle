@@ -56,6 +56,14 @@ impl ModalitySet {
     pub const fn contains(self, required: Self) -> bool {
         self.0 & required.0 == required.0
     }
+
+    /// Build from raw bits, ignoring undefined ones — for hosts
+    /// deserializing foreign context descriptors (and for exhaustive
+    /// testing over the modality space).
+    #[must_use]
+    pub const fn from_bits_truncate(bits: u8) -> Self {
+        Self(bits & 0b1_1111)
+    }
 }
 
 /// The consumer's execution posture.
@@ -158,6 +166,11 @@ pub struct Variant {
     pub match_expr: MatchExpr,
     /// What those consumers receive.
     pub body: VariantBody,
+    /// Advisory freshness window in ms for resolutions served from this
+    /// variant (G-3). `None` ⇒ [`crate::DEFAULT_REVALIDATE_MS`]. Short for
+    /// sensitive artifacts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revalidate_after_ms: Option<u64>,
 }
 
 /// A token's lifecycle disposition at a point in time.
