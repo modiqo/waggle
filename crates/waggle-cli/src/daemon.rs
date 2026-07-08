@@ -16,6 +16,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 
 use waggle_mcp::{handle_message, Handler};
+use waggle_store::ReadStore as _;
 use waggle_store_sqlite::SqliteStore;
 
 use crate::run::{now, open_handler, os_entropy};
@@ -85,6 +86,7 @@ pub fn run_daemon() -> i32 {
             last_activity_secs: AtomicU64::new(now_secs()),
         });
         spawn_idle_monitor(&state, &sock);
+        spawn_tcp_listener(&handler, &state, &sock);
         eprintln!(
             "waggled: listening on {} (pid {})",
             sock.display(),
@@ -96,9 +98,11 @@ pub fn run_daemon() -> i32 {
                     let handler = Arc::clone(&handler);
                     let state = Arc::clone(&state);
                     let sock = sock.clone();
-                    tokio::spawn(
-                        async move { serve_client(stream, &handler, &state, &sock).await },
-                    );
+                    tokio::spawn(async move {
+                        let (read, write) = tokio::io::split(stream);
+                        let lines = BufReader::new(read).lines();
+                        serve_client(lines, write, &handler, &state, &sock).await;
+                    });
                 }
                 Err(e) => {
                     eprintln!("waggled: accept: {e}");
@@ -133,16 +137,18 @@ fn bind(sock: &Path) -> Result<UnixListener, i32> {
     }
 }
 
-async fn serve_client(
-    stream: UnixStream,
+async fn serve_client<R, W>(
+    mut lines: tokio::io::Lines<BufReader<R>>,
+    mut write: W,
     handler: &Handler<SqliteStore>,
     state: &DaemonState,
     sock: &Path,
-) {
+) where
+    R: tokio::io::AsyncRead + Unpin,
+    W: tokio::io::AsyncWrite + Unpin,
+{
     state.active_connections.fetch_add(1, Ordering::SeqCst);
     state.last_activity_secs.store(now_secs(), Ordering::SeqCst);
-    let (read, mut write) = stream.into_split();
-    let mut lines = BufReader::new(read).lines();
     while let Ok(Some(line)) = lines.next_line().await {
         if line.trim().is_empty() {
             continue;
@@ -150,6 +156,34 @@ async fn serve_client(
         state.last_activity_secs.store(now_secs(), Ordering::SeqCst);
         // Daemon-level management methods are intercepted BEFORE the MCP
         // dispatcher — management is not a tool agents see (16 appendix).
+        // Tier 2: a forwardable frame whose token this store doesn't own
+        // goes upstream when one is configured (16 §3, 08 §0) — the
+        // computation runs at the owner; only the answer comes back.
+        if let Some(token) = crate::remote::forwardable_token(&line) {
+            let known = handler
+                .store()
+                .manifest(token)
+                .await
+                .ok()
+                .flatten()
+                .is_some();
+            if !known && std::env::var("WAGGLE_UPSTREAM").is_ok() {
+                let id = serde_json::from_str::<serde_json::Value>(&line)
+                    .ok()
+                    .and_then(|m| m.get("id").cloned())
+                    .unwrap_or(serde_json::Value::Null);
+                let response = match crate::remote::forward(&line).await {
+                    Some(r) => r,
+                    None => crate::remote::unreachable_response(&id, token),
+                };
+                if write.write_all(response.as_bytes()).await.is_err()
+                    || write.write_all(b"\n").await.is_err()
+                {
+                    break;
+                }
+                continue;
+            }
+        }
         let response = if let Some(mgmt) = manage_message(&line, state, sock) {
             let shutdown = mgmt.1;
             if write.write_all(mgmt.0.as_bytes()).await.is_ok() {
@@ -212,6 +246,61 @@ fn manage_message(line: &str, state: &DaemonState, sock: &Path) -> Option<(Strin
             false,
         )),
     }
+}
+
+/// Token-gated TCP (F-2 tier 2): listen only when BOTH `WAGGLE_TCP` and
+/// `WAGGLE_TCP_TOKEN` are set — an unauthenticated network listener is
+/// not a mode this daemon has. Every connection must open with the
+/// `waggled/hello` bearer frame or it is dropped without a byte served.
+fn spawn_tcp_listener(handler: &Arc<Handler<SqliteStore>>, state: &Arc<DaemonState>, sock: &Path) {
+    let Ok(addr) = std::env::var("WAGGLE_TCP") else {
+        return;
+    };
+    let Ok(gate) = std::env::var("WAGGLE_TCP_TOKEN") else {
+        eprintln!(
+            "waggled: WAGGLE_TCP set without WAGGLE_TCP_TOKEN — refusing to listen unauthenticated"
+        );
+        return;
+    };
+    if gate.len() < 16 {
+        eprintln!("waggled: WAGGLE_TCP_TOKEN is under 16 chars — refusing (generate one: openssl rand -hex 16)");
+        return;
+    }
+    let handler = Arc::clone(handler);
+    let state = Arc::clone(state);
+    let sock = sock.to_path_buf();
+    tokio::spawn(async move {
+        let listener = match tokio::net::TcpListener::bind(&addr).await {
+            Ok(l) => l,
+            Err(e) => {
+                eprintln!("waggled: tcp bind {addr}: {e}");
+                return;
+            }
+        };
+        eprintln!("waggled: tcp listening on {addr} (token-gated)");
+        loop {
+            let Ok((stream, peer)) = listener.accept().await else {
+                break;
+            };
+            let handler = Arc::clone(&handler);
+            let state = Arc::clone(&state);
+            let gate = gate.clone();
+            let sock = sock.clone();
+            tokio::spawn(async move {
+                let (read, write) = tokio::io::split(stream);
+                let mut lines = BufReader::new(read).lines();
+                // The gate: first line must be a valid hello.
+                match lines.next_line().await {
+                    Ok(Some(first)) if crate::remote::hello_ok(&first, &gate) => {}
+                    _ => {
+                        eprintln!("waggled: tcp {peer}: rejected (bad hello)");
+                        return;
+                    }
+                }
+                serve_client(lines, write, &handler, &state, &sock).await;
+            });
+        }
+    });
 }
 
 /// Idle exit (`WAGGLE_IDLE_SECS`): a daemon with zero connections and no

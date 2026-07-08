@@ -1088,6 +1088,7 @@ dependencies = [
  "waggle-core",
  "waggle-mcp",
  "waggle-ops",
+ "waggle-store",
  "waggle-store-sqlite",
 ]
 

@@ -16,6 +16,8 @@ use serde_json::json;
 #[cfg(unix)]
 mod daemon;
 mod init;
+#[cfg(unix)]
+mod remote;
 mod run;
 
 #[derive(Parser)]
