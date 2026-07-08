@@ -10,7 +10,7 @@ use waggle_core::{
     mint, negotiate, resolve, ActorClass, CanonicalUrl, Change, Channel, ConsumerHint, MintOptions,
     MintSpec, ResolverContext, Sharer, Stage, Timestamp, Token,
 };
-use waggle_store::{AppendIntent, Appended, MintNonce, Store, StoreError};
+use waggle_store::{AppendIntent, Appended, BlobSink, MintNonce, Store, StoreError};
 
 use crate::envelope::{Envelope, NextCall, Stats};
 use crate::map::{global_map, handoff_line, token_map};
@@ -20,6 +20,9 @@ pub struct Handler<S> {
     store: S,
     /// Session identity used when `sharer` is omitted (one-call mint).
     default_sharer: Sharer,
+    /// Content-addressed media storage; absent hosts refuse `attach` with
+    /// a hint rather than degrading silently.
+    blobs: Option<Box<dyn BlobSink + Send + Sync>>,
 }
 
 fn arg_str<'a>(args: &'a Map<String, Value>, key: &str) -> Option<&'a str> {
@@ -72,7 +75,15 @@ impl<S: Store> Handler<S> {
         Self {
             store,
             default_sharer,
+            blobs: None,
         }
+    }
+
+    /// Attach a blob sidecar — enables `mint --attach` and media variants.
+    #[must_use]
+    pub fn with_blobs(mut self, blobs: Box<dyn BlobSink + Send + Sync>) -> Self {
+        self.blobs = Some(blobs);
+        self
     }
 
     /// The store, for transports needing direct reads.
@@ -159,6 +170,12 @@ impl<S: Store> Handler<S> {
                 }
             }
         }
+        if let Some(path) = arg_str(args, "attach") {
+            match self.attach_variant(path, arg_str(args, "attach-type")) {
+                Ok(v) => spec = spec.variant(v.match_expr, v.body),
+                Err(e) => return e,
+            }
+        }
         let manifest = match mint(spec, &MintOptions::default(), &mut *entropy, now) {
             Ok(m) => m,
             Err(e) => return Envelope::err(e.to_string(), vec![]),
@@ -207,6 +224,44 @@ impl<S: Store> Handler<S> {
             Ok(_) => Envelope::err("store returned a non-mint receipt for a mint", vec![]),
             Err(e) => store_err(&e),
         }
+    }
+
+    /// Read `path`, store it content-addressed, and shape the media
+    /// variant: images serve vision consumers, audio serves listeners
+    /// (rev 2.3) — everyone else falls through to the catch-all.
+    fn attach_variant(
+        &self,
+        path: &str,
+        declared_type: Option<&str>,
+    ) -> Result<waggle_core::Variant, Envelope> {
+        let Some(blobs) = &self.blobs else {
+            return Err(Envelope::err(
+                "this host has no blob store — attach needs one (the daemon configures it automatically)",
+                vec![],
+            ));
+        };
+        let bytes = std::fs::read(path)
+            .map_err(|e| Envelope::err(format!("attach {path}: {e}"), vec![]))?;
+        let content_type = declared_type.map_or_else(
+            || infer_content_type(path).to_owned(),
+            std::borrow::ToOwned::to_owned,
+        );
+        let media = blobs
+            .put(&bytes, &content_type)
+            .map_err(|e| Envelope::err(e.to_string(), vec![]))?;
+        let modality = if content_type.starts_with("audio/") {
+            waggle_core::ModalitySet::AUDIO
+        } else {
+            waggle_core::ModalitySet::VISION
+        };
+        Ok(waggle_core::Variant {
+            match_expr: waggle_core::MatchExpr {
+                modalities: Some(modality),
+                ..waggle_core::MatchExpr::default()
+            },
+            body: waggle_core::VariantBody::Media(media),
+            revalidate_after_ms: None,
+        })
     }
 
     async fn resolve(&self, args: &Map<String, Value>, now: Timestamp) -> Envelope {
@@ -419,6 +474,26 @@ impl<S: Store> Handler<S> {
         let funnel = self.store.funnel(token).await.unwrap_or_default();
         let children = self.store.children(token).await.unwrap_or_default();
         token_map(&view.manifest, &funnel, children.len(), now)
+    }
+}
+
+/// Extension → content type, for the common media cases.
+fn infer_content_type(path: &str) -> &'static str {
+    match path
+        .rsplit('.')
+        .next()
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
+        Some("png") => "image/png",
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        Some("mp3") => "audio/mpeg",
+        Some("wav") => "audio/wav",
+        Some("ogg" | "oga") => "audio/ogg",
+        Some("m4a") => "audio/mp4",
+        _ => "application/octet-stream",
     }
 }
 

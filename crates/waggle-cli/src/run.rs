@@ -40,11 +40,15 @@ pub fn open_handler() -> Result<Handler<SqliteStore>, String> {
         std::fs::create_dir_all(dir).map_err(|e| format!("store dir {}: {e}", dir.display()))?;
     }
     let store = SqliteStore::open(&path).map_err(|e| e.to_string())?;
+    let blobs_dir = path
+        .parent()
+        .map_or_else(|| PathBuf::from("blobs"), |d| d.join("blobs"));
+    let blobs = waggle_store_sqlite::BlobStore::open(&blobs_dir).map_err(|e| e.to_string())?;
     let sharer = std::env::var("WAGGLE_SHARER")
         .ok()
         .and_then(|s| Sharer::new(&s).ok())
         .unwrap_or_else(|| Sharer::new("session").expect("static slug"));
-    Ok(Handler::new(store, sharer))
+    Ok(Handler::new(store, sharer).with_blobs(Box::new(blobs)))
 }
 
 /// Run one tool call and print the envelope as JSON. Exit code: 0 on

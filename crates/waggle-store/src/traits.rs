@@ -5,7 +5,7 @@
 
 use std::collections::BTreeMap;
 
-use waggle_core::{CanonicalUrl, LogRecord, Seq, Stage, Token};
+use waggle_core::{CanonicalUrl, LogRecord, MediaRef, Seq, Stage, Token};
 
 use crate::error::StoreError;
 use crate::types::{AppendIntent, Appended, ManifestView};
@@ -57,3 +57,13 @@ pub trait AppendStore {
 pub trait Store: ReadStore + AppendStore {}
 
 impl<T: ReadStore + AppendStore> Store for T {}
+
+/// Content-addressed blob storage (rev 2.3): bytes in, [`MediaRef`] out;
+/// reads verify. Backends with a sidecar implement this; hosts hand it to
+/// the tool layer so `mint --attach` and media resolution work.
+pub trait BlobSink {
+    /// Store bytes; identical bytes yield the identical address.
+    fn put(&self, bytes: &[u8], content_type: &str) -> Result<MediaRef, StoreError>;
+    /// Fetch and integrity-verify the bytes a `MediaRef` names.
+    fn get(&self, media: &MediaRef) -> Result<Vec<u8>, StoreError>;
+}

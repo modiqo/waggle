@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 use waggle_core::{CanonicalUrl, MediaRef, Sha256Hex};
-use waggle_store::StoreError;
+use waggle_store::{BlobSink, StoreError};
 
 /// The blob store rooted at `<store-root>/blobs/`.
 pub struct BlobStore {
@@ -103,6 +103,15 @@ impl BlobStore {
             }
         }
         Ok(removed)
+    }
+}
+
+impl BlobSink for BlobStore {
+    fn put(&self, bytes: &[u8], content_type: &str) -> Result<MediaRef, StoreError> {
+        Self::put(self, bytes, content_type)
+    }
+    fn get(&self, media: &MediaRef) -> Result<Vec<u8>, StoreError> {
+        Self::get(self, media)
     }
 }
 

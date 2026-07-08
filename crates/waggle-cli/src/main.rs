@@ -42,6 +42,12 @@ enum Cmd {
         /// Where this share lives (e.g. subagent/researcher); defaults to subagent/general.
         #[arg(long)]
         channel: Option<String>,
+        /// Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all.
+        #[arg(long)]
+        attach: Option<String>,
+        /// Content type of the attachment; inferred from the extension when omitted.
+        #[arg(long)]
+        attach_type: Option<String>,
     },
     #[command(about = waggle_ops::RESOLVE.description)]
     Resolve {
@@ -105,9 +111,17 @@ fn main() {
             target,
             sharer,
             channel,
+            attach,
+            attach_type,
         } => run::tool_call(
             "mint",
-            strip_nulls(json!({ "target": target, "sharer": sharer, "channel": channel })),
+            strip_nulls(json!({
+                "target": target,
+                "sharer": sharer,
+                "channel": channel,
+                "attach": attach,
+                "attach-type": attach_type,
+            })),
         ),
         Cmd::Resolve { token, context } => {
             let ctx =

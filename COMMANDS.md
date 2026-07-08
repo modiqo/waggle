@@ -11,6 +11,8 @@ Create an attributed reference (a waggle token) for an artifact instead of pasti
 | `--target` | true | Canonical URI of the artifact (file path, workspace URI, or URL). |
 | `--sharer` | false | Who is distributing this; defaults to the session identity. |
 | `--channel` | false | Where this share lives (e.g. subagent/researcher); defaults to subagent/general. |
+| `--attach` | false | Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all. |
+| `--attach-type` | false | Content type of the attachment; inferred from the extension when omitted. |
 
 - forward → `resolve`: self-check the projection each consumer will receive
 - forward → `map`: orient: see all paths available from this fresh token
@@ -81,7 +83,8 @@ Run the waggle daemon (waggled): the single owner of the local store, serving ev
 
 | arg | required | doc |
 |---|---|---|
-| `--stdio` | false | Run as a stdio proxy shim instead of the HTTP daemon. |
+| `--stdio` | false | Speak MCP over stdin/stdout — as a shim to the shared daemon (unix), or directly. |
+| `--daemon` | false | Run waggled in the foreground: the single owner of the local store, on a unix socket every harness shares. |
 
 - forward → `map`: after the daemon is up, orient from the global map
 
