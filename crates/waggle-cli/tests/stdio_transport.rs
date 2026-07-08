@@ -20,6 +20,7 @@ fn serve_stdio_speaks_mcp_and_persists() {
         .args(["serve", "--stdio"])
         .env("WAGGLE_STORE", &store)
         .env("WAGGLE_SHARER", "harness-test")
+        .env("WAGGLE_DIRECT", "1") // the direct server; the shim path has its own test
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())

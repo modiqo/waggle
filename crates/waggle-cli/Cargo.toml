@@ -24,5 +24,8 @@ serde_json = { workspace = true }
 pollster = { workspace = true }
 getrandom = { workspace = true }
 
+[target.'cfg(unix)'.dependencies]
+tokio = { workspace = true }
+
 [lints]
 workspace = true

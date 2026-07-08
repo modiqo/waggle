@@ -55,12 +55,15 @@ fn rpc_err(id: &Value, code: i64, message: &str) -> String {
 
 /// Handle one JSON-RPC message. Returns `None` for notifications (no
 /// response on the wire). `now`/`entropy` come from the transport.
-pub async fn handle_message<S: Store>(
+pub async fn handle_message<S: Store, E>(
     handler: &Handler<S>,
     raw: &str,
     now: Timestamp,
-    entropy: &mut dyn FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError>,
-) -> Option<String> {
+    entropy: &mut E,
+) -> Option<String>
+where
+    E: FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError>,
+{
     let msg: Value = match serde_json::from_str(raw) {
         Ok(v) => v,
         Err(e) => return Some(rpc_err(&Value::Null, -32700, &format!("parse error: {e}"))),

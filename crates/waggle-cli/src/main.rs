@@ -13,6 +13,8 @@
 use clap::{Parser, Subcommand};
 use serde_json::json;
 
+#[cfg(unix)]
+mod daemon;
 mod run;
 
 #[derive(Parser)]
@@ -85,9 +87,12 @@ enum Cmd {
     },
     #[command(about = waggle_ops::SERVE.description)]
     Serve {
-        /// Run as a stdio proxy shim instead of the HTTP daemon.
+        /// Speak MCP over stdin/stdout — as a shim to the shared daemon (unix), or directly.
         #[arg(long)]
         stdio: bool,
+        /// Run waggled in the foreground: the single owner of the local store, on a unix socket every harness shares.
+        #[arg(long)]
+        daemon: bool,
     },
 }
 
@@ -129,19 +134,38 @@ fn main() {
         ),
         Cmd::Funnel { token } => run::tool_call("funnel", json!({ "token": token })),
         Cmd::Map { token } => run::tool_call("map", strip_nulls(json!({ "token": token }))),
-        Cmd::Serve { stdio } => {
-            if stdio {
-                run::serve_stdio()
-            } else {
-                eprintln!(
-                    "waggle serve: the HTTP daemon lands later in CP-6; \
-                     use --stdio (works with every MCP harness today)."
-                );
-                2
-            }
-        }
+        Cmd::Serve { stdio, daemon } => serve(stdio, daemon),
     };
     std::process::exit(code);
+}
+
+/// Route `serve`: daemon (unix), shim (unix), or the direct in-process
+/// server (everywhere; `WAGGLE_DIRECT=1` forces it for tests).
+fn serve(stdio: bool, daemon: bool) -> i32 {
+    #[cfg(unix)]
+    {
+        if daemon {
+            return daemon::run_daemon();
+        }
+        if stdio {
+            if std::env::var("WAGGLE_DIRECT").is_ok() {
+                return run::serve_stdio();
+            }
+            return daemon::serve_stdio_shim();
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        if daemon {
+            eprintln!("waggle serve: the daemon is unix-only today — use --stdio (direct mode).");
+            return 2;
+        }
+        if stdio {
+            return run::serve_stdio();
+        }
+    }
+    eprintln!("waggle serve: pass --stdio (harness shim) or --daemon (foreground waggled).");
+    2
 }
 
 /// Drop null members so handlers see 'absent', not 'null'.

@@ -25,9 +25,9 @@ fn entropy() -> impl FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError> {
 
 /// Send one tools/call frame; return the parsed envelope. Every envelope
 /// is `envelope_next_valid`-checked on the way out (17 §5).
-async fn call(
+async fn call<E: FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError>>(
     handler: &Handler<SqliteStore>,
-    e: &mut dyn FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError>,
+    e: &mut E,
     now: u64,
     tool: &str,
     args: Value,

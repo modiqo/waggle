@@ -82,13 +82,16 @@ impl<S: Store> Handler<S> {
 
     /// Dispatch one tool call. `now` and `entropy` are the transport's —
     /// handlers stay clock- and randomness-free.
-    pub async fn dispatch(
+    pub async fn dispatch<E>(
         &self,
         tool: &str,
         args: &Value,
         now: Timestamp,
-        entropy: &mut dyn FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError>,
-    ) -> Envelope {
+        entropy: &mut E,
+    ) -> Envelope
+    where
+        E: FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError>,
+    {
         let empty = Map::new();
         let args = args.as_object().unwrap_or(&empty);
         match tool {
@@ -109,12 +112,10 @@ impl<S: Store> Handler<S> {
         }
     }
 
-    async fn mint(
-        &self,
-        args: &Map<String, Value>,
-        now: Timestamp,
-        entropy: &mut dyn FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError>,
-    ) -> Envelope {
+    async fn mint<E>(&self, args: &Map<String, Value>, now: Timestamp, entropy: &mut E) -> Envelope
+    where
+        E: FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError>,
+    {
         let Some(target) = arg_str(args, "target") else {
             return Envelope::err("missing `target` — the artifact URI to mint from", vec![]);
         };
@@ -158,9 +159,7 @@ impl<S: Store> Handler<S> {
                 }
             }
         }
-        // Re-wrap: mint is generic over Sized entropy; the dyn is ours.
-        let mut sized_entropy = |buf: &mut [u8]| entropy(buf);
-        let manifest = match mint(spec, &MintOptions::default(), &mut sized_entropy, now) {
+        let manifest = match mint(spec, &MintOptions::default(), &mut *entropy, now) {
             Ok(m) => m,
             Err(e) => return Envelope::err(e.to_string(), vec![]),
         };

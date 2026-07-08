@@ -203,7 +203,10 @@ pub const SERVE: OperationSpec = OperationSpec {
     surface: Surface::CliOnly,
     kind: OpKind::Read,
     description: "Run the waggle daemon (waggled): the single owner of the local store, serving every harness on this machine over MCP. With --stdio, act as a proxy shim for harnesses that spawn stdio servers (auto-starts the daemon if absent).",
-    args: &[ArgSpec { name: "stdio", required: false, doc: "Run as a stdio proxy shim instead of the HTTP daemon." }],
+    args: &[
+        ArgSpec { name: "stdio", required: false, doc: "Speak MCP over stdin/stdout — as a shim to the shared daemon (unix), or directly." },
+        ArgSpec { name: "daemon", required: false, doc: "Run waggled in the foreground: the single owner of the local store, on a unix socket every harness shares." },
+    ],
     forward: &[EdgeSpec { to: "map", why: "after the daemon is up, orient from the global map" }],
     reverse: &[],
     core_fn: "waggle_cli::serve",

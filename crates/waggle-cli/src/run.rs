@@ -12,12 +12,12 @@ use waggle_mcp::{handle_message, Handler};
 use waggle_store_sqlite::SqliteStore;
 
 /// OS entropy as a closure — the only randomness source in the binary.
-fn os_entropy(buf: &mut [u8]) -> Result<(), EntropyError> {
+pub fn os_entropy(buf: &mut [u8]) -> Result<(), EntropyError> {
     getrandom::getrandom(buf).map_err(|e| EntropyError(e.to_string()))
 }
 
 /// The system clock, once per command — handlers stay clock-free.
-fn now() -> Timestamp {
+pub fn now() -> Timestamp {
     let ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
@@ -34,7 +34,7 @@ fn store_path() -> PathBuf {
     PathBuf::from(home).join(".waggle").join("waggle.db")
 }
 
-fn open_handler() -> Result<Handler<SqliteStore>, String> {
+pub fn open_handler() -> Result<Handler<SqliteStore>, String> {
     let path = store_path();
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|e| format!("store dir {}: {e}", dir.display()))?;
