@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 460" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 620" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
   <defs>
     <marker id="ha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#8a6d3b"/>
@@ -7,70 +7,87 @@
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#b3423a"/>
     </marker>
   </defs>
-  <rect width="940" height="460" fill="#fffdf8"/>
+  <rect width="1100" height="620" fill="#fffdf8"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="19" font-weight="bold" fill="#1f2430">the handoff, before and after</text>
+  <text x="550" y="44" text-anchor="middle" font-size="19" font-weight="bold" fill="#1f2430">the handoff, before and after</text>
 
-  <!-- BEFORE -->
-  <text x="235" y="76" text-anchor="middle" font-size="14" font-weight="bold" fill="#b3423a">forward the context and hope</text>
-  <rect x="150" y="95" width="170" height="46" rx="8" fill="#ffffff" stroke="#9aa1ad" stroke-width="1.5"/>
-  <text x="235" y="123" text-anchor="middle" font-size="14" fill="#1f2430">orchestrator</text>
+  <!-- ============ BEFORE (panel 40..500, center 270) ============ -->
+  <text x="270" y="92" text-anchor="middle" font-size="14" font-weight="bold" fill="#b3423a">forward the context and hope</text>
 
-  <line x1="200" y1="141" x2="120" y2="205" stroke="#b3423a" stroke-width="2" marker-end="url(#hr)"/>
-  <line x1="235" y1="141" x2="235" y2="205" stroke="#b3423a" stroke-width="2" marker-end="url(#hr)"/>
-  <line x1="270" y1="141" x2="350" y2="205" stroke="#b3423a" stroke-width="2" marker-end="url(#hr)"/>
-  <text x="235" y="180" text-anchor="middle" font-size="12" fill="#b3423a">the whole artifact, pasted — three times</text>
+  <rect x="185" y="112" width="170" height="46" rx="8" fill="#ffffff" stroke="#9aa1ad" stroke-width="1.5"/>
+  <text x="270" y="140" text-anchor="middle" font-size="14" fill="#1f2430">orchestrator</text>
+
+  <line x1="225" y1="158" x2="135" y2="252" stroke="#b3423a" stroke-width="2" marker-end="url(#hr)"/>
+  <line x1="270" y1="158" x2="270" y2="252" stroke="#b3423a" stroke-width="2" marker-end="url(#hr)"/>
+  <line x1="315" y1="158" x2="405" y2="252" stroke="#b3423a" stroke-width="2" marker-end="url(#hr)"/>
+
+  <!-- label painted over the arrows, on its own ground -->
+  <rect x="145" y="188" width="250" height="24" fill="#fffdf8"/>
+  <text x="270" y="205" text-anchor="middle" font-size="12.5" fill="#b3423a">the whole artifact, three times</text>
 
   <g font-size="13" fill="#1f2430">
-    <rect x="55" y="210" width="130" height="42" rx="8" fill="#ffffff" stroke="#9aa1ad"/>
-    <text x="120" y="236" text-anchor="middle">subagent A</text>
-    <rect x="170" y="210" width="130" height="42" rx="8" fill="#ffffff" stroke="#9aa1ad"/>
-    <text x="235" y="236" text-anchor="middle">subagent B</text>
-    <rect x="285" y="210" width="130" height="42" rx="8" fill="#ffffff" stroke="#9aa1ad"/>
-    <text x="350" y="236" text-anchor="middle">subagent C</text>
+    <rect x="70" y="258" width="130" height="44" rx="8" fill="#ffffff" stroke="#9aa1ad"/>
+    <text x="135" y="285" text-anchor="middle">subagent A</text>
+    <rect x="205" y="258" width="130" height="44" rx="8" fill="#ffffff" stroke="#9aa1ad"/>
+    <text x="270" y="285" text-anchor="middle">subagent B</text>
+    <rect x="340" y="258" width="130" height="44" rx="8" fill="#ffffff" stroke="#9aa1ad"/>
+    <text x="405" y="285" text-anchor="middle">subagent C</text>
   </g>
 
   <g font-size="12.5" fill="#7a4340">
-    <text x="235" y="292" text-anchor="middle">every copy identical — the 4k model gets the frontier model's 9,000 tokens</text>
-    <text x="235" y="312" text-anchor="middle">no author, no lifecycle: a stale copy is wrong forever, silently</text>
-    <text x="235" y="332" text-anchor="middle">no telemetry: which subagent actually read its input?</text>
+    <text x="270" y="348" text-anchor="middle">every copy identical:</text>
+    <text x="270" y="368" text-anchor="middle">the 4k model gets all 9,000 tokens</text>
+    <text x="270" y="396" text-anchor="middle">no author, no lifecycle:</text>
+    <text x="270" y="416" text-anchor="middle">stale copies stay wrong, silently</text>
+    <text x="270" y="444" text-anchor="middle">no telemetry:</text>
+    <text x="270" y="464" text-anchor="middle">did anyone actually read it?</text>
   </g>
 
   <!-- divider -->
-  <line x1="470" y1="70" x2="470" y2="350" stroke="#e3ddd0" stroke-width="2"/>
+  <line x1="550" y1="80" x2="550" y2="480" stroke="#e3ddd0" stroke-width="2"/>
 
-  <!-- AFTER -->
-  <text x="705" y="76" text-anchor="middle" font-size="14" font-weight="bold" fill="#8a6d3b">hand off a reference that answers back</text>
-  <rect x="620" y="95" width="170" height="46" rx="8" fill="#ffffff" stroke="#9aa1ad" stroke-width="1.5"/>
-  <text x="705" y="123" text-anchor="middle" font-size="14" fill="#1f2430">orchestrator</text>
+  <!-- ============ AFTER (panel 600..1060, center 830) ============ -->
+  <text x="830" y="92" text-anchor="middle" font-size="14" font-weight="bold" fill="#8a6d3b">hand off a reference</text>
 
-  <line x1="705" y1="141" x2="705" y2="168" stroke="#8a6d3b" stroke-width="2" marker-end="url(#ha)"/>
-  <rect x="627" y="172" width="156" height="34" rx="17" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.5"/>
-  <text x="705" y="194" text-anchor="middle" font-size="14" fill="#6b4a08">7Kp2xQ9f · 30 bytes</text>
+  <rect x="745" y="112" width="170" height="46" rx="8" fill="#ffffff" stroke="#9aa1ad" stroke-width="1.5"/>
+  <text x="830" y="140" text-anchor="middle" font-size="14" fill="#1f2430">orchestrator</text>
 
-  <line x1="655" y1="206" x2="592" y2="248" stroke="#8a6d3b" stroke-width="2" marker-end="url(#ha)"/>
-  <line x1="705" y1="206" x2="705" y2="248" stroke="#8a6d3b" stroke-width="2" marker-end="url(#ha)"/>
-  <line x1="755" y1="206" x2="818" y2="248" stroke="#8a6d3b" stroke-width="2" marker-end="url(#ha)"/>
-  <text x="705" y="234" text-anchor="middle" font-size="12" fill="#8a6d3b">each resolves its OWN projection</text>
+  <line x1="830" y1="158" x2="830" y2="182" stroke="#8a6d3b" stroke-width="2" marker-end="url(#ha)"/>
+
+  <rect x="725" y="186" width="210" height="36" rx="18" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.5"/>
+  <text x="830" y="209" text-anchor="middle" font-size="14" fill="#6b4a08">7Kp2xQ9f - 30 bytes</text>
+
+  <line x1="775" y1="222" x2="690" y2="288" stroke="#8a6d3b" stroke-width="2" marker-end="url(#ha)"/>
+  <line x1="830" y1="222" x2="830" y2="288" stroke="#8a6d3b" stroke-width="2" marker-end="url(#ha)"/>
+  <line x1="885" y1="222" x2="970" y2="288" stroke="#8a6d3b" stroke-width="2" marker-end="url(#ha)"/>
+
+  <rect x="705" y="242" width="250" height="24" fill="#fffdf8"/>
+  <text x="830" y="259" text-anchor="middle" font-size="12.5" fill="#8a6d3b">each resolves its own projection</text>
 
   <g font-size="13" fill="#1f2430">
-    <rect x="525" y="253" width="134" height="58" rx="8" fill="#ffffff" stroke="#9aa1ad"/>
-    <text x="592" y="276" text-anchor="middle">frontier model</text>
-    <text x="592" y="296" text-anchor="middle" font-size="11.5" fill="#667085">the section index</text>
-    <rect x="671" y="253" width="134" height="58" rx="8" fill="#ffffff" stroke="#9aa1ad"/>
-    <text x="738" y="276" text-anchor="middle">4k-context model</text>
-    <text x="738" y="296" text-anchor="middle" font-size="11.5" fill="#667085">the summary</text>
-    <rect x="817" y="253" width="106" height="58" rx="8" fill="#ffffff" stroke="#9aa1ad"/>
-    <text x="870" y="276" text-anchor="middle">CI runner</text>
-    <text x="870" y="296" text-anchor="middle" font-size="11.5" fill="#667085">fail-closed steps</text>
+    <rect x="612" y="294" width="156" height="62" rx="8" fill="#ffffff" stroke="#9aa1ad"/>
+    <text x="690" y="318" text-anchor="middle">frontier model</text>
+    <text x="690" y="340" text-anchor="middle" font-size="11.5" fill="#667085">section index</text>
+
+    <rect x="778" y="294" width="156" height="62" rx="8" fill="#ffffff" stroke="#9aa1ad"/>
+    <text x="856" y="318" text-anchor="middle">small model</text>
+    <text x="856" y="340" text-anchor="middle" font-size="11.5" fill="#667085">the summary</text>
+
+    <rect x="900" y="380" width="0" height="0" fill="none"/>
+    <rect x="944" y="294" width="116" height="62" rx="8" fill="#ffffff" stroke="#9aa1ad"/>
+    <text x="1002" y="318" text-anchor="middle">CI runner</text>
+    <text x="1002" y="340" text-anchor="middle" font-size="11.5" fill="#667085">fail-closed</text>
   </g>
 
   <g font-size="12.5" fill="#3a5a40">
-    <text x="705" y="341" text-anchor="middle">attributed · adaptive per consumer · revocable · every read counted</text>
+    <text x="830" y="400" text-anchor="middle">attributed to its author</text>
+    <text x="830" y="420" text-anchor="middle">adaptive per consumer</text>
+    <text x="830" y="440" text-anchor="middle">revocable, everywhere it went</text>
+    <text x="830" y="460" text-anchor="middle">every read counted</text>
   </g>
 
   <!-- footer -->
-  <line x1="60" y1="374" x2="880" y2="374" stroke="#e3ddd0" stroke-width="1.5"/>
-  <text x="470" y="404" text-anchor="middle" font-size="13.5" fill="#1f2430">the bee does not carry the field to the hive — she dances a reference,</text>
-  <text x="470" y="424" text-anchor="middle" font-size="13.5" fill="#1f2430">and every bee that reads it decodes it for its own role, then flies itself.</text>
+  <line x1="80" y1="508" x2="1020" y2="508" stroke="#e3ddd0" stroke-width="1.5"/>
+  <text x="550" y="546" text-anchor="middle" font-size="13.5" fill="#1f2430">the bee does not carry the field to the hive.</text>
+  <text x="550" y="570" text-anchor="middle" font-size="13.5" fill="#1f2430">she dances a reference, and each reader decodes it for its own role.</text>
 </svg>

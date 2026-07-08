@@ -1,68 +1,74 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 360" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 420" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
   <defs>
     <marker id="ra" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#8a6d3b"/>
     </marker>
   </defs>
-  <rect width="940" height="360" fill="#fffdf8"/>
+  <rect width="1100" height="420" fill="#fffdf8"/>
 
-  <text x="470" y="36" text-anchor="middle" font-size="18" font-weight="bold" fill="#1f2430">one token, three radii — nothing about the agent's loop changes</text>
+  <text x="550" y="40" text-anchor="middle" font-size="18" font-weight="bold" fill="#1f2430">one token, three radii</text>
 
-  <!-- radius 1: one machine -->
-  <rect x="40" y="70" width="260" height="210" rx="10" fill="#ffffff" stroke="#9aa1ad" stroke-width="1.5"/>
-  <text x="170" y="97" text-anchor="middle" font-size="14" font-weight="bold" fill="#1f2430">one machine</text>
+  <!-- panel 1: one machine (40..360, center 200) -->
+  <rect x="40" y="70" width="320" height="240" rx="10" fill="#ffffff" stroke="#9aa1ad" stroke-width="1.5"/>
+  <text x="200" y="100" text-anchor="middle" font-size="14" font-weight="bold" fill="#1f2430">one machine</text>
   <g font-size="12.5" fill="#1f2430">
-    <rect x="62" y="112" width="100" height="34" rx="6" fill="#f5f2ea" stroke="#b9b09c"/>
-    <text x="112" y="133" text-anchor="middle">Claude Code</text>
-    <rect x="178" y="112" width="100" height="34" rx="6" fill="#f5f2ea" stroke="#b9b09c"/>
-    <text x="228" y="133" text-anchor="middle">Codex</text>
-    <rect x="120" y="176" width="100" height="34" rx="6" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.5"/>
-    <text x="170" y="197" text-anchor="middle" fill="#6b4a08">waggled</text>
+    <rect x="62" y="118" width="125" height="36" rx="6" fill="#f5f2ea" stroke="#b9b09c"/>
+    <text x="124" y="141" text-anchor="middle">Claude Code</text>
+    <rect x="213" y="118" width="125" height="36" rx="6" fill="#f5f2ea" stroke="#b9b09c"/>
+    <text x="275" y="141" text-anchor="middle">Codex</text>
+    <rect x="140" y="186" width="120" height="36" rx="6" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.5"/>
+    <text x="200" y="209" text-anchor="middle" fill="#6b4a08">waggled</text>
   </g>
-  <line x1="112" y1="146" x2="152" y2="174" stroke="#8a6d3b" stroke-width="1.8" marker-end="url(#ra)"/>
-  <line x1="228" y1="146" x2="188" y2="174" stroke="#8a6d3b" stroke-width="1.8" marker-end="url(#ra)"/>
-  <text x="170" y="236" text-anchor="middle" font-size="12" fill="#667085">every harness, one store:</text>
-  <text x="170" y="253" text-anchor="middle" font-size="12" fill="#667085">what one session mints,</text>
-  <text x="170" y="270" text-anchor="middle" font-size="12" fill="#667085">another resolves. 323 µs.</text>
+  <line x1="124" y1="154" x2="168" y2="184" stroke="#8a6d3b" stroke-width="1.8" marker-end="url(#ra)"/>
+  <line x1="275" y1="154" x2="231" y2="184" stroke="#8a6d3b" stroke-width="1.8" marker-end="url(#ra)"/>
+  <g font-size="12" fill="#667085">
+    <text x="200" y="252" text-anchor="middle">every harness, one store:</text>
+    <text x="200" y="270" text-anchor="middle">one session mints,</text>
+    <text x="200" y="288" text-anchor="middle">another resolves. 323 us.</text>
+  </g>
 
-  <!-- radius 2: machines -->
-  <rect x="340" y="70" width="260" height="210" rx="10" fill="#ffffff" stroke="#9aa1ad" stroke-width="1.5"/>
-  <text x="470" y="97" text-anchor="middle" font-size="14" font-weight="bold" fill="#1f2430">across machines</text>
+  <!-- panel 2: across machines (390..710, center 550) -->
+  <rect x="390" y="70" width="320" height="240" rx="10" fill="#ffffff" stroke="#9aa1ad" stroke-width="1.5"/>
+  <text x="550" y="100" text-anchor="middle" font-size="14" font-weight="bold" fill="#1f2430">across machines</text>
+  <g font-size="12.5" fill="#6b4a08">
+    <rect x="412" y="140" width="125" height="40" rx="6" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.5"/>
+    <text x="474" y="165" text-anchor="middle">waggled A</text>
+    <rect x="563" y="140" width="125" height="40" rx="6" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.5"/>
+    <text x="625" y="165" text-anchor="middle">waggled B</text>
+  </g>
+  <line x1="537" y1="160" x2="561" y2="160" stroke="#8a6d3b" stroke-width="1.8" marker-end="url(#ra)"/>
+  <g font-size="12" fill="#667085">
+    <text x="550" y="216" text-anchor="middle">a token minted there</text>
+    <text x="550" y="234" text-anchor="middle">resolves here, transparently.</text>
+    <text x="550" y="252" text-anchor="middle">strict: revocations bite now.</text>
+    <text x="550" y="270" text-anchor="middle">eventual: the author's window.</text>
+  </g>
+
+  <!-- panel 3: the edge (740..1060, center 900) -->
+  <rect x="740" y="70" width="320" height="240" rx="10" fill="#fef8f1" stroke="#e07b39" stroke-width="1.5"/>
+  <text x="900" y="100" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a3c10">the edge</text>
   <g font-size="12.5" fill="#1f2430">
-    <rect x="362" y="130" width="100" height="40" rx="6" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.5"/>
-    <text x="412" y="155" text-anchor="middle" fill="#6b4a08">waggled A</text>
-    <rect x="478" y="130" width="100" height="40" rx="6" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.5"/>
-    <text x="528" y="155" text-anchor="middle" fill="#6b4a08">waggled B</text>
+    <rect x="762" y="118" width="125" height="40" rx="6" fill="#ffffff" stroke="#b9b09c"/>
+    <text x="824" y="136" text-anchor="middle">laptop</text>
+    <text x="824" y="152" text-anchor="middle" font-size="11" fill="#667085">asleep</text>
+    <rect x="913" y="118" width="125" height="40" rx="6" fill="#ffffff" stroke="#e07b39"/>
+    <text x="975" y="136" text-anchor="middle">Cloudflare</text>
+    <text x="975" y="152" text-anchor="middle" font-size="11" fill="#667085">your account</text>
   </g>
-  <line x1="462" y1="150" x2="476" y2="150" stroke="#8a6d3b" stroke-width="1.8" marker-end="url(#ra)"/>
-  <text x="470" y="205" text-anchor="middle" font-size="12" fill="#667085">a token minted THERE</text>
-  <text x="470" y="222" text-anchor="middle" font-size="12" fill="#667085">resolves HERE, transparently.</text>
-  <text x="470" y="239" text-anchor="middle" font-size="12" fill="#667085">strict = revocations bite now;</text>
-  <text x="470" y="256" text-anchor="middle" font-size="12" fill="#667085">eventual = the author's window.</text>
-
-  <!-- radius 3: the edge -->
-  <rect x="640" y="70" width="260" height="210" rx="10" fill="#fef8f1" stroke="#e07b39" stroke-width="1.5"/>
-  <text x="770" y="97" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a3c10">the edge</text>
-  <g font-size="12.5">
-    <rect x="662" y="112" width="105" height="38" rx="6" fill="#ffffff" stroke="#b9b09c"/>
-    <text x="714" y="130" text-anchor="middle" fill="#1f2430">laptop</text>
-    <text x="714" y="144" text-anchor="middle" font-size="11" fill="#667085">asleep</text>
-    <rect x="783" y="112" width="95" height="38" rx="6" fill="#ffffff" stroke="#e07b39"/>
-    <text x="830" y="130" text-anchor="middle" fill="#1f2430">Cloudflare</text>
-    <text x="830" y="144" text-anchor="middle" font-size="11" fill="#667085">your account</text>
+  <line x1="887" y1="138" x2="911" y2="138" stroke="#8a6d3b" stroke-width="1.8" marker-end="url(#ra)"/>
+  <g font-size="12" fill="#667085">
+    <text x="900" y="198" text-anchor="middle" fill="#8a5a2b">waggle edge push</text>
+    <text x="900" y="220" text-anchor="middle">records and snapshots</text>
+    <text x="900" y="238" text-anchor="middle">replicate; files never leave.</text>
+    <text x="900" y="260" text-anchor="middle">grep runs at the edge;</text>
+    <text x="900" y="278" text-anchor="middle">only matches travel back.</text>
   </g>
-  <line x1="767" y1="131" x2="781" y2="131" stroke="#8a6d3b" stroke-width="1.8" marker-end="url(#ra)"/>
-  <text x="770" y="176" text-anchor="middle" font-size="12" fill="#8a5a2b">waggle edge push</text>
-  <text x="770" y="196" text-anchor="middle" font-size="12" fill="#667085">records + pinned snapshots</text>
-  <text x="770" y="213" text-anchor="middle" font-size="12" fill="#667085">replicate; the FILES never leave.</text>
-  <text x="770" y="234" text-anchor="middle" font-size="12" fill="#667085">grep runs AT the edge —</text>
-  <text x="770" y="251" text-anchor="middle" font-size="12" fill="#667085">only the matches travel back.</text>
 
-  <!-- the token traveling -->
-  <rect x="392" y="298" width="156" height="32" rx="16" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.5"/>
-  <text x="470" y="319" text-anchor="middle" font-size="13.5" fill="#6b4a08">7Kp2xQ9f · 30 bytes</text>
-  <line x1="300" y1="314" x2="388" y2="314" stroke="#8a6d3b" stroke-width="1.8" marker-end="url(#ra)"/>
-  <line x1="552" y1="314" x2="636" y2="314" stroke="#8a6d3b" stroke-width="1.8" marker-end="url(#ra)"/>
-  <text x="170" y="319" text-anchor="middle" font-size="12.5" fill="#667085">the same eight characters,</text>
-  <text x="770" y="319" text-anchor="middle" font-size="12.5" fill="#667085">meaning the same thing, everywhere</text>
+  <!-- the token traveling beneath -->
+  <rect x="445" y="342" width="210" height="36" rx="18" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.5"/>
+  <text x="550" y="365" text-anchor="middle" font-size="13.5" fill="#6b4a08">7Kp2xQ9f - 30 bytes</text>
+  <line x1="200" y1="360" x2="441" y2="360" stroke="#8a6d3b" stroke-width="1.8" marker-end="url(#ra)"/>
+  <line x1="659" y1="360" x2="900" y2="360" stroke="#8a6d3b" stroke-width="1.8" marker-end="url(#ra)"/>
+  <text x="200" y="342" text-anchor="middle" font-size="12" fill="#667085">the same eight characters,</text>
+  <text x="900" y="342" text-anchor="middle" font-size="12" fill="#667085">meaning the same thing, everywhere</text>
 </svg>
