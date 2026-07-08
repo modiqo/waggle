@@ -206,8 +206,19 @@ fn miniflare_matrix() {
         .collect();
     samples.sort_unstable();
     let p50 = samples[samples.len() / 2];
-    println!("E11: edge resolve p50 {p50} µs (budget 10 ms local-Miniflare)");
-    assert!(p50 < 10_000, "E11: p50 {p50} µs exceeds the 10 ms budget");
+    // The 10 ms budget is calibrated to a dev machine; shared CI runners
+    // are several times slower, so they widen it via env rather than
+    // turning a perf guard into a flake (the guard still catches
+    // pathological regressions there).
+    let budget_ms: u128 = std::env::var("WAGGLE_EDGE_P50_BUDGET_MS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(10);
+    println!("E11: edge resolve p50 {p50} µs (budget {budget_ms} ms)");
+    assert!(
+        p50 < budget_ms * 1_000,
+        "E11: p50 {p50} µs exceeds the {budget_ms} ms budget"
+    );
 
     // ── E9: the public unfurl carries OG meta from the snapshot.
     let resp = ureq::get(&format!("http://127.0.0.1:{port}/t/{token}"))

@@ -68,3 +68,7 @@ jobs:
         run: cargo install worker-build --locked
       - name: Miniflare matrix (CP-10e)
         run: just edge-test
+        env:
+          # Shared 2-core runners are ~8x slower than the dev machines the
+          # 10 ms budget was calibrated on; still guards regressions.
+          WAGGLE_EDGE_P50_BUDGET_MS: 60

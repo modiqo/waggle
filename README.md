@@ -1,5 +1,8 @@
+<h1 align="center">
+  <img src="docs/assets/logo.svg" width="52" alt="the waggle mark: a figure-eight dance with the waggle run as an arrow" align="center"> waggle
+</h1>
+
 <p align="center">
-  <strong>waggle</strong><br>
   <em>Agents already pass references. Waggle makes the reference intelligent.</em>
 </p>
 
@@ -27,6 +30,10 @@ And here is the part that matters: every bee that reads the dance decodes it
 **according to its own role and state**, then flies to the target itself.
 One shared marker. Adaptive interpretation per consumer. Recruitment success
 observable at the hive.
+
+<p align="center">
+  <img src="docs/assets/dance.svg" alt="The waggle dance: a figure-eight around a waggle run whose angle to vertical encodes direction to the find, duration encodes distance, vigor encodes quality" width="640">
+</p>
 
 Twenty million years before context windows, evolution solved the handoff
 problem — and it did not solve it by pasting the meadow into the prompt.

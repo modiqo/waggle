@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 820" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+  <defs>
+    <marker id="da" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1f2430"/>
+    </marker>
+    <marker id="dh" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c9860a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="820" fill="#fffdf8"/>
+
+  <!-- sun, top-left -->
+  <g stroke="#1f2430" stroke-width="5" stroke-linecap="round" fill="none">
+    <circle cx="150" cy="140" r="36"/>
+    <line x1="150" y1="72"  x2="150" y2="92"/>
+    <line x1="150" y1="188" x2="150" y2="208"/>
+    <line x1="82"  y1="140" x2="102" y2="140"/>
+    <line x1="198" y1="140" x2="218" y2="140"/>
+    <line x1="102" y1="92"  x2="116" y2="106"/>
+    <line x1="184" y1="174" x2="198" y2="188"/>
+    <line x1="198" y1="92"  x2="184" y2="106"/>
+    <line x1="116" y1="174" x2="102" y2="188"/>
+  </g>
+
+  <!-- gravity/vertical reference -->
+  <line x1="150" y1="230" x2="150" y2="740" stroke="#1f2430" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- flower, top-right -->
+  <g transform="translate(760,130)" stroke="#1f2430" stroke-width="5" fill="none" stroke-linecap="round">
+    <circle r="13" fill="#c9860a" stroke="none"/>
+    <ellipse cx="0"   cy="-30" rx="12" ry="18"/>
+    <ellipse cx="0"   cy="30"  rx="12" ry="18"/>
+    <ellipse cx="-30" cy="0"   rx="18" ry="12"/>
+    <ellipse cx="30"  cy="0"   rx="18" ry="12"/>
+    <ellipse cx="-22" cy="-22" rx="14" ry="14"/>
+    <ellipse cx="22"  cy="-22" rx="14" ry="14"/>
+    <ellipse cx="-22" cy="22"  rx="14" ry="14"/>
+    <ellipse cx="22"  cy="22"  rx="14" ry="14"/>
+  </g>
+
+  <!-- bearing line: vertex to the find -->
+  <line x1="150" y1="740" x2="712" y2="178" stroke="#1f2430" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- the angle -->
+  <path d="M 150 660 A 80 80 0 0 1 207 683" fill="none" stroke="#1f2430" stroke-width="3.5"/>
+  <text x="196" y="650" font-size="26" font-style="italic" fill="#1f2430">a</text>
+
+  <!-- the figure-eight, centered on the bearing line -->
+  <g transform="translate(310,580) rotate(-45)">
+    <!-- return loop, left side (solid) -->
+    <path d="M 250 0 C 330 -170, -80 -170, -4 -16" fill="none" stroke="#1f2430" stroke-width="4" marker-end="url(#da)"/>
+    <!-- return loop, right side (dotted) -->
+    <path d="M 250 0 C 330 170, -80 170, -4 16" fill="none" stroke="#1f2430" stroke-width="4" stroke-dasharray="2 9" stroke-linecap="round" marker-end="url(#da)"/>
+    <!-- the waggle run itself -->
+    <path d="M 0 0 Q 10 -16 20 0 T 40 0 T 60 0 T 80 0 T 100 0 T 120 0 T 140 0 T 160 0 T 180 0 T 200 0 T 220 0"
+          fill="none" stroke="#c9860a" stroke-width="5" stroke-linecap="round"/>
+    <line x1="222" y1="0" x2="246" y2="0" stroke="#c9860a" stroke-width="5" marker-end="url(#dh)"/>
+    <!-- the message, written along the run -->
+    <text x="125" y="48" text-anchor="middle" font-size="17" fill="#6b4a08">1 s of waggle = 1 km</text>
+  </g>
+
+  <!-- the dancer, on the solid loop -->
+  <g transform="translate(330,382) rotate(24)">
+    <ellipse cx="-14" cy="-16" rx="13" ry="8" fill="none" stroke="#1f2430" stroke-width="4"/>
+    <ellipse cx="14"  cy="-16" rx="13" ry="8" fill="none" stroke="#1f2430" stroke-width="4"/>
+    <ellipse cx="0" cy="0" rx="24" ry="16" fill="#c9860a" stroke="#1f2430" stroke-width="4"/>
+    <line x1="-8" y1="-15" x2="-8" y2="15" stroke="#1f2430" stroke-width="4"/>
+    <line x1="1"  y1="-16" x2="1"  y2="16" stroke="#1f2430" stroke-width="4"/>
+    <line x1="10" y1="-13" x2="10" y2="13" stroke="#1f2430" stroke-width="4"/>
+  </g>
+
+  <!-- a reader, on the dotted loop -->
+  <g transform="translate(508,606) rotate(24)">
+    <ellipse cx="-14" cy="-16" rx="13" ry="8" fill="none" stroke="#1f2430" stroke-width="4"/>
+    <ellipse cx="14"  cy="-16" rx="13" ry="8" fill="none" stroke="#1f2430" stroke-width="4"/>
+    <ellipse cx="0" cy="0" rx="24" ry="16" fill="#c9860a" stroke="#1f2430" stroke-width="4"/>
+    <line x1="-8" y1="-15" x2="-8" y2="15" stroke="#1f2430" stroke-width="4"/>
+    <line x1="1"  y1="-16" x2="1"  y2="16" stroke="#1f2430" stroke-width="4"/>
+    <line x1="10" y1="-13" x2="10" y2="13" stroke="#1f2430" stroke-width="4"/>
+  </g>
+
+  <!-- the reading -->
+  <g font-size="15" fill="#667085">
+    <text x="450" y="778" text-anchor="middle">angle to vertical: direction to the find. waggle duration: distance. vigor: quality.</text>
+    <text x="450" y="802" text-anchor="middle" fill="#6b4a08">a 30-byte reference, decoded by each reader for its own flight.</text>
+  </g>
+</svg>
