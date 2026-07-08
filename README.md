@@ -117,6 +117,10 @@ shared daemon on a unix socket that owns the store. Every harness on your
 machine lands on the same tokens: what a Claude Code session mints, a
 Codex session resolves.
 
+> **Lost?** The [documentation map](docs/README.md) categorizes everything:
+> the why, the guides in reading order, the reference surfaces, and the
+> design corpus.
+
 ## Getting started
 
 Sixty seconds from a checkout:
