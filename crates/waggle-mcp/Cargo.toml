@@ -25,6 +25,7 @@ pollster = { workspace = true }
 waggle-store-sqlite = { path = "../waggle-store-sqlite", version = "0.1.0" }
 waggle-social = { workspace = true }
 criterion = { workspace = true }
+tempfile = "3"
 
 [[bench]]
 name = "query_paths"

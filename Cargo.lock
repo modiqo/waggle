@@ -1798,6 +1798,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "tempfile",
  "waggle-core",
  "waggle-ops",
  "waggle-social",
