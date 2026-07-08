@@ -69,6 +69,26 @@ boundary).
 > boundaries, the why-provider-caching-doesn't-transfer argument, and
 > the full dance-to-design mapping — is **[docs/WHY.md](docs/WHY.md)**.
 
+## What enters the context window
+
+When a parent hands a subagent `/tmp/result.md` — or a waggle token —
+only that *string* enters the subagent's context. The artifact behind it
+does not travel unless something fetches it. Every harness answers
+"fetch when?" differently: Claude Code subagents start fresh and gather
+context themselves; OpenAI SDK handoffs forward conversation history
+unless filtered; MCP resources enter only when the host reads them.
+Three patterns, one gap:
+
+<p align="center">
+  <img src="docs/assets/context.svg" alt="Three context windows compared: a full handoff fills the window with the artifact again; a raw path is cheap but blind; a waggle token stays small and pulls back only budgeted slices through resolve, search, and read" width="940">
+</p>
+
+Waggle standardizes the third pattern, and enforces its one hard rule
+**by type**: the token travels in context; the artifact never
+auto-expands; `resolve`, `read`, and `search` return only the projection
+or slice the consumer asked for, under byte budgets. Cheap like a path —
+but the reference answers back.
+
 ## How it works
 
 Waggle is the reference, made first-class. A **token** is a ~30-byte
