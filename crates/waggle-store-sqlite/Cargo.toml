@@ -22,6 +22,9 @@ sha2 = { workspace = true }
 pollster = { workspace = true }
 criterion = { workspace = true }
 
+[target.'cfg(loom)'.dependencies]
+loom = { workspace = true }
+
 [[bench]]
 name = "store_paths"
 harness = false

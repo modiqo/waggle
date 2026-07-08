@@ -105,3 +105,29 @@ fn idle_daemon_exits_and_cleans_up() {
     );
     std::fs::remove_dir_all(&dir).ok();
 }
+
+/// F-4: a shim pointed at a daemon that owns a DIFFERENT store must fail
+/// loudly with the skew named — never serve silently wrong answers.
+#[test]
+fn shim_refuses_a_store_skewed_daemon() {
+    let dir = env_dir("skew");
+    // Daemon bound to store A.
+    let (_, ok) = waggle(&dir, &["daemon", "start"]);
+    assert!(ok);
+
+    // A shim expecting store B, same socket: refused with the fix named.
+    let out = Command::new(env!("CARGO_BIN_EXE_waggle"))
+        .args(["serve", "--stdio"])
+        .env("WAGGLE_STORE", dir.join("DIFFERENT.db"))
+        .env("WAGGLE_SOCK", dir.join("waggled.sock"))
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(err.contains("store skew"), "{err}");
+    assert!(err.contains("daemon restart"), "the fix is named: {err}");
+
+    let _ = waggle(&dir, &["daemon", "stop"]);
+    std::fs::remove_dir_all(&dir).ok();
+}

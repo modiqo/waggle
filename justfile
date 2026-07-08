@@ -11,6 +11,10 @@ dev-install:
 demo:
     bash scripts/demo.sh
 
+# Model-check the cache layer with loom (15 §5.2)
+loom:
+    RUSTFLAGS="--cfg loom" cargo test -p waggle-store-sqlite --test loom_cache --release
+
 # Run the criterion hot-path benchmarks (see benches/PERF.md)
 bench:
     cargo bench -p waggle-core --bench hot_paths

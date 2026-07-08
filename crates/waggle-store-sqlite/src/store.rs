@@ -3,9 +3,9 @@
 //! WAL snapshot reads, and a read-through manifest cache invalidated
 //! in-commit.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::path::Path;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 
 use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};
 use waggle_core::{
@@ -22,7 +22,8 @@ pub struct SqliteStore {
     conn: Mutex<Connection>,
     /// Read-through hot cache: token → shared manifest. Invalidated inside
     /// the commit path — a cache over the anchor, never the anchor.
-    cache: RwLock<HashMap<Token, Arc<AttributionManifest>>>,
+    /// Isolated in [`crate::cache`] so loom model-checks its semantics.
+    cache: crate::cache::Cache<Token, Arc<AttributionManifest>>,
 }
 
 impl SqliteStore {
@@ -32,7 +33,7 @@ impl SqliteStore {
         init(&conn)?;
         Ok(Self {
             conn: Mutex::new(conn),
-            cache: RwLock::new(HashMap::new()),
+            cache: crate::cache::Cache::new(),
         })
     }
 
@@ -42,7 +43,7 @@ impl SqliteStore {
         init(&conn)?;
         Ok(Self {
             conn: Mutex::new(conn),
-            cache: RwLock::new(HashMap::new()),
+            cache: crate::cache::Cache::new(),
         })
     }
 
@@ -53,15 +54,11 @@ impl SqliteStore {
     }
 
     fn cache_put(&self, manifest: &AttributionManifest) {
-        if let Ok(mut cache) = self.cache.write() {
-            cache.insert(manifest.token, Arc::new(manifest.clone()));
-        }
+        self.cache.put(manifest.token, Arc::new(manifest.clone()));
     }
 
     fn cache_drop(&self, token: Token) {
-        if let Ok(mut cache) = self.cache.write() {
-            cache.remove(&token);
-        }
+        self.cache.drop_key(&token);
     }
 }
 
@@ -403,12 +400,8 @@ impl ReadStore for SqliteStore {
     async fn manifest(&self, token: Token) -> Result<Option<ManifestView>, StoreError> {
         // Hot path: the cache. Correctness path: the anchor (C-10 — a
         // cache miss consults SQLite before answering None).
-        if let Ok(cache) = self.cache.read() {
-            if let Some(m) = cache.get(&token) {
-                return Ok(Some(ManifestView {
-                    manifest: m.clone(),
-                }));
-            }
+        if let Some(m) = self.cache.get(&token) {
+            return Ok(Some(ManifestView { manifest: m }));
         }
         let conn = self.lock()?;
         let Some(manifest) = load_manifest(&conn, token)? else {
@@ -416,9 +409,7 @@ impl ReadStore for SqliteStore {
         };
         drop(conn);
         let arc = Arc::new(manifest);
-        if let Ok(mut cache) = self.cache.write() {
-            cache.insert(token, arc.clone());
-        }
+        self.cache.put(token, arc.clone());
         Ok(Some(ManifestView { manifest: arc }))
     }
 

@@ -18,6 +18,7 @@
 //! layer are the remaining CP-5 tail (tracked in `docs/design/14`).
 
 mod blobs;
+pub mod cache;
 mod schema;
 mod store;
 

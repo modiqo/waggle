@@ -254,6 +254,13 @@ pub fn serve_stdio_shim() -> i32 {
             return 1;
         }
     };
+    // F-4: verify the daemon owns the store THIS session expects — a
+    // stale daemon bound to a different (or deleted) store must fail
+    // loudly here, not serve silently wrong answers.
+    if let Err(e) = verify_store(&sock) {
+        eprintln!("waggle shim: {e}");
+        return 1;
+    }
     let reader = match stream.try_clone() {
         Ok(r) => r,
         Err(e) => {
@@ -287,6 +294,23 @@ pub fn serve_stdio_shim() -> i32 {
     let _ = stream.shutdown(std::net::Shutdown::Write);
     let _ = pump_out.join();
     0
+}
+
+/// F-4 (16 §6): compare the daemon's advertised store with our own
+/// expectation; mismatch is a configuration skew, named with its fix.
+fn verify_store(sock: &Path) -> Result<(), String> {
+    let Some(status) = rpc_once(sock, "waggled/status") else {
+        return Ok(()); // daemon vanished between connect and check; pumping will surface it
+    };
+    let daemon_store = status["store"].as_str().unwrap_or_default().to_owned();
+    let expected = crate::run::store_path_display();
+    if daemon_store != expected {
+        return Err(format!(
+            "store skew: waggled (pid {}) owns `{daemon_store}` but this session expects `{expected}` — run `waggle daemon restart` with the right WAGGLE_STORE, or unset the override",
+            status["pid"]
+        ));
+    }
+    Ok(())
 }
 
 fn connect_or_start(sock: &Path) -> Result<std::os::unix::net::UnixStream, String> {
