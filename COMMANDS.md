@@ -29,6 +29,7 @@ Fetch the projection of a waggle token matched to your context (model family, ha
 |---|---|---|
 | `--token` | true | The waggle token to resolve. |
 | `--context` | false | Resolver context (harness metadata, A2A agent card, or explicit JSON); defaults to negotiated. |
+| `--level` | false | For tokens owned elsewhere: eventual (default) serves a cached resolution inside its revalidate window; strict always revalidates at the owner — revocations bite immediately. |
 
 - forward → `search`: interrogate the content before ingesting any of it
 - forward → `query`: slice a large manifest by path instead of pulling it whole

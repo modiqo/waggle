@@ -26,6 +26,7 @@ pub fn now() -> Timestamp {
 
 /// Store location: `WAGGLE_STORE` overrides; default is
 /// `~/.waggle/waggle.db` (the machine-wide store, doc `16 §2`).
+#[cfg(unix)] // consumed by the daemon status + shim skew check
 pub fn store_path_display() -> String {
     store_path().display().to_string()
 }
@@ -55,10 +56,43 @@ pub fn open_handler() -> Result<Handler<SqliteStore>, String> {
     Ok(Handler::new(store, sharer).with_blobs(Box::new(blobs)))
 }
 
+/// Route a verb through the running daemon when one owns our store —
+/// the CLI then behaves EXACTLY like MCP traffic (federation, shared
+/// cache, one funnel). No daemon → the direct in-process path below.
+#[cfg(unix)]
+fn try_daemon_call(tool: &str, args: &Value) -> Option<i32> {
+    use std::io::{BufRead, BufReader, Write as _};
+    let sock = crate::daemon::socket_path();
+    let mut stream = std::os::unix::net::UnixStream::connect(&sock).ok()?;
+    let frame = json!({
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": { "name": tool, "arguments": args },
+    })
+    .to_string();
+    writeln!(stream, "{frame}").ok()?;
+    let mut line = String::new();
+    BufReader::new(stream).read_line(&mut line).ok()?;
+    let rpc: Value = serde_json::from_str(&line).ok()?;
+    let text = rpc.pointer("/result/content/0/text")?.as_str()?;
+    let envelope: Value = serde_json::from_str(text).ok()?;
+    let is_err = envelope.get("hint").is_some_and(|h| !h.is_null());
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&envelope).unwrap_or_default()
+    );
+    Some(i32::from(is_err))
+}
+
 /// Run one tool call and print the envelope as JSON. Exit code: 0 on
 /// success, 1 when the envelope carries a hint (the error contract).
 #[allow(clippy::needless_pass_by_value)] // call sites build args inline
 pub fn tool_call(tool: &str, args: Value) -> i32 {
+    #[cfg(unix)]
+    if std::env::var("WAGGLE_DIRECT").is_err() {
+        if let Some(code) = try_daemon_call(tool, &args) {
+            return code;
+        }
+    }
     let handler = match open_handler() {
         Ok(h) => h,
         Err(e) => {

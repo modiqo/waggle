@@ -314,3 +314,59 @@ fn g8_strict_vs_eventual_revoke_and_offline_window() {
     }
     std::fs::remove_dir_all(&base).ok();
 }
+
+/// Slice 3: CLI verbs federate too — `waggle resolve` on the peer
+/// machine routes through the peer daemon and reaches the owner, exactly
+/// like MCP traffic. One dispatcher, one behavior, both surfaces.
+#[test]
+fn cli_verbs_federate_through_the_daemon() {
+    let base = std::env::temp_dir().join(format!("waggle-clifed-{}", std::process::id()));
+    std::fs::remove_dir_all(&base).ok();
+    let owner_dir = base.join("owner");
+    let peer_dir = base.join("peer");
+    std::fs::create_dir_all(&owner_dir).unwrap();
+    std::fs::create_dir_all(&peer_dir).unwrap();
+    let gate = "clifed-gate-0123456789abcdef".to_owned();
+    let tcp = format!("127.0.0.1:{}", 40003 + std::process::id() % 20000);
+
+    let mut owner = Shim::spawn(
+        &owner_dir,
+        &[
+            ("WAGGLE_TCP", tcp.clone()),
+            ("WAGGLE_TCP_TOKEN", gate.clone()),
+        ],
+    );
+    let minted = owner.tool("mint", &serde_json::json!({ "target": "ws://clifed/x" }));
+    let token = minted["result"]["token"].as_str().unwrap().to_owned();
+
+    // Start the peer daemon (upstream configured), then use the PLAIN CLI.
+    let mut peer = Shim::spawn(
+        &peer_dir,
+        &[
+            ("WAGGLE_UPSTREAM", tcp.clone()),
+            ("WAGGLE_UPSTREAM_TOKEN", gate.clone()),
+        ],
+    );
+    peer.tool("map", &serde_json::json!({})); // ensure the daemon is up
+
+    let out = Command::new(env!("CARGO_BIN_EXE_waggle"))
+        .args(["resolve", "--token", &token])
+        .env("WAGGLE_STORE", peer_dir.join("waggle.db"))
+        .env("WAGGLE_SOCK", peer_dir.join("waggled.sock"))
+        .output()
+        .unwrap();
+    let envelope: serde_json::Value =
+        serde_json::from_str(String::from_utf8_lossy(&out.stdout).trim()).unwrap();
+    assert!(out.status.success(), "{envelope}");
+    assert_eq!(
+        envelope["result"]["target"], "ws://clifed/x",
+        "the CLI resolve federated to the owner: {envelope}"
+    );
+
+    owner.close();
+    peer.close();
+    for d in [&owner_dir, &peer_dir] {
+        stop_daemon(d);
+    }
+    std::fs::remove_dir_all(&base).ok();
+}

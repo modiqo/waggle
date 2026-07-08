@@ -78,6 +78,10 @@ fn serve_stdio_speaks_mcp_and_persists() {
     let out = Command::new(env!("CARGO_BIN_EXE_waggle"))
         .args(["funnel", "--token", &token])
         .env("WAGGLE_STORE", &store)
+        .env(
+            "WAGGLE_SOCK",
+            store.parent().unwrap().join("no-daemon.sock"),
+        )
         .output()
         .unwrap();
     let envelope: serde_json::Value =
@@ -98,6 +102,10 @@ fn cli_verbs_share_the_mcp_dispatcher() {
         let out = Command::new(env!("CARGO_BIN_EXE_waggle"))
             .args(args)
             .env("WAGGLE_STORE", &store)
+            .env(
+                "WAGGLE_SOCK",
+                store.parent().unwrap().join("no-daemon.sock"),
+            )
             .output()
             .unwrap();
         let v = serde_json::from_str(std::str::from_utf8(&out.stdout).unwrap()).unwrap();
