@@ -124,11 +124,13 @@ pub fn token_map(
         },
     ];
 
-    let result: Value = json!({
+    let mut result = json!({
         "here": here,
         "reverse": reverse,
         "irreversible": { "events": "history does not un-happen — record a correcting stage instead" },
-        "guidance": guidance,
     });
+    if !guidance.is_empty() {
+        result["guidance"] = Value::String(guidance);
+    }
     Envelope::ok(result, forward)
 }

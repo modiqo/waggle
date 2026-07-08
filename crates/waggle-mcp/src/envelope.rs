@@ -32,6 +32,14 @@ pub struct Stats {
     pub seq: Option<u32>,
 }
 
+impl Stats {
+    /// True when this call has nothing to report — the envelope omits it.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.records.is_none() && self.seq.is_none()
+    }
+}
+
 /// The response every tool returns (17 §2).
 #[derive(Debug, Clone, Serialize)]
 pub struct Envelope {
@@ -43,6 +51,7 @@ pub struct Envelope {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hint: Option<String>,
     /// What this call cost/touched.
+    #[serde(skip_serializing_if = "Stats::is_empty")]
     pub stats: Stats,
 }
 
