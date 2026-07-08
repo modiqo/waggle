@@ -148,6 +148,14 @@ enum Cmd {
         #[arg(long)]
         token: Option<String>,
     },
+    #[command(about = waggle_ops::DAEMON.description)]
+    Daemon {
+        /// status | start | stop | restart.
+        action: String,
+        /// For start/restart: exit after this many seconds with no connections (shim auto-starts default to 1800).
+        #[arg(long)]
+        idle_secs: Option<u64>,
+    },
     #[command(about = waggle_ops::SERVE.description)]
     Serve {
         /// Speak MCP over stdin/stdout — as a shim to the shared daemon (unix), or directly.
@@ -251,9 +259,26 @@ fn main() {
             strip_nulls(json!({ "token": token, "path": path, "max-bytes": max_bytes })),
         ),
         Cmd::Map { token } => run::tool_call("map", strip_nulls(json!({ "token": token }))),
+        Cmd::Daemon { action, idle_secs } => manage_daemon(&action, idle_secs),
         Cmd::Serve { stdio, daemon } => serve(stdio, daemon),
     };
     std::process::exit(code);
+}
+
+/// Route `daemon` management (unix-only, like the daemon itself).
+fn manage_daemon(action: &str, idle_secs: Option<u64>) -> i32 {
+    #[cfg(unix)]
+    {
+        daemon::manage(action, idle_secs)
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (action, idle_secs);
+        eprintln!(
+            "waggle daemon: unix-only today — on this platform use serve --stdio (direct mode)."
+        );
+        2
+    }
 }
 
 /// Route `serve`: daemon (unix), shim (unix), or the direct in-process

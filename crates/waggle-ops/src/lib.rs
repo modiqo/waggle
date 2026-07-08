@@ -276,9 +276,24 @@ pub const SERVE: OperationSpec = OperationSpec {
     core_fn: "waggle_cli::serve",
 };
 
+/// `daemon` — lifecycle management for waggled (CLI only).
+pub const DAEMON: OperationSpec = OperationSpec {
+    name: "daemon",
+    surface: Surface::CliOnly,
+    kind: OpKind::Read,
+    description: "Manage waggled: status (pid, store, uptime, connections), start (idempotent), stop (graceful over the socket; terminates orphans by pidfile), restart. Pidfile + idle exit make lingering orphans structurally unlikely.",
+    args: &[
+        ArgSpec { name: "action", required: true, doc: "status | start | stop | restart." },
+        ArgSpec { name: "idle-secs", required: false, doc: "For start/restart: exit after this many seconds with no connections (shim auto-starts default to 1800)." },
+    ],
+    forward: &[EdgeSpec { to: "map", why: "with the daemon up, orient from the global map" }],
+    reverse: &[],
+    core_fn: "waggle_cli::daemon::manage",
+};
+
 /// The catalog. Order is presentation order (CLI help, docs, global map).
 pub const OPERATIONS: &[&OperationSpec] = &[
-    &MINT, &RESOLVE, &RECORD, &MUTATE, &FUNNEL, &READ, &SEARCH, &QUERY, &MAP, &SERVE,
+    &MINT, &RESOLVE, &RECORD, &MUTATE, &FUNNEL, &READ, &SEARCH, &QUERY, &MAP, &SERVE, &DAEMON,
 ];
 
 /// Look an operation up by name.

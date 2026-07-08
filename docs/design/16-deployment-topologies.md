@@ -115,3 +115,28 @@ an integration test: two simulated harness clients sharing one daemon).
 `export`/`replay` land in **CP-6** (local) and are re-verified against the
 cloud store in **CP-10** (`it_replay_migration`: local journal → cloud →
 reconstruct ≡, using C-8 dedupe under an injected mid-replay kill).
+
+
+## Appendix · Daemon lifecycle (rev 2.8): no orphans, by design
+
+`waggled` gains explicit management — `waggle daemon <status|start|stop|restart>`
+— plus three mechanisms that make lingering orphans structurally unlikely:
+
+1. **A pidfile beside the socket** (`waggled.pid`): written at bind,
+   removed at shutdown. `status` and `stop` consult both — a live socket
+   answers over RPC; a dead socket with a live pidfile is diagnosed as an
+   orphan and `stop` terminates it by pid.
+2. **Graceful shutdown over the socket**: `stop` sends the daemon-level
+   `waggled/shutdown` method (intercepted before the MCP dispatcher —
+   management is not a tool agents see); the daemon replies, cleans its
+   socket and pidfile, and exits. Durability is unaffected: every acked
+   write already survived (`synchronous=FULL`).
+3. **Idle exit**: `WAGGLE_IDLE_SECS` (shim auto-starts set 1800 unless
+   overridden) — a daemon with zero connections and no activity for the
+   window cleans up and exits. The next shim start revives it. A daemon
+   nobody is using does not outlive its usefulness.
+
+`status` reports pid, version, store path, socket path, uptime, and
+active connections — the observability half of "no orphans". `start` is
+idempotent (already-running reports the pid and exits 0); `restart` is
+stop-then-start with the pid change shown.

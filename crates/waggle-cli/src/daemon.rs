@@ -9,6 +9,7 @@
 //! plan); `serve --stdio` there runs the direct in-process server.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -18,6 +19,30 @@ use waggle_mcp::{handle_message, Handler};
 use waggle_store_sqlite::SqliteStore;
 
 use crate::run::{now, open_handler, os_entropy};
+
+/// Shared daemon state for status reporting and idle detection.
+struct DaemonState {
+    started_unix_ms: u64,
+    active_connections: AtomicU64,
+    last_activity_secs: AtomicU64,
+}
+
+fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
+}
+
+/// The pidfile sits beside the socket: written at bind, removed at
+/// shutdown; `stop` uses it to terminate orphans whose socket died.
+fn pid_path(sock: &Path) -> PathBuf {
+    sock.with_extension("pid")
+}
+
+fn cleanup(sock: &Path) {
+    let _ = std::fs::remove_file(sock);
+    let _ = std::fs::remove_file(pid_path(sock));
+}
 
 /// Socket location: `WAGGLE_SOCK` overrides; default sits beside the store.
 pub fn socket_path() -> PathBuf {
@@ -53,12 +78,27 @@ pub fn run_daemon() -> i32 {
             Ok(l) => l,
             Err(code) => return code,
         };
-        eprintln!("waggled: listening on {}", sock.display());
+        let _ = std::fs::write(pid_path(&sock), std::process::id().to_string());
+        let state = Arc::new(DaemonState {
+            started_unix_ms: now_secs() * 1000,
+            active_connections: AtomicU64::new(0),
+            last_activity_secs: AtomicU64::new(now_secs()),
+        });
+        spawn_idle_monitor(&state, &sock);
+        eprintln!(
+            "waggled: listening on {} (pid {})",
+            sock.display(),
+            std::process::id()
+        );
         loop {
             match listener.accept().await {
                 Ok((stream, _)) => {
                     let handler = Arc::clone(&handler);
-                    tokio::spawn(async move { serve_client(stream, &handler).await });
+                    let state = Arc::clone(&state);
+                    let sock = sock.clone();
+                    tokio::spawn(
+                        async move { serve_client(stream, &handler, &state, &sock).await },
+                    );
                 }
                 Err(e) => {
                     eprintln!("waggled: accept: {e}");
@@ -93,14 +133,37 @@ fn bind(sock: &Path) -> Result<UnixListener, i32> {
     }
 }
 
-async fn serve_client(stream: UnixStream, handler: &Handler<SqliteStore>) {
+async fn serve_client(
+    stream: UnixStream,
+    handler: &Handler<SqliteStore>,
+    state: &DaemonState,
+    sock: &Path,
+) {
+    state.active_connections.fetch_add(1, Ordering::SeqCst);
+    state.last_activity_secs.store(now_secs(), Ordering::SeqCst);
     let (read, mut write) = stream.into_split();
     let mut lines = BufReader::new(read).lines();
     while let Ok(Some(line)) = lines.next_line().await {
         if line.trim().is_empty() {
             continue;
         }
-        let response = handle_message(handler, &line, now(), &mut os_entropy).await;
+        state.last_activity_secs.store(now_secs(), Ordering::SeqCst);
+        // Daemon-level management methods are intercepted BEFORE the MCP
+        // dispatcher — management is not a tool agents see (16 appendix).
+        let response = if let Some(mgmt) = manage_message(&line, state, sock) {
+            let shutdown = mgmt.1;
+            if write.write_all(mgmt.0.as_bytes()).await.is_ok() {
+                let _ = write.write_all(b"\n").await;
+            }
+            if shutdown {
+                eprintln!("waggled: shutdown requested — exiting");
+                cleanup(sock);
+                std::process::exit(0);
+            }
+            None
+        } else {
+            handle_message(handler, &line, now(), &mut os_entropy).await
+        };
         if let Some(response) = response {
             if write.write_all(response.as_bytes()).await.is_err()
                 || write.write_all(b"\n").await.is_err()
@@ -109,6 +172,72 @@ async fn serve_client(stream: UnixStream, handler: &Handler<SqliteStore>) {
             }
         }
     }
+    state.active_connections.fetch_sub(1, Ordering::SeqCst);
+    state.last_activity_secs.store(now_secs(), Ordering::SeqCst);
+}
+
+/// Handle `waggled/status` and `waggled/shutdown`. Returns the response
+/// line and whether to exit after sending it.
+fn manage_message(line: &str, state: &DaemonState, sock: &Path) -> Option<(String, bool)> {
+    let msg: serde_json::Value = serde_json::from_str(line).ok()?;
+    let method = msg.get("method")?.as_str()?;
+    if !method.starts_with("waggled/") {
+        return None;
+    }
+    let id = msg.get("id").cloned().unwrap_or(serde_json::Value::Null);
+    match method {
+        "waggled/status" => {
+            let result = serde_json::json!({
+                "pid": std::process::id(),
+                "version": env!("CARGO_PKG_VERSION"),
+                "store": crate::run::store_path_display(),
+                "socket": sock.display().to_string(),
+                "started_unix_ms": state.started_unix_ms,
+                "uptime_secs": now_secs().saturating_sub(state.started_unix_ms / 1000),
+                "active_connections": state.active_connections.load(Ordering::SeqCst),
+            });
+            Some((
+                serde_json::json!({ "jsonrpc": "2.0", "id": id, "result": result }).to_string(),
+                false,
+            ))
+        }
+        "waggled/shutdown" => Some((
+            serde_json::json!({ "jsonrpc": "2.0", "id": id, "result": { "stopping": true, "pid": std::process::id() } })
+                .to_string(),
+            true,
+        )),
+        _ => Some((
+            serde_json::json!({ "jsonrpc": "2.0", "id": id, "error": { "code": -32601, "message": "unknown waggled method" } })
+                .to_string(),
+            false,
+        )),
+    }
+}
+
+/// Idle exit (`WAGGLE_IDLE_SECS`): a daemon with zero connections and no
+/// activity for the window cleans up and leaves; the next shim start
+/// revives it. Orphans do not outlive their usefulness.
+fn spawn_idle_monitor(state: &Arc<DaemonState>, sock: &Path) {
+    let Ok(idle) = std::env::var("WAGGLE_IDLE_SECS").map(|s| s.parse::<u64>().unwrap_or(0)) else {
+        return;
+    };
+    if idle == 0 {
+        return;
+    }
+    let state = Arc::clone(state);
+    let sock = sock.to_path_buf();
+    let interval = std::time::Duration::from_secs((idle / 4).max(1));
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(interval).await;
+            let quiet = now_secs().saturating_sub(state.last_activity_secs.load(Ordering::SeqCst));
+            if state.active_connections.load(Ordering::SeqCst) == 0 && quiet >= idle {
+                eprintln!("waggled: idle {idle}s with no connections — exiting");
+                cleanup(&sock);
+                std::process::exit(0);
+            }
+        }
+    });
 }
 
 /// The stdio shim (16 §3): pump stdin→socket and socket→stdout, adding
@@ -166,8 +295,10 @@ fn connect_or_start(sock: &Path) -> Result<std::os::unix::net::UnixStream, Strin
     }
     // Dead or absent: start waggled detached and wait for the socket.
     let exe = std::env::current_exe().map_err(|e| format!("current_exe: {e}"))?;
+    let idle = std::env::var("WAGGLE_IDLE_SECS").unwrap_or_else(|_| "1800".into());
     std::process::Command::new(exe)
         .args(["serve", "--daemon"])
+        .env("WAGGLE_IDLE_SECS", idle)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -183,4 +314,137 @@ fn connect_or_start(sock: &Path) -> Result<std::os::unix::net::UnixStream, Strin
         "waggled did not come up at {} within 5s — run `waggle serve --daemon` to see why",
         sock.display()
     ))
+}
+
+// ─── the management client: waggle daemon <action> ─────────────────────
+
+fn rpc_once(sock: &Path, method: &str) -> Option<serde_json::Value> {
+    use std::io::{BufRead, BufReader as StdBufReader, Write as _};
+    let mut stream = std::os::unix::net::UnixStream::connect(sock).ok()?;
+    let frame = serde_json::json!({ "jsonrpc": "2.0", "id": 1, "method": method }).to_string();
+    writeln!(stream, "{frame}").ok()?;
+    let mut line = String::new();
+    StdBufReader::new(stream).read_line(&mut line).ok()?;
+    serde_json::from_str::<serde_json::Value>(&line)
+        .ok()?
+        .get("result")
+        .cloned()
+}
+
+fn orphan_pid(sock: &Path) -> Option<u32> {
+    let pid: u32 = std::fs::read_to_string(pid_path(sock))
+        .ok()?
+        .trim()
+        .parse()
+        .ok()?;
+    // Alive? Signal 0 probes without touching.
+    let alive = std::process::Command::new("kill")
+        .args(["-0", &pid.to_string()])
+        .status()
+        .is_ok_and(|s| s.success());
+    alive.then_some(pid)
+}
+
+fn start_detached(idle_secs: Option<u64>) -> Result<(), String> {
+    let exe = std::env::current_exe().map_err(|e| format!("current_exe: {e}"))?;
+    let idle = idle_secs
+        .map(|s| s.to_string())
+        .or_else(|| std::env::var("WAGGLE_IDLE_SECS").ok())
+        .unwrap_or_else(|| "0".into());
+    std::process::Command::new(exe)
+        .args(["serve", "--daemon"])
+        .env("WAGGLE_IDLE_SECS", idle)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|e| format!("start waggled: {e}"))?;
+    let sock = socket_path();
+    for _ in 0..50 {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        if rpc_once(&sock, "waggled/status").is_some() {
+            return Ok(());
+        }
+    }
+    Err("waggled did not come up within 5s — run `waggle serve --daemon` to see why".into())
+}
+
+fn do_stop(sock: &Path) -> i32 {
+    if let Some(result) = rpc_once(sock, "waggled/shutdown") {
+        println!(
+            "{}",
+            serde_json::json!({ "stopped": true, "pid": result["pid"] })
+        );
+        // Give it a beat to release the socket.
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        return 0;
+    }
+    if let Some(pid) = orphan_pid(sock) {
+        let _ = std::process::Command::new("kill")
+            .args(["-TERM", &pid.to_string()])
+            .status();
+        cleanup(sock);
+        println!(
+            "{}",
+            serde_json::json!({ "stopped": true, "pid": pid, "was_orphan": true })
+        );
+        return 0;
+    }
+    cleanup(sock); // sweep any stale files
+    eprintln!("waggle daemon stop: not running");
+    1
+}
+
+/// `waggle daemon <status|start|stop|restart>` — exit 0 on success/true,
+/// 1 when status finds nothing running or stop had nothing to stop.
+pub fn manage(action: &str, idle_secs: Option<u64>) -> i32 {
+    let sock = socket_path();
+    match action {
+        "status" => {
+            if let Some(result) = rpc_once(&sock, "waggled/status") {
+                // One line, scriptable: `waggle daemon status | jq .pid`.
+                println!("{}", serde_json::to_string(&result).unwrap_or_default());
+                0
+            } else if let Some(pid) = orphan_pid(&sock) {
+                eprintln!(
+                    "waggle daemon status: ORPHAN — pid {pid} is alive but its socket is dead; run `waggle daemon stop`"
+                );
+                1
+            } else {
+                eprintln!("waggle daemon status: not running");
+                1
+            }
+        }
+        "start" => {
+            if let Some(result) = rpc_once(&sock, "waggled/status") {
+                println!(
+                    "{}",
+                    serde_json::json!({ "already_running": true, "pid": result["pid"] })
+                );
+                return 0;
+            }
+            match start_detached(idle_secs) {
+                Ok(()) => manage("status", None),
+                Err(e) => {
+                    eprintln!("waggle daemon start: {e}");
+                    1
+                }
+            }
+        }
+        "stop" => do_stop(&sock),
+        "restart" => {
+            let _ = do_stop(&sock);
+            match start_detached(idle_secs) {
+                Ok(()) => manage("status", None),
+                Err(e) => {
+                    eprintln!("waggle daemon restart: {e}");
+                    1
+                }
+            }
+        }
+        other => {
+            eprintln!("waggle daemon: `{other}` — actions are status | start | stop | restart");
+            2
+        }
+    }
 }

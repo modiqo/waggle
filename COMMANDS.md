@@ -134,3 +134,14 @@ Run the waggle daemon (waggled): the single owner of the local store, serving ev
 
 - forward → `map`: after the daemon is up, orient from the global map
 
+## `daemon` — CLI only
+
+Manage waggled: status (pid, store, uptime, connections), start (idempotent), stop (graceful over the socket; terminates orphans by pidfile), restart. Pidfile + idle exit make lingering orphans structurally unlikely.
+
+| arg | required | doc |
+|---|---|---|
+| `--action` | true | status | start | stop | restart. |
+| `--idle-secs` | false | For start/restart: exit after this many seconds with no connections (shim auto-starts default to 1800). |
+
+- forward → `map`: with the daemon up, orient from the global map
+

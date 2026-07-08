@@ -26,6 +26,10 @@ pub fn now() -> Timestamp {
 
 /// Store location: `WAGGLE_STORE` overrides; default is
 /// `~/.waggle/waggle.db` (the machine-wide store, doc `16 §2`).
+pub fn store_path_display() -> String {
+    store_path().display().to_string()
+}
+
 fn store_path() -> PathBuf {
     if let Ok(p) = std::env::var("WAGGLE_STORE") {
         return PathBuf::from(p);

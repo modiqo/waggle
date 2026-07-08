@@ -215,3 +215,22 @@ crates.io: `waggle` verified unclaimed (July 2026). Settled: publish the
 facade crate under the umbrella name; users who embed write `waggle::mint`,
 docs stay one crate wide, internals stay split. The MCP server is what most
 users install (`waggle-cli`), and never requires knowing any of this.
+
+
+## Appendix · Published-name inventory (crates.io)
+
+All names below are claimed under v0.0.0 placeholders (2026-07-07/08)
+pointing at this repository; real releases begin at 0.1. Claim policy:
+workspace members are claimed as soon as they exist; **insurance names**
+are claimed only when they appear in our own public documentation (the
+squatter's reading list); speculative names wait until the crate is real.
+
+| Crate | Status | Why |
+|---|---|---|
+| `waggle` | claimed · workspace facade | the flagship |
+| `waggle-core` `waggle-ops` `waggle-cli` `waggle-mcp` | claimed · workspace | shipping crates |
+| `waggle-store` `-sqlite` `-fs-jsonl` `-cloudflare` | claimed · workspace | storage contract + backends |
+| `waggle-agent` `waggle-social` | claimed · workspace | extractors; human-facing renderers |
+| `waggled` | claimed · **insurance** | the daemon's name is all over our docs; likeliest future split-out binary |
+| `waggle-spec` `waggle-conformance` | claimed · **insurance** | CP-12 publishes a spec + vectors; the names should be waiting |
+| `xtask` | never published | internal tooling, by convention |
