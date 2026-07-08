@@ -1,0 +1,20 @@
+[package]
+name = "waggle-store-fs-jsonl"
+description = "Minimalist JSONL backend for waggle and the export/replay wire format. Lands in CP-5."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+waggle-core = { workspace = true }
+waggle-store = { path = "../waggle-store", version = "0.1.0" }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

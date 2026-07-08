@@ -1,0 +1,23 @@
+[package]
+name = "waggle-cli"
+description = "The waggle CLI: the clap projection of the operations catalog. Ships `waggle` (verbs) and, from CP-6, `waggled` (the local daemon) and the stdio shim."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[[bin]]
+name = "waggle"
+path = "src/main.rs"
+
+[dependencies]
+waggle-core = { workspace = true }
+waggle-ops = { workspace = true }
+clap = { workspace = true }
+
+[lints]
+workspace = true

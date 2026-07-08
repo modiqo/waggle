@@ -1,0 +1,17 @@
+[package]
+name = "waggle-ops"
+description = "The waggle operations catalog — one table of operation specs from which the MCP tools, the clap CLI, the map edges, and the docs are projected. Single source of truth; no I/O."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+
+[lints]
+workspace = true

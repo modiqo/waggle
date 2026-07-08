@@ -1,0 +1,18 @@
+[package]
+name = "waggle-store"
+description = "The waggle storage contract: ReadStore/AppendStore/Store supertraits, contract clauses C-1..C-10, and the conformance suite every backend must pass. Lands in CP-4."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+waggle-core = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

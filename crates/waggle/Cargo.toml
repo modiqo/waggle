@@ -1,0 +1,18 @@
+[package]
+name = "waggle"
+description = "Attributed, resolvable artifact references for agent handoffs — a ~30-byte token that replaces context forwarding between agents and subagents. Facade crate re-exporting the waggle family."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+waggle-core = { workspace = true }
+waggle-ops = { workspace = true }
+
+[lints]
+workspace = true

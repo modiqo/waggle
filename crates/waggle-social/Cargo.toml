@@ -1,0 +1,18 @@
+[package]
+name = "waggle-social"
+description = "Human-facing renderers for waggle tokens: SharePackage per channel, OG meta from snapshot metadata, QR. Pure functions; lands in CP-8."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+waggle-core = { workspace = true }
+serde = { workspace = true }
+
+[lints]
+workspace = true

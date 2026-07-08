@@ -1,0 +1,21 @@
+[package]
+name = "waggle-core"
+description = "Sans-I/O core of waggle: tokens, timestamps, entropy injection. No clock, no I/O, no storage — every effect is a parameter. Compiles to wasm32 unchanged."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+serde_json = { workspace = true }

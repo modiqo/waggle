@@ -1,0 +1,35 @@
+[workspace]
+resolver = "2"
+members = ["crates/*", "xtask"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/modiqo/waggle"
+authors = ["Modiqo <oss@modiqo.ai>"]
+keywords = ["agents", "mcp", "attribution", "handoff", "coordination"]
+categories = ["development-tools"]
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+getrandom = "0.2"
+clap = { version = "4", features = ["derive"] }
+
+waggle-core = { path = "crates/waggle-core", version = "0.1.0" }
+waggle-ops = { path = "crates/waggle-ops", version = "0.1.0" }
+waggle-agent = { path = "crates/waggle-agent", version = "0.1.0" }
+waggle-social = { path = "crates/waggle-social", version = "0.1.0" }
+waggle-store = { path = "crates/waggle-store", version = "0.1.0" }
+
+[workspace.lints.rust]
+missing_docs = "deny"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "allow"

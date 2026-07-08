@@ -1,0 +1,159 @@
+<p align="center">
+  <strong>waggle</strong><br>
+  <em>Agents already pass references. Waggle makes the reference intelligent.</em>
+</p>
+
+<p align="center">
+  <a href="#the-dance">Why "waggle"</a> ·
+  <a href="#the-problem">The problem</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#status">Status</a> ·
+  <a href="docs/design/">Design docs</a>
+</p>
+
+---
+
+## The dance
+
+A honeybee returns from a find. On the vertical comb, in the dark, she
+performs a figure-eight dance — the **waggle dance** — whose angle encodes
+direction, whose duration encodes distance, whose vigor encodes quality.
+She does not carry the field to the hive. She carries a **reference**.
+
+And here is the part that matters: every bee that reads the dance decodes it
+**according to its own role and state**, then flies to the target itself.
+One shared marker. Adaptive interpretation per consumer. Recruitment success
+observable at the hive.
+
+Twenty million years before context windows, evolution solved the handoff
+problem — and it did not solve it by pasting the meadow into the prompt.
+
+## The problem
+
+We are entering the world of agent harnesses: Claude Code orchestrators
+fanning out hundreds of subagents, Codex sessions delegating in parallel,
+cross-vendor agents discovering each other over open protocols. And every
+one of these handoffs, today, works the same way: **forward the context and
+hope**.
+
+The costs are measured, not hypothetical. Multi-agent systems consume ~15×
+the tokens of a chat session — with the overhead attributed by the vendor
+itself to *"duplicating context across agents, coordination messages between
+agents, and summarizing results for handoffs."* Their words: **"Each handoff
+loses context."** Roughly 37% of multi-agent failures trace to exactly this
+seam. (Sources and adversarial verification of every number:
+[docs/design/12-research-appendix.md](docs/design/12-research-appendix.md).)
+
+The workaround every practitioner reaches for is the file path —
+`/tmp/analysis.md`, pasted in prose. A path *is* a 30-byte reference, and
+that instinct is correct. But a path has **no attribution** (who made this,
+from what), **no adaptation** (the 4k-context model gets the same 9,000
+tokens as the frontier model), **no lifecycle** (a stale path silently
+serves wrong data forever), **no telemetry** (which subagent actually read
+its input? which stalled?), and **no reach** (it dies at the machine
+boundary).
+
+## How it works
+
+Waggle is the reference, made first-class. A **token** is a ~30-byte
+attributed name for an artifact, minted in one call:
+
+```
+mint { target: "ws://analysis/market-report.md" }
+  → wg:7Kp2…
+  → next: hand off with — "resolve wg:7Kp2 via waggle for your working context"
+```
+
+Behind the token, an **attribution manifest**: who minted it, for which
+channel, from which parent (delegation forms a lineage tree), with
+**variants** — different projections for different consumers. When an agent
+resolves the token it presents its context (model family, harness,
+modalities, posture — or an A2A Agent Card), and a **sealed, deterministic
+matcher** returns *its* projection: the section index for the frontier
+model, the executive summary for the small one, the fail-closed instructions
+for the CI runner, the image for the vision agent and the transcript for the
+one without eyes.
+
+Everything that happens — every resolve, every downstream stage, every
+revocation — is an **event in an append-only log**. Funnels are folds over
+that log; any statistic is exactly reconstructable; and events carry **no
+payload by construction** — the type system, not a policy page, keeps your
+data out of the analytics.
+
+```text
+one waggle token
+├── for humans     unfurls in Slack, renders as a QR, 301s in a browser
+├── for agents     resolves to the variant matched to what they are
+├── for the author attribution, funnel, revoke/supersede — observability
+│                  no orchestrator has today
+└── for the swarm  a lineage tree: who handed what to whom, replayable
+```
+
+**Consumption is protocol-shaped**: waggle is an MCP server. One config line
+in Claude Code, Codex, Cursor, or anything MCP-speaking — no SDK, no
+language bindings, no accounts. Locally it is one binary and a SQLite file
+(`waggled`, the daemon every harness on your machine shares). The same
+tokens later graduate to the edge (Cloudflare Workers) by **replaying the
+log** — migration is a stream, because the log is the truth.
+
+```bash
+# the bootstrap, in its entirety
+cargo install waggle-cli
+claude mcp add --transport http waggle http://127.0.0.1:7411/mcp
+```
+
+## What makes it credible
+
+This repository is design-first and unusually explicit about its own
+discipline — the [design docs](docs/design/) are the contract:
+
+- **Sans-I/O core** — no clock, no entropy, no storage in the domain crates;
+  every effect is a parameter. The same code runs in the native daemon and
+  in Workers wasm, and every function is deterministic under test.
+- **Deterministic adaptivity** — same context, same projection, always;
+  the variant matcher is sealed so the trust claim survives.
+- **Event-sourced with a reconstruct guarantee** — counters are cache; the
+  log is truth; replay-equivalence is a CI property, not a slogan.
+- **One operations catalog** — the MCP tools, the clap CLI, the `map`
+  navigation, and `COMMANDS.md` are four projections of one table, with
+  parity tests that fail the build on drift. The tools teach the agent
+  themselves (`map`: *"I am here — what are my forward and reverse paths?"*)
+  so instruction cannot rot the way skills do.
+- **Adversarially reviewed before code** — the concurrency model survived a
+  scenario-by-scenario attack (eight gaps found, fixed, and test-specified);
+  the market claims survived a 103-agent verification pass that killed seven
+  circulating statistics we now refuse to cite.
+
+## Status
+
+**Pre-0.1 — the spine.** The workspace, the operations catalog, the core
+token type, and the CI guards (file-size lint, catalog↔CLI parity, three-OS
+matrix, wasm build) are real and tested; handlers land checkpoint by
+checkpoint ([execution plan](docs/design/14-execution-plan.md)). Nothing
+here is ready to use yet — it is ready to **build on**, in the open, with
+the gates visible.
+
+| Crate | Role |
+|---|---|
+| `waggle-core` | sans-I/O domain: tokens, time-as-value, entropy injection |
+| `waggle-ops` | the operations catalog — one source, four projections |
+| `waggle-agent` | resolver-context extraction (harness metadata, A2A cards) |
+| `waggle-social` | the human face: unfurls, share packages, QR |
+| `waggle-store*` | the storage contract + SQLite/JSONL/Cloudflare backends |
+| `waggle-mcp` | the MCP projection: tool schemas, envelope, transports |
+| `waggle-cli` | `waggle` verbs + `waggled`, the local daemon |
+
+```bash
+just dev-install   # build & install the CLI from this checkout
+just preflight     # fmt-check · clippy -D warnings · file-size lint · tests · wasm
+```
+
+## License
+
+MIT OR Apache-2.0, at your option.
+
+---
+
+<p align="center">
+  <em>She never carries the field home. She dances, and the hive knows.</em>
+</p>
