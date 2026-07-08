@@ -291,9 +291,24 @@ pub const DAEMON: OperationSpec = OperationSpec {
     core_fn: "waggle_cli::daemon::manage",
 };
 
+/// `init` — make a repo waggle-fluent (CLI only).
+pub const INIT: OperationSpec = OperationSpec {
+    name: "init",
+    surface: Surface::CliOnly,
+    kind: OpKind::RelaxedWrite,
+    description: "Install the five-line agent stub into this repo's harness convention files (CLAUDE.md, AGENTS.md, .cursorrules) — creating AGENTS.md and CLAUDE.md when none exist. Idempotent: re-running refreshes the managed block in place. Pair with: claude mcp add waggle -- waggle serve --stdio.",
+    args: &[
+        ArgSpec { name: "file", required: false, doc: "Target exactly this file instead of auto-detecting convention files." },
+    ],
+    forward: &[EdgeSpec { to: "map", why: "orient: the tools teach everything past the stub" }],
+    reverse: &[],
+    core_fn: "waggle_cli::init::run",
+};
+
 /// The catalog. Order is presentation order (CLI help, docs, global map).
 pub const OPERATIONS: &[&OperationSpec] = &[
-    &MINT, &RESOLVE, &RECORD, &MUTATE, &FUNNEL, &READ, &SEARCH, &QUERY, &MAP, &SERVE, &DAEMON,
+    &MINT, &RESOLVE, &RECORD, &MUTATE, &FUNNEL, &READ, &SEARCH, &QUERY, &MAP, &INIT, &SERVE,
+    &DAEMON,
 ];
 
 /// Look an operation up by name.

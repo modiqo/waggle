@@ -103,8 +103,14 @@ log** — migration is a stream, because the log is the truth.
 ```bash
 # the bootstrap, in its entirety
 just dev-install                                  # (crates.io release at 0.1)
-claude mcp add waggle -- waggle serve --stdio
+claude mcp add waggle -- waggle serve --stdio     # the tools, self-documenting
+waggle init                                       # the 5-line stub, into CLAUDE.md/AGENTS.md
 ```
+
+`waggle init` installs the *entire* out-of-band instruction — five
+sentences in your repo's harness convention files (idempotent; re-run to
+refresh). Everything past that, the tools teach in-band: every response
+carries executable next steps, and `map` answers "where am I?" live.
 
 Behind that line, `waggle serve --stdio` is a shim onto **`waggled`** — a
 shared daemon on a unix socket that owns the store. Every harness on your
@@ -117,6 +123,7 @@ Sixty seconds from a checkout:
 
 ```bash
 just dev-install
+waggle init          # make this repo agent-fluent (CLAUDE.md / AGENTS.md stub)
 waggle mint --target "file:///$PWD/README.md"
 ```
 

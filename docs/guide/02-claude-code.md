@@ -22,7 +22,15 @@ command `waggle`, args `["serve", "--stdio"]`.
 waggle's tools guide the agent themselves — every response carries
 executable `next` steps, every error carries a fix, and the `map` tool
 answers "where am I and what are my paths." The *entire* out-of-band
-instruction you need in `CLAUDE.md` / `AGENTS.md` is:
+instruction is five sentences, and one command installs it into every
+harness convention file present (`CLAUDE.md`, `AGENTS.md`,
+`.cursorrules`) — idempotent, re-run to refresh:
+
+```bash
+waggle init
+```
+
+What it installs:
 
 ```markdown
 ## Artifact handoffs

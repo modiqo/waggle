@@ -123,6 +123,16 @@ Orientation. With no arguments: the global map of operations from where you stan
 - forward → `mint`: start: turn an artifact into an attributed reference
 - forward → `resolve`: consume: fetch a token's projection for your context
 
+## `init` — CLI only
+
+Install the five-line agent stub into this repo's harness convention files (CLAUDE.md, AGENTS.md, .cursorrules) — creating AGENTS.md and CLAUDE.md when none exist. Idempotent: re-running refreshes the managed block in place. Pair with: claude mcp add waggle -- waggle serve --stdio.
+
+| arg | required | doc |
+|---|---|---|
+| `--file` | false | Target exactly this file instead of auto-detecting convention files. |
+
+- forward → `map`: orient: the tools teach everything past the stub
+
 ## `serve` — CLI only
 
 Run the waggle daemon (waggled): the single owner of the local store, serving every harness on this machine over MCP. With --stdio, act as a proxy shim for harnesses that spawn stdio servers (auto-starts the daemon if absent).

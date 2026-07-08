@@ -6,11 +6,20 @@ output — copy the commands, you'll see the same shapes.
 
 ## Install
 
-From a checkout:
+Prerequisites: a Rust toolchain (`rustup`, stable ≥ 1.85) and
+[`just`](https://github.com/casey/just) (`cargo install just` or
+`brew install just`).
 
 ```bash
 git clone https://github.com/modiqo/waggle && cd waggle
 just dev-install        # cargo install --path crates/waggle-cli
+waggle --version        # sanity check
+```
+
+Then, in any repo where agents will work:
+
+```bash
+waggle init             # installs the 5-line agent stub into CLAUDE.md/AGENTS.md/.cursorrules
 ```
 
 The store lives at `~/.waggle/waggle.db` (SQLite, WAL). Two knobs, both

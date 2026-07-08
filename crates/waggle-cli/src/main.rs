@@ -15,6 +15,7 @@ use serde_json::json;
 
 #[cfg(unix)]
 mod daemon;
+mod init;
 mod run;
 
 #[derive(Parser)]
@@ -148,6 +149,12 @@ enum Cmd {
         #[arg(long)]
         token: Option<String>,
     },
+    #[command(about = waggle_ops::INIT.description)]
+    Init {
+        /// Target exactly this file instead of auto-detecting convention files.
+        #[arg(long)]
+        file: Option<String>,
+    },
     #[command(about = waggle_ops::DAEMON.description)]
     Daemon {
         /// status | start | stop | restart.
@@ -259,6 +266,7 @@ fn main() {
             strip_nulls(json!({ "token": token, "path": path, "max-bytes": max_bytes })),
         ),
         Cmd::Map { token } => run::tool_call("map", strip_nulls(json!({ "token": token }))),
+        Cmd::Init { file } => init::run(file.as_deref()),
         Cmd::Daemon { action, idle_secs } => manage_daemon(&action, idle_secs),
         Cmd::Serve { stdio, daemon } => serve(stdio, daemon),
     };
