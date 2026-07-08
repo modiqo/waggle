@@ -34,7 +34,10 @@ pub fn global_map(token_count: u64) -> Envelope {
             why: e.why.to_owned(),
         })
         .collect();
-    Envelope::ok(json!({ "here": here }), forward)
+    Envelope::ok(json!({ "here": here }), forward).with_stats(crate::envelope::Stats {
+        records: Some(token_count),
+        seq: None,
+    })
 }
 
 /// The token map: state-ranked forward paths, honest reverse paths.
@@ -132,5 +135,12 @@ pub fn token_map(
     if !guidance.is_empty() {
         result["guidance"] = Value::String(guidance);
     }
-    Envelope::ok(result, forward)
+    // What this call consulted: the token's full record count — exact
+    // without a scan, because seqs are dense (C-3): one mint, plus a
+    // mutation per version step, plus every counted event.
+    let records = 1 + u64::from(manifest.version - 1) + funnel.values().sum::<u64>();
+    Envelope::ok(result, forward).with_stats(crate::envelope::Stats {
+        records: Some(records),
+        seq: None,
+    })
 }
