@@ -42,10 +42,20 @@ in rev-1 docs — replaced everywhere by the verified chain above.
 
 ## 3. Questions the research did not answer (feeding 10 §5)
 
-1. Do agent-memory platforms (Letta/Zep class) or LangGraph
-   stores/checkpoints already provide attributed, resolvable references?
-   Competitor scan inconclusive → **targeted diligence before 0.1 code
-   freeze** (10 §5 #13).
+1. ~~Do agent-memory platforms (Letta/Zep class) or LangGraph
+   stores/checkpoints already provide attributed, resolvable references?~~
+   **RESOLVED (2026-07-08, pre-code gate): white space confirmed.**
+   Letta/Zep/Mem0 are *fact-memory* layers (tiered context, temporal
+   knowledge graphs) — no artifact-reference primitive, no attribution, no
+   adaptive projection, no lifecycle
+   ([comparison](https://rohitraj.tech/en/notes/open-source-ai-agent-memory-mem0-vs-zep-letta-2026)).
+   LangGraph: checkpointers are per-thread state snapshots; Store is
+   namespaced JSON documents (a shared blackboard, unattributed); and its
+   `create_handoff_tool` **"by default passes full message history"**
+   between agents
+   ([supervisor docs](https://github.com/langchain-ai/langgraph-supervisor-py)) —
+   the strongest single piece of evidence yet that the incumbent pattern is
+   the pathology, not a competitor.
 2. Do simulated/benchmarked savings hold in production LLM workloads once the
    coordination protocol's own overhead is counted? → our benchmark harness
    is a 0.1 deliverable for exactly this reason.

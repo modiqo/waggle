@@ -12,9 +12,12 @@
 //! This is what lets the identical code run in the native daemon, in
 //! Cloudflare Workers wasm, and under deterministic tests.
 //!
-//! CP-0 ships the foundation trio: [`Token`], [`Timestamp`], [`Entropy`].
-//! Manifests, variants, resolution, and folds land in CP-1..CP-3
-//! (design docs `02`–`04`).
+//! CP-0 shipped the foundation trio: [`Token`], [`Timestamp`], [`Entropy`].
+//! CP-1 adds the domain model: slugs ([`Sharer`], [`Channel`], [`Stage`]),
+//! targets ([`CanonicalUrl`], [`TargetMeta`], [`MediaRef`]), the
+//! three-zone [`AttributionManifest`] with variants, and [`mint`] — a pure
+//! function of `(spec, options, entropy, now)`. The sealed variant matcher
+//! and folds land in CP-2/CP-3 (design docs `02`–`04`).
 //!
 //! ```
 //! use waggle_core::{Entropy, Token};
@@ -33,9 +36,23 @@
 //! ```
 
 mod entropy;
+mod manifest;
+mod mint;
+mod slug;
+mod target;
 mod time;
 mod token;
 
 pub use entropy::{Entropy, EntropyError};
+pub use manifest::{
+    AttributionManifest, Constraint, Disposition, MatchExpr, ModalitySet, Posture, Variant,
+    VariantBody, MANIFEST_SCHEMA_VERSION,
+};
+pub use mint::{mint, MintError, MintOptions, MintSpec};
+pub use slug::{Channel, Sharer, SlugError, Stage};
+pub use target::{
+    CanonicalUrl, MediaRef, Sha256Error, Sha256Hex, TargetError, TargetMeta,
+    INLINE_THRESHOLD_BYTES, MANIFEST_SIZE_CAP_BYTES,
+};
 pub use time::Timestamp;
 pub use token::{Token, TokenError, TOKEN_ALPHABET};

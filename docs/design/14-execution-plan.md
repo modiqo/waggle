@@ -157,8 +157,8 @@ G-7/G-8 → CP-10.
 
 | CP | Title | Phase | Status | Exit evidence |
 |---|---|---|---|---|
-| 0 | Scaffold & CI teeth | 0.1 | ☐ not started | CI run link |
-| 1 | Core types & manifests | 0.1 | ☐ not started | coverage + doc report |
+| 0 | Scaffold & CI teeth | 0.1 | ✅ done | [run 28917719272](https://github.com/modiqo/waggle/actions/runs/28917719272) — 3-OS matrix + wasm + docs-drift green, commit `1c408ce`; parity guard fails-on-rogue proven by test |
+| 1 | Core types & manifests | 0.1 | ◐ in progress | coverage + doc report |
 | 2 | Sealed matcher | 0.1 | ☐ not started | vector-suite run |
 | 3 | Event log & folds | 0.1 | ☐ not started | R-1..R-3 + bench baseline |
 | 4 | Store + conformance | 0.1 | ☐ not started | conformance run (memory) |
@@ -178,8 +178,10 @@ it.*
 
 ## Pre-code gates (before CP-1 merges)
 
-- [ ] **Diligence: agent-memory platforms** (10 §5 #13 / 12 §3 Q1) — targeted
-  check that Letta/Zep/LangGraph-stores don't already ship attributed
-  resolvable references. Outcome recorded in 12.
+- [x] **Diligence: agent-memory platforms** (10 §5 #13 / 12 §3 Q1) —
+  **done 2026-07-08, white space confirmed** (12 §3): memory platforms are
+  fact-memory layers; LangGraph's handoff default is full-context forwarding
+  — evidence of the problem, not a competitor.
 - [ ] Name claim: publish `waggle` placeholder crates (facade + core) to
-  crates.io.
+  crates.io — **awaiting owner's cargo credentials** (the one human-gated
+  item; code proceeds meanwhile, the risk is name squatting only).
