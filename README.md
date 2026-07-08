@@ -102,8 +102,67 @@ just dev-install                                  # (crates.io release at 0.1)
 claude mcp add waggle -- waggle serve --stdio
 ```
 
-The stdio server works today; the shared `waggled` HTTP daemon (one store,
-many harnesses at once) is landing in the same checkpoint.
+Behind that line, `waggle serve --stdio` is a shim onto **`waggled`** — a
+shared daemon on a unix socket that owns the store. Every harness on your
+machine lands on the same tokens: what a Claude Code session mints, a
+Codex session resolves.
+
+## Getting started
+
+Sixty seconds from a checkout:
+
+```bash
+just dev-install
+waggle mint --target "file:///$PWD/README.md"
+```
+
+```json
+{
+  "result": {
+    "token": "b2uQyZUC",
+    "handoff": "resolve b2uQyZUC via waggle for your working context",
+    "variants": 1
+  },
+  "next": [
+    { "tool": "resolve", "args": { "token": "b2uQyZUC" },
+      "why": "self-check the projection consumers will receive" }
+  ]
+}
+```
+
+That `handoff` line is what you give a teammate — human or agent — instead
+of the file's contents. Then walk the loop the way a consumer would:
+`waggle resolve --token …` → `waggle record --token … --stage run` →
+`waggle funnel --token …` → `waggle map --token …`. Every response carries
+executable `next` steps; if you're ever unsure, `map` tells you where you
+are and what your paths forward and back are.
+
+**The guide** (real commands, real outputs):
+
+1. [Five minutes to your first handoff](docs/guide/01-five-minutes.md) — mint → resolve → record → funnel → map
+2. [Wiring into Claude Code & any MCP harness](docs/guide/02-claude-code.md) — one config line, the 5-line agent stub, the orchestrator pattern
+3. [Variants & media](docs/guide/03-variants-and-media.md) — one token, the right projection per consumer; images by modality
+4. [Lifecycle, attribution & guided query](docs/guide/04-lifecycle-and-query.md) — supersede/revoke with CAS, funnels, slices under byte budgets
+5. [Embedding in Rust](docs/guide/05-embedding-rust.md) — the sans-I/O core, the store contract, reconstruct
+
+Still landing before 0.1: the published handoff benchmark and the
+crates.io release (names are claimed).
+
+| Crate | Role |
+|---|---|
+| `waggle-core` | sans-I/O domain: tokens, time-as-value, entropy injection |
+| `waggle-ops` | the operations catalog — one source, four projections |
+| `waggle-agent` | resolver-context extraction (harness metadata, A2A cards) |
+| `waggle-social` | the human face: unfurls, share packages, QR |
+| `waggle-store*` | the storage contract + SQLite/JSONL/Cloudflare backends |
+| `waggle-mcp` | the MCP projection: tool schemas, envelope, transports |
+| `waggle-cli` | `waggle` verbs + `waggled`, the local daemon |
+
+```bash
+just dev-install   # build & install the CLI from this checkout
+just preflight     # fmt-check · clippy -D warnings · file-size lint · tests · wasm
+```
+
 
 ## What makes it credible
 
@@ -153,34 +212,6 @@ below is a passing test in CI (three-OS matrix + wasm; ~105 tests;
   cache-hit resolve read **39 ns**, durable event append **39 µs**
   (real fsync), a million-event funnel fold in **334 µs** — every
   design-budget beaten with 25–30× headroom.
-
-Try it from this checkout:
-
-```bash
-just dev-install
-waggle mint --target "file:///$PWD/README.md"   # → token + handoff line
-waggle resolve --token <token>                  # → your projection
-waggle map --token <token>                      # → where you are, what's next
-```
-
-Still landing before 0.1: the shared `waggled` daemon (concurrent
-harnesses), guided query slices, social renderers, and the published
-handoff benchmark.
-
-| Crate | Role |
-|---|---|
-| `waggle-core` | sans-I/O domain: tokens, time-as-value, entropy injection |
-| `waggle-ops` | the operations catalog — one source, four projections |
-| `waggle-agent` | resolver-context extraction (harness metadata, A2A cards) |
-| `waggle-social` | the human face: unfurls, share packages, QR |
-| `waggle-store*` | the storage contract + SQLite/JSONL/Cloudflare backends |
-| `waggle-mcp` | the MCP projection: tool schemas, envelope, transports |
-| `waggle-cli` | `waggle` verbs + `waggled`, the local daemon |
-
-```bash
-just dev-install   # build & install the CLI from this checkout
-just preflight     # fmt-check · clippy -D warnings · file-size lint · tests · wasm
-```
 
 ## License
 
