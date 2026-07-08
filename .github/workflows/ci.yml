@@ -46,6 +46,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo run -p xtask -- gen-docs
       - run: git diff --exit-code COMMANDS.md
+      - run: cargo run -q -p xtask -- gen-vectors
+      - run: git diff --exit-code spec/vectors
 
   edge:
     name: edge (Miniflare matrix)

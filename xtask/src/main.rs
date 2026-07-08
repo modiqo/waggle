@@ -9,6 +9,8 @@
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
+mod vectors;
+
 const MAX_LINES: usize = 750;
 
 fn main() {
@@ -17,8 +19,11 @@ fn main() {
     let result = match arg.as_str() {
         "lint-file-size" => lint_file_size(&root),
         "gen-docs" => gen_docs(&root),
+        "gen-vectors" => vectors::generate(&root)
+            .map(|()| println!("gen-vectors: wrote spec/vectors/"))
+            .map_err(|e| format!("gen-vectors: {e}")),
         other => Err(format!(
-            "unknown xtask `{other}` — try lint-file-size | gen-docs"
+            "unknown xtask `{other}` — try lint-file-size | gen-docs | gen-vectors"
         )),
     };
     if let Err(msg) = result {

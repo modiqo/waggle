@@ -1,0 +1,31 @@
+{
+  "canonical_core_hex_len": 364,
+  "manifest": {
+    "channel": "subagent/general",
+    "minted_at": 1700000000000,
+    "schema": 1,
+    "sharer": "spec",
+    "target": "ws://spec/vector-artifact",
+    "token": "jjjjjjjj",
+    "variants": [
+      {
+        "body": {
+          "inline": {
+            "content_type": "text/markdown",
+            "data": "Fetch the artifact at ws://spec/vector-artifact and use it as your working context."
+          }
+        },
+        "match": {}
+      }
+    ],
+    "version": 1
+  },
+  "note": "spec §6: Ed25519 over the immutable core; a mismatch here is a canonical-encoding break",
+  "resolution_disposition": "active",
+  "seed": "0707…07 (32 bytes of 0x07)",
+  "signature": {
+    "alg": "ed25519",
+    "key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+    "sig": "9d1505163181948d5d275107dec96bfce95de17839c09760a1048be971a49b7e60a8d151e33f620b869d3a4b33fe006247b85c63d58e2d59fffe73f304760203"
+  }
+}

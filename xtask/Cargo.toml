@@ -9,3 +9,6 @@ publish = false
 
 [dependencies]
 waggle-ops = { workspace = true }
+waggle-core = { workspace = true }
+ed25519-dalek = { workspace = true }
+serde_json = { workspace = true }

@@ -184,7 +184,12 @@ just preflight     # fmt-check · clippy -D warnings · file-size lint · tests 
 ## What makes it credible
 
 This repository is design-first and unusually explicit about its own
-discipline — the [design docs](docs/design/) are the contract:
+discipline — the [design docs](docs/design/) are the contract, and the
+[**specification**](spec/waggle-spec.md) with its
+[conformance vectors](spec/vectors/) is the portable half (the vectors
+are generated FROM the implementation and drift-checked in CI — an
+independent implementation that matches them is a waggle
+implementation):
 
 - **Sans-I/O core** — no clock, no entropy, no storage in the domain crates;
   every effect is a parameter. The same code runs in the native daemon and

@@ -1,0 +1,136 @@
+{
+  "cases": [
+    {
+      "context": {
+        "harness": "claude-code",
+        "kind": "agent",
+        "modalities": 1,
+        "model_family": "claude",
+        "posture": "attended"
+      },
+      "expect_index": 0,
+      "name": "claude-in-claude-code"
+    },
+    {
+      "context": {
+        "harness": "other",
+        "kind": "agent",
+        "modalities": 3,
+        "model_family": "claude",
+        "posture": "attended"
+      },
+      "expect_index": 2,
+      "name": "claude-with-browser"
+    },
+    {
+      "context": {
+        "kind": "agent",
+        "modalities": 1,
+        "model_family": "gpt",
+        "posture": "headless"
+      },
+      "expect_index": 1,
+      "name": "gpt-headless-tie"
+    },
+    {
+      "context": {
+        "kind": "agent",
+        "modalities": 1,
+        "posture": "ci"
+      },
+      "expect_index": 3,
+      "name": "anonymous-ci"
+    },
+    {
+      "context": {
+        "kind": "agent",
+        "modalities": 1,
+        "posture": "attended"
+      },
+      "expect_index": 4,
+      "name": "anonymous-attended"
+    },
+    {
+      "context": {
+        "kind": "agent",
+        "modalities": 8,
+        "model_family": "gemini",
+        "posture": "attended"
+      },
+      "expect_index": 4,
+      "name": "vision-not-browser"
+    }
+  ],
+  "note": "sealed matcher, spec §3: match → specificity → declaration order → catch-all",
+  "variants": [
+    {
+      "body": {
+        "inline": {
+          "content_type": "text/plain",
+          "data": "claude-code-guidance"
+        }
+      },
+      "match": {
+        "harness": {
+          "one-of": [
+            "claude-code"
+          ]
+        },
+        "model_family": {
+          "one-of": [
+            "claude"
+          ]
+        }
+      }
+    },
+    {
+      "body": {
+        "inline": {
+          "content_type": "text/plain",
+          "data": "gpt-mapping"
+        }
+      },
+      "match": {
+        "model_family": {
+          "one-of": [
+            "gpt"
+          ]
+        }
+      }
+    },
+    {
+      "body": {
+        "inline": {
+          "content_type": "text/plain",
+          "data": "browser-flow"
+        }
+      },
+      "match": {
+        "modalities": 2
+      }
+    },
+    {
+      "body": {
+        "inline": {
+          "content_type": "text/plain",
+          "data": "fail-closed"
+        }
+      },
+      "match": {
+        "posture": [
+          "headless",
+          "ci"
+        ]
+      }
+    },
+    {
+      "body": {
+        "inline": {
+          "content_type": "text/plain",
+          "data": "generic"
+        }
+      },
+      "match": {}
+    }
+  ]
+}
