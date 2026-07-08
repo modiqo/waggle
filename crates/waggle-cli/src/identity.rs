@@ -40,19 +40,18 @@ fn pubkey_hex(key: &SigningKey) -> String {
 /// `waggle identity <show|init>`.
 pub fn run(action: &str) -> i32 {
     match action {
-        "show" => match load() {
-            Some(key) => {
+        "show" => {
+            if let Some(key) = load() {
                 println!(
                     "{}",
                     serde_json::json!({ "public_key": pubkey_hex(&key), "path": identity_path() })
                 );
                 0
-            }
-            None => {
+            } else {
                 eprintln!("waggle identity: none — `waggle identity init` creates one");
                 1
             }
-        },
+        }
         "init" => {
             let path = identity_path();
             if path.exists() {
@@ -68,10 +67,10 @@ pub fn run(action: &str) -> i32 {
                 return 1;
             }
             let key = SigningKey::from_bytes(&seed);
+            use std::fmt::Write as _;
             if let Some(dir) = path.parent() {
                 let _ = std::fs::create_dir_all(dir);
             }
-            use std::fmt::Write as _;
             let mut hex = String::with_capacity(64);
             for b in &seed {
                 let _ = write!(hex, "{b:02x}");
