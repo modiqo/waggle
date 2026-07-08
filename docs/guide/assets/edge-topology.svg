@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 400" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/>
+    </marker>
+  </defs>
+  <rect width="860" height="400" fill="#ffffff"/>
+  <!-- laptop -->
+  <rect x="20" y="60" width="250" height="280" rx="10" fill="#f5f7fa" stroke="#8899aa"/>
+  <text x="145" y="86" text-anchor="middle" font-weight="bold" fill="#223">YOUR LAPTOP</text>
+  <rect x="45" y="105" width="200" height="46" rx="6" fill="#ffffff" stroke="#8899aa"/>
+  <text x="145" y="124" text-anchor="middle" fill="#223">waggled (daemon)</text>
+  <text x="145" y="141" text-anchor="middle" fill="#667" font-size="11">every harness, one owner</text>
+  <rect x="45" y="165" width="200" height="40" rx="6" fill="#ffffff" stroke="#8899aa"/>
+  <text x="145" y="189" text-anchor="middle" fill="#223">SQLite log (the truth)</text>
+  <rect x="45" y="219" width="200" height="40" rx="6" fill="#ffffff" stroke="#8899aa"/>
+  <text x="145" y="243" text-anchor="middle" fill="#223">blob CAS (snapshots)</text>
+  <rect x="45" y="279" width="200" height="40" rx="6" fill="#fff8e6" stroke="#c9a227"/>
+  <text x="145" y="303" text-anchor="middle" fill="#5a4a00">the artifact files — NEVER leave</text>
+  <!-- cloudflare -->
+  <rect x="480" y="40" width="360" height="320" rx="10" fill="#fef4ec" stroke="#e07b39"/>
+  <text x="660" y="66" text-anchor="middle" font-weight="bold" fill="#7a3c10">CLOUDFLARE (your account)</text>
+  <rect x="505" y="85" width="310" height="44" rx="6" fill="#ffffff" stroke="#e07b39"/>
+  <text x="660" y="103" text-anchor="middle" fill="#223">waggle-edge worker</text>
+  <text x="660" y="120" text-anchor="middle" fill="#667" font-size="11">auth · routing · adds NO semantics</text>
+  <rect x="505" y="145" width="150" height="60" rx="6" fill="#ffffff" stroke="#e07b39"/>
+  <text x="580" y="169" text-anchor="middle" fill="#223">Durable Object</text>
+  <text x="580" y="186" text-anchor="middle" fill="#667" font-size="11">per tenant · single writer</text>
+  <rect x="668" y="145" width="147" height="60" rx="6" fill="#ffffff" stroke="#e07b39"/>
+  <text x="741" y="169" text-anchor="middle" fill="#223">R2 bucket</text>
+  <text x="741" y="186" text-anchor="middle" fill="#667" font-size="11">snapshot blobs</text>
+  <rect x="505" y="220" width="150" height="44" rx="6" fill="#ffffff" stroke="#e07b39"/>
+  <text x="580" y="238" text-anchor="middle" fill="#223">KV namespace</text>
+  <text x="580" y="255" text-anchor="middle" fill="#667" font-size="11">unfurl cache (60s)</text>
+  <!-- push arrow -->
+  <line x1="270" y1="180" x2="478" y2="140" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+  <text x="368" y="140" text-anchor="middle" fill="#223" font-weight="bold">waggle edge push</text>
+  <text x="368" y="157" text-anchor="middle" fill="#667" font-size="11">records (idempotent) + blobs (hash-named)</text>
+  <!-- consumers -->
+  <rect x="505" y="290" width="150" height="50" rx="6" fill="#eef6ee" stroke="#4a8a4a"/>
+  <text x="580" y="311" text-anchor="middle" fill="#1e4620">remote agent</text>
+  <text x="580" y="328" text-anchor="middle" fill="#456" font-size="11">POST /mcp + bearer</text>
+  <rect x="668" y="290" width="147" height="50" rx="6" fill="#eef6ee" stroke="#4a8a4a"/>
+  <text x="741" y="311" text-anchor="middle" fill="#1e4620">human / unfurl bot</text>
+  <text x="741" y="328" text-anchor="middle" fill="#456" font-size="11">GET /t/:token (public)</text>
+  <line x1="580" y1="288" x2="580" y2="266" stroke="#4a8a4a" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="741" y1="288" x2="741" y2="207" stroke="#4a8a4a" stroke-width="2" marker-end="url(#a)"/>
+</svg>

@@ -159,6 +159,7 @@ are and what your paths forward and back are.
 7. [Surgical content access](docs/guide/07-surgical-content.md) — grep through the token: `search`/`read` with lenses, budgets, and snapshots that outlive the file
 8. [Running waggled & federation](docs/guide/08-daemon-and-federation.md) — lifecycle verbs, stop-vs-purge, the env knobs, two-machine setup, strict vs eventual freshness
 9. [The edge](docs/guide/09-the-edge.md) — deploy waggle to Cloudflare in 5 minutes; `waggle edge status|push|smoke`; what syncs, what it costs, how to leave
+10. [The edge, walked through](docs/guide/10-edge-walkthrough.md) — every command against a real account, with diagrams: mint on a laptop, grep on Cloudflare, revoke and watch it travel
 
 Landing next: the published handoff benchmark (0.1.x) and the network
 tier — remote subagents through a forwarding resolver, then the

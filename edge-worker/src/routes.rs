@@ -92,7 +92,26 @@ fn mutate_token(body: &str) -> Option<String> {
 pub async fn store_rpc(mut req: Request, env: &Env) -> Result<Response> {
     let tenant = tenant_of(&req);
     let body = req.text().await?;
-    delegate(env, &tenant, "/store", body).await
+    // A lifecycle mutation can arrive by INGEST too (replication/push) —
+    // it must invalidate the unfurl cache exactly like an /mcp mutate.
+    // (Found live: a pushed revocation served a stale cached unfurl.)
+    let invalidate = ingested_mutation_token(&body);
+    let resp = delegate(env, &tenant, "/store", body).await;
+    if let (Some(token), Ok(kv)) = (invalidate, env.kv("CACHE")) {
+        let _ = kv.delete(&format!("unfurl:{token}")).await;
+    }
+    resp
+}
+
+/// The token of an ingested mutation record, for cache invalidation.
+fn ingested_mutation_token(body: &str) -> Option<String> {
+    let msg: serde_json::Value = serde_json::from_str(body).ok()?;
+    if msg.get("op")?.as_str()? != "ingest" {
+        return None;
+    }
+    let record = msg.get("record")?;
+    (record.get("record")?.as_str()? == "mutation")
+        .then(|| record.get("token")?.as_str().map(str::to_owned))?
 }
 
 /// `/t/:token` — the public face: OG meta from the mint snapshot (I-3),

@@ -282,6 +282,19 @@ fn miniflare_matrix() {
         "E2: revoked → gone, never stale cache"
     );
 
+    // ── E2 (ingest path): a revocation arriving by REPLICATION must
+    //     invalidate the cache too — found live on the real edge, where
+    //     `waggle edge push` carried a revocation past a cached unfurl.
+    let (records2, pushed_token) = seed_local_store_revoked();
+    for rec in &records2 {
+        store_op(port, &serde_json::json!({ "op": "ingest", "record": rec }));
+    }
+    assert_eq!(
+        unfurl(&pushed_token),
+        410,
+        "E2-ingest: pushed revocations invalidate the unfurl cache"
+    );
+
     // ── impressions: the unfurls above recorded the funnel's top stage.
     let funnel_frame = format!(
         r#"{{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{{"name":"funnel","arguments":{{"token":"{content_token}"}}}}}}"#
@@ -515,6 +528,49 @@ fn waggle_ops_names() -> Vec<&'static str> {
     vec![
         "mint", "resolve", "record", "mutate", "funnel", "read", "search", "query", "map",
     ]
+}
+
+/// A store whose token gets unfurled (cached) BEFORE its revocation
+/// arrives — except here both land by ingest; the worker must still
+/// invalidate. (The unfurl between ingests happens inside the test.)
+fn seed_local_store_revoked() -> (Vec<waggle_core::LogRecord>, String) {
+    use waggle_store::{AppendIntent, AppendStore, MintNonce, ReadStore};
+    pollster::block_on(async {
+        let local = waggle_store_sqlite::SqliteStore::open_in_memory().unwrap();
+        let mut entropy = |b: &mut [u8]| {
+            b.fill(77);
+            Ok(())
+        };
+        let manifest = waggle_core::mint(
+            waggle_core::MintSpec::new(
+                waggle_core::CanonicalUrl::new("ws://revoked-push/artifact").unwrap(),
+                waggle_core::Sharer::new("lead").unwrap(),
+                waggle_core::Channel::subagent_general(),
+            ),
+            &waggle_core::MintOptions::default(),
+            &mut entropy,
+            waggle_core::Timestamp::from_unix_ms(1),
+        )
+        .unwrap();
+        let token = manifest.token;
+        local
+            .append(AppendIntent::Mint {
+                manifest: Box::new(manifest),
+                nonce: MintNonce(7),
+            })
+            .await
+            .unwrap();
+        local
+            .append(AppendIntent::Mutate {
+                token,
+                change: waggle_core::Change::Revoked,
+                expected_version: Some(1),
+                at: waggle_core::Timestamp::from_unix_ms(2),
+            })
+            .await
+            .unwrap();
+        (local.scan_all().await.unwrap(), token.as_str().to_owned())
+    })
 }
 
 fn seed_local_store() -> (Vec<waggle_core::LogRecord>, String) {

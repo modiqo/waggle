@@ -16,7 +16,7 @@ new_sqlite_classes = ["Hive"]
 # `npx wrangler r2 bucket create waggle-blobs` — see docs/guide/09.
 [[kv_namespaces]]
 binding = "CACHE"
-id = "waggle_cache_placeholder"
+id = "71908207db1f468eae7baa48bc28c6a9"
 
 [[r2_buckets]]
 binding = "BUCKET"
