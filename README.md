@@ -102,7 +102,7 @@ log** — migration is a stream, because the log is the truth.
 
 ```bash
 # the bootstrap, in its entirety
-just dev-install                                  # (crates.io release at 0.1)
+cargo install waggle-cli                          # v0.1.0, on crates.io
 claude mcp add waggle -- waggle serve --stdio     # the tools, self-documenting
 waggle init                                       # the 5-line stub, into CLAUDE.md/AGENTS.md
 ```
@@ -122,8 +122,8 @@ Codex session resolves.
 Sixty seconds from a checkout:
 
 ```bash
-just dev-install
-waggle init          # make this repo agent-fluent (CLAUDE.md / AGENTS.md stub)
+cargo install waggle-cli     # or: just dev-install, from a checkout
+waggle init                  # make this repo agent-fluent (CLAUDE.md / AGENTS.md stub)
 waggle mint --target "file:///$PWD/README.md"
 ```
 
@@ -158,8 +158,9 @@ are and what your paths forward and back are.
 6. [The full lifecycle](docs/guide/06-the-full-lifecycle.md) — one mission followed end to end: lineage, projections, slices, and the correction that reaches late readers (**`just demo` runs it live**)
 7. [Surgical content access](docs/guide/07-surgical-content.md) — grep through the token: `search`/`read` with lenses, budgets, and snapshots that outlive the file
 
-Still landing before 0.1: the published handoff benchmark and the
-crates.io release (names are claimed).
+Landing next: the published handoff benchmark (0.1.x) and the network
+tier — remote subagents through a forwarding resolver, then the
+Cloudflare edge (0.2).
 
 | Crate | Role |
 |---|---|
@@ -201,7 +202,7 @@ discipline — the [design docs](docs/design/) are the contract:
 
 ## Status
 
-**Pre-0.1 — usable.** The full local loop works end to end and every claim
+**v0.1.0 — released** ([crates.io](https://crates.io/crates/waggle-cli)). The full local loop works end to end and every claim
 below is a passing test in CI (three-OS matrix + wasm; ~105 tests;
 [execution plan](docs/design/14-execution-plan.md) tracks each gate):
 
