@@ -13,6 +13,12 @@ categories.workspace = true
 [dependencies]
 waggle-core = { workspace = true }
 serde = { workspace = true }
+qrcodegen = { workspace = true, optional = true }
+
+[features]
+default = ["qr"]
+## SVG QR rendering for the qr-event channel (design doc 05).
+qr = ["dep:qrcodegen"]
 
 [lints]
 workspace = true

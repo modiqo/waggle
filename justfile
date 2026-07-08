@@ -23,7 +23,7 @@ test:
 
 # Verify the sans-I/O crates compile for the Workers target
 wasm-check:
-    cargo check -p waggle-core -p waggle-ops --target wasm32-unknown-unknown
+    cargo check -p waggle-core -p waggle-ops -p waggle-social --target wasm32-unknown-unknown
 
 # Regenerate COMMANDS.md from the operations catalog
 gen-docs:
