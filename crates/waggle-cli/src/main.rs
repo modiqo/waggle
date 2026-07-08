@@ -67,6 +67,12 @@ enum Cmd {
         #[arg(long)]
         expected_version: Option<u32>,
     },
+    #[command(about = waggle_ops::FUNNEL.description)]
+    Funnel {
+        /// The waggle token whose funnel to report.
+        #[arg(long)]
+        token: String,
+    },
     #[command(about = waggle_ops::MAP.description)]
     Map {
         /// Token to orient around; omit for the global map.
@@ -88,6 +94,7 @@ fn main() {
         Cmd::Resolve { .. } => "resolve",
         Cmd::Record { .. } => "record",
         Cmd::Mutate { .. } => "mutate",
+        Cmd::Funnel { .. } => "funnel",
         Cmd::Map { .. } => "map",
         Cmd::Serve { .. } => "serve",
     };

@@ -37,6 +37,7 @@ Report a lifecycle stage (run, repeat, or a custom stage) against a token so the
 | `--token` | true | The waggle token the stage applies to. |
 | `--stage` | true | Well-known stage (run, repeat, assess, ...) or a custom kebab-case slug. |
 
+- forward → `funnel`: see the counts your report just moved
 - forward → `map`: orient: see what the funnel now suggests
 
 ## `mutate` — CLI + MCP tool
@@ -51,6 +52,17 @@ Change a token's manifest. Lifecycle changes (revoke, supersede, expiry) require
 
 - forward → `map`: confirm the token's new disposition and remaining paths
 - reverse → `mutate`: a supersede can itself be superseded; revocation is final
+
+## `funnel` — CLI + MCP tool
+
+A token's funnel: stage counts (impression → resolve → run → repeat) plus lineage roll-up. This is the attribution answer — which handoffs were consumed, which stalled, which delivered repeat value. Counts only; no payloads exist to leak (I-1).
+
+| arg | required | doc |
+|---|---|---|
+| `--token` | true | The waggle token whose funnel to report. |
+
+- forward → `map`: orient: the funnel feeds the map's ranked suggestions
+- forward → `mutate`: a stalled or wrong share can be revoked or superseded
 
 ## `map` — CLI + MCP tool
 

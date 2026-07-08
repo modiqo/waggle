@@ -141,7 +141,10 @@ pub const RECORD: OperationSpec = OperationSpec {
         ArgSpec { name: "token", required: true, doc: "The waggle token the stage applies to." },
         ArgSpec { name: "stage", required: true, doc: "Well-known stage (run, repeat, assess, ...) or a custom kebab-case slug." },
     ],
-    forward: &[EdgeSpec { to: "map", why: "orient: see what the funnel now suggests" }],
+    forward: &[
+        EdgeSpec { to: "funnel", why: "see the counts your report just moved" },
+        EdgeSpec { to: "map", why: "orient: see what the funnel now suggests" },
+    ],
     reverse: &[],
     core_fn: "waggle_core::event",
 };
@@ -160,6 +163,23 @@ pub const MUTATE: OperationSpec = OperationSpec {
     forward: &[EdgeSpec { to: "map", why: "confirm the token's new disposition and remaining paths" }],
     reverse: &[EdgeSpec { to: "mutate", why: "a supersede can itself be superseded; revocation is final" }],
     core_fn: "waggle_core::mutate",
+};
+
+/// `funnel` — a token's stage counts: the attribution answer.
+pub const FUNNEL: OperationSpec = OperationSpec {
+    name: "funnel",
+    surface: Surface::Both,
+    kind: OpKind::Read,
+    description: "A token's funnel: stage counts (impression → resolve → run → repeat) plus lineage roll-up. This is the attribution answer — which handoffs were consumed, which stalled, which delivered repeat value. Counts only; no payloads exist to leak (I-1).",
+    args: &[
+        ArgSpec { name: "token", required: true, doc: "The waggle token whose funnel to report." },
+    ],
+    forward: &[
+        EdgeSpec { to: "map", why: "orient: the funnel feeds the map's ranked suggestions" },
+        EdgeSpec { to: "mutate", why: "a stalled or wrong share can be revoked or superseded" },
+    ],
+    reverse: &[],
+    core_fn: "waggle_store::ReadStore::funnel",
 };
 
 /// `map` — "I am here; what are my forward and reverse paths?"
@@ -190,7 +210,8 @@ pub const SERVE: OperationSpec = OperationSpec {
 };
 
 /// The catalog. Order is presentation order (CLI help, docs, global map).
-pub const OPERATIONS: &[&OperationSpec] = &[&MINT, &RESOLVE, &RECORD, &MUTATE, &MAP, &SERVE];
+pub const OPERATIONS: &[&OperationSpec] =
+    &[&MINT, &RESOLVE, &RECORD, &MUTATE, &FUNNEL, &MAP, &SERVE];
 
 /// Look an operation up by name.
 pub fn find(name: &str) -> Option<&'static OperationSpec> {

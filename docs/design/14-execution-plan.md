@@ -162,6 +162,7 @@ G-7/G-8 → CP-10.
 | 2 | Sealed matcher | 0.1 | ✅ done | [run 28918472379](https://github.com/modiqo/waggle/actions/runs/28918472379) — vector table (ties/near-misses/multimodal), 10⁴-context determinism, g3 freshness |
 | 3 | Event log & folds | 0.1 | ✅ done | [run 28918829415](https://github.com/modiqo/waggle/actions/runs/28918829415) — R-1..R-3 proptests, one-pass multi-fold, 1M-fold shape |
 | 4 | Store + conformance | 0.1 | ✅ done | [run 28919140836](https://github.com/modiqo/waggle/actions/runs/28919140836) — memory conformance, compile_fail I-4 bound |
+| 6 | MCP + daemon | 0.1 | ◐ surface landed | envelope + handlers + JSON-RPC wire + `map` engine; **scenario A green over tools/call frames on SQLite**; fluency gates green: one_call_mint, envelope_next_valid, hint_on_every_error, map_state_table, tool-list↔catalog correspondence; `funnel` op added to catalog+CLI (parity green) — remaining: waggled HTTP daemon + stdio shim binaries, CLI verb wiring, two-clients test, local auth (F-2), version skew (F-4), media end-to-end |
 | 5 | SQLite backend | 0.1 | ◐ nearly done | sqlite conformance ✅ · reopen durability ✅ · wire replay w/ dupes ✅ · cache invalidation ✅ · **fs-jsonl conformance ✅ (reopen IS a replay)** · **blob CAS ✅ (roundtrip+corruption, dedupe, GC)** — remaining hardening tail (scheduled with CP-9 bench phase): loom cache suite, crash matrix, flood/budget benches, Parquet compaction |
 | 6 | MCP server + CLI | 0.1 | ☐ not started | scenario-A test run |
 | 7 | Guided queries | 0.1 | ☐ not started | guidance-walk test |
