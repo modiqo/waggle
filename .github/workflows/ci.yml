@@ -25,6 +25,8 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo run -p xtask -- lint-file-size
       - run: cargo test --workspace
+        env:
+          WAGGLE_PURGE_TEST: 1
 
   wasm:
     # The Workers build target (08) — Linux only.

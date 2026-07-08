@@ -9,6 +9,14 @@ use std::process::{Command, Stdio};
 
 #[test]
 fn purge_reaps_zombies_with_deleted_sockets() {
+    // Purge is deliberately nuclear: it reaps EVERY waggled this user
+    // owns — including a real one on the default socket. Gated so
+    // `cargo test` on a dev machine never murders the daemon you're
+    // dogfooding with; CI (no real daemon) always sets the gate.
+    if std::env::var("WAGGLE_PURGE_TEST").is_err() {
+        eprintln!("skipped: set WAGGLE_PURGE_TEST=1 (kills ALL your waggled processes)");
+        return;
+    }
     // Two daemons whose state dirs we delete out from under them — the
     // exact zombie shape that poisoned earlier test runs.
     let mut zombies = Vec::new();
