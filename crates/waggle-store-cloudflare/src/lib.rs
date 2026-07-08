@@ -1,7 +1,19 @@
-//! # waggle-store-cloudflare — the edge backend (stub, CP-10 / 0.2)
+//! # waggle-store-cloudflare — the edge tier's store engine
 //!
-//! KV as the read cache (a miss is never authoritative — C-10), Queues as
-//! the append path, R2 NDJSON as the log, Analytics Engine as the
-//! approximate-counter accelerator, with lifecycle writes CAS-ing the
-//! origin store directly (design doc `08`). The `worker` dependency is
-//! added when this crate lands — stubs stay dependency-free.
+//! The full storage contract over a five-verb [`EdgeStorage`] seam
+//! (design doc `08 §8`): the engine runs **natively** against an
+//! in-memory fake — where conformance and the differential oracle
+//! certify it — and **inside a Durable Object** against DO storage,
+//! where the single-writer execution model provides the atomicity the
+//! contract needs (the same principle as `waggled`, relocated).
+//!
+//! The worker itself (routes, auth, DO class) lives in the deploy crate;
+//! this crate is deliberately runtime-free.
+
+#![allow(async_fn_in_trait)] // ?Send by design — Workers futures aren't Send.
+
+mod engine;
+mod storage;
+
+pub use engine::EdgeStore;
+pub use storage::{EdgeStorage, MemoryEdgeStorage};

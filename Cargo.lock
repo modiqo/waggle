@@ -1147,6 +1147,14 @@ dependencies = [
 [[package]]
 name = "waggle-store-cloudflare"
 version = "0.1.0"
+dependencies = [
+ "pollster",
+ "serde",
+ "serde_json",
+ "waggle-core",
+ "waggle-store",
+ "waggle-store-sqlite",
+]
 
 [[package]]
 name = "waggle-store-fs-jsonl"

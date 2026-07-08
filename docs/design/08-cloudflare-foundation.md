@@ -184,3 +184,47 @@ pennies per million at Workers pricing tiers. R2 storage of 19-byte-ish rows
 (NDJSON inflated, Parquet compressed) is negligible until billions of events.
 The design has no per-request database dependency, which is both the latency
 story and the cost story.
+
+
+## 8. The v1-edge commit point: one Durable Object per tenant (rev 2.9)
+
+Implementation forced the question §2 deferred: **KV has no transactions
+and no CAS** — C-3's dense sequences, C-8's nonce uniqueness, and C-9's
+compare-and-swap cannot be built on it. The answer is the same principle
+the local tier proved (13 §8): **a single writer owns the store** — at
+the edge, a **Durable Object per tenant** (SQLite-backed DO storage),
+which is exactly `waggled`'s committer, relocated. KV becomes what it is
+good at — an optional read cache in front of the DO (G-7 read-through) —
+R2 holds blobs and the JSONL archive, and Queues remain the deferred
+scale upgrade (the free-tier v1 writes events inside the DO invocation).
+
+Consequences worth stating: the contract holds **by construction** (the
+DO serializes; the engine is the same shape as the local Inner); tenant
+throughput is bounded by one DO (thousands of req/s — a team, not a
+planet; sharding is a later chapter, recorded not hidden); and the
+engine is written **sans-runtime** — `EdgeStore<S: EdgeStorage>` over a
+five-verb storage trait (get/put/delete/list-prefix), so the identical
+engine runs natively against an in-memory fake (fast conformance, the
+differential oracle) and inside the DO against real storage.
+
+## 9. CP-10e — the completeness matrix
+
+*Written before implementation; the finish line is published. A row
+flips only with a run link (Miniflare rows) or a dated manual note
+(E13). Deviations are recorded in place, never removed.*
+
+| # | Promise (source) | Witness | Tier |
+|---|---|---|---|
+| E1 | Store contract C-1..C-10 (07) | `conformance::run_all` vs the edge engine | native (fake storage) **and** Miniflare |
+| E2 | G-7: cache miss → origin read-through, never a false unknown (15) | `it_kv_miss_reads_through` | Miniflare |
+| E3 | G-8: strict\|eventual at the edge (15 §5.3) | `it_strict_vs_eventual_revoke` (edge-shaped) | Miniflare |
+| E4 | Migration is a stream (16 §4), mid-replay kill injected | `it_replay_migration` — reconstruct ≡ after resume | Miniflare |
+| E5 | Computation at the data (08 §0): search/read over R2 blobs | `edge_search_slices` — matches only, budget held | Miniflare |
+| E6 | **Differential oracle**: same log ⇒ same answers as local | `edge_equals_local` — random op sequences, envelope-compare vs SQLite | native **and** Miniflare |
+| E7 | Tool surface can't drift (09 §2) on `/mcp` | `edge_tool_list_matches_catalog` | Miniflare |
+| E8 | Auth: per-tenant keys; unauthenticated dropped (§5) | `edge_auth_rejects` | Miniflare |
+| E9 | Unfurls from mint snapshot only, I-3 (05) | `edge_unfurl_snapshot` ≡ waggle-social output | Miniflare |
+| E10 | I-1/I-7 at the edge: stored records payload-free, actor classes only | asserted on raw records in E4/E6 fixtures | native + Miniflare |
+| E11 | Perf: resolve p50 < 10 ms local-Miniflare | `edge_resolve_p50` → PERF.md | Miniflare |
+| E12 | wasm build health + worker size logged | existing wasm CI job + edge job | CI |
+| E13 | Real edge ≡ Miniflare | `just edge-smoke` on the operator's workers.dev | manual, dated note |
