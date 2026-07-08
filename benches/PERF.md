@@ -17,6 +17,8 @@ criterion midpoint estimate. Budgets from
 | `query` slice, root shape of a 120 KB doc, 4 KB budget | 30 µs | — | — |
 | **`event` append, durable** (WAL + `synchronous=FULL` — real fsync) | **39 µs** | — | ~25k events/s/writer |
 | **funnel fold over 1,000,000 events** (SoA scan) | **334 µs** | < 10 ms | 30× |
+| **socket round-trip** (shim → waggled → resolve → back, p50) | **323 µs** (p99 806 µs) | p50 < 2 ms | 6× |
+| event flood, 10k burst (in-memory store, per-event acks) | 280 ms (~36k/s) | — | — |
 
 Reading the table:
 
@@ -32,6 +34,5 @@ Reading the table:
 
 Not yet measured here: the **handoff benchmark** (context-forwarding vs.
 token-referenced orchestration across ≥2 model families — the CP-9 public
-number, needs live model APIs), loom/crash suites, and cross-process
-socket round-trip p50 (< 2 ms budget). Tracked in
+number, needs live model APIs) and the loom/crash-point suites. Tracked in
 [the execution plan](../docs/design/14-execution-plan.md).

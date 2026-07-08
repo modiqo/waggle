@@ -141,3 +141,62 @@ fn shim_auto_starts_the_daemon() {
     // but kill it via its socket path being removed + test process exit.
     std::fs::remove_dir_all(&dir).ok();
 }
+
+/// The socket round-trip budget (design doc `13 §6`: p50 < 2 ms). CI
+/// runners are noisy, so the assertion is generous; the measured p50 is
+/// printed and recorded in benches/PERF.md from a quiet machine.
+#[test]
+fn socket_round_trip_p50() {
+    let dir = std::env::temp_dir().join(format!("waggle-p50-{}", std::process::id()));
+    std::fs::remove_dir_all(&dir).ok();
+    std::fs::create_dir_all(&dir).unwrap();
+    let store = dir.join("waggle.db");
+    let sock = dir.join("waggled.sock");
+
+    let mut daemon = Command::new(env!("CARGO_BIN_EXE_waggle"))
+        .args(["serve", "--daemon"])
+        .env("WAGGLE_STORE", &store)
+        .env("WAGGLE_SOCK", &sock)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    for _ in 0..50 {
+        if sock.exists() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+
+    let mut client = Client::spawn(&store, &sock, "p50");
+    client.call(r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#);
+    let minted = client.tool(2, "mint", &serde_json::json!({ "target": "ws://p50/x.md" }));
+    let token = minted["result"]["token"].as_str().unwrap().to_owned();
+
+    let mut samples: Vec<u128> = (0..200)
+        .map(|i| {
+            let frame = serde_json::json!({
+                "jsonrpc": "2.0", "id": i + 10, "method": "tools/call",
+                "params": { "name": "resolve", "arguments": { "token": token } },
+            })
+            .to_string();
+            let start = std::time::Instant::now();
+            client.call(&frame);
+            start.elapsed().as_micros()
+        })
+        .collect();
+    samples.sort_unstable();
+    let p50 = samples[samples.len() / 2];
+    let p99 = samples[samples.len() * 99 / 100];
+    println!("socket round-trip: p50 {p50} µs · p99 {p99} µs (budget: p50 < 2000 µs)");
+    assert!(
+        p50 < 20_000,
+        "p50 {p50} µs is beyond even CI-noise allowance"
+    );
+
+    client.close();
+    let _ = daemon.kill();
+    let _ = daemon.wait();
+    std::fs::remove_dir_all(&dir).ok();
+}

@@ -167,6 +167,7 @@ G-7/G-8 → CP-10.
 | 7 | Guided queries | 0.1 | ◐ awaiting CI | guidance-walk green (every leaf reachable via next_paths) · budget property (2k random path/budget pairs; shrink ladder ends in bare {kind,bytes}) · tool-layer floors · bad path errs with valid roots + executable recovery · query op in catalog/CLI/MCP, parity + reachability green — slice bench lands with CP-9 |
 | 8 | Social renderers | 0.1 | ☐ not started | snapshot suite |
 | 9 | Benchmark harness | 0.1 | ◐ mechanical numbers in | criterion suite live (`just bench` → benches/PERF.md): cache-hit read 39ns (25× under budget) · durable append 39µs w/ fsync · 1M fold 334µs (30× under) · resolve 7.4ns · query slice 624ns–30µs — remaining: LLM handoff study (blocked: API decision), socket p50, loom/crash suites, crates.io claim + 0.1 tag (blocked: cargo login) |
+| G | Gap verification G-1..G-8 | 0.1 | ◕ local tier done | G-1/G-2 (8-way writer contention → dense gapless seqs; readers never tear, counters never run backwards) · G-3 (core freshness) · G-4/G-5 (conformance CAS + idempotent mint) · G-6 (10k flood, every event lands, ~36k/s) · **socket p50 323µs vs 2ms budget** — G-7/G-8 are edge-tier by definition, land with CP-10 |
 | 10 | Cloudflare | 0.2 | ☐ not started | scenario-B test run |
 | 11 | Trust | 0.3 | ☐ not started | signature vectors |
 | 12 | Spec & vectors | 1.0 | ☐ not started | vectors from clean checkout |
