@@ -140,3 +140,11 @@ reconstruct ≡, using C-8 dedupe under an injected mid-replay kill).
 active connections — the observability half of "no orphans". `start` is
 idempotent (already-running reports the pid and exits 0); `restart` is
 stop-then-start with the pid change shown.
+
+4. **`purge` (rev 2.9)** — the last resort `stop` structurally cannot
+   be: daemons whose socket AND pidfile were deleted out from under
+   them (crashed tests, swept temp dirs) are findable only by process
+   table. `purge` pgreps every `waggle serve --daemon` owned by the
+   user, TERMs, escalates to KILL after a grace period, and reports
+   `{purged, count, needed_sigkill}`. Tested against manufactured
+   zombies (state dirs removed from under live daemons).

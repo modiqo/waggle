@@ -157,6 +157,7 @@ are and what your paths forward and back are.
 5. [Embedding in Rust](docs/guide/05-embedding-rust.md) — the sans-I/O core, the store contract, reconstruct
 6. [The full lifecycle](docs/guide/06-the-full-lifecycle.md) — one mission followed end to end: lineage, projections, slices, and the correction that reaches late readers (**`just demo` runs it live**)
 7. [Surgical content access](docs/guide/07-surgical-content.md) — grep through the token: `search`/`read` with lenses, budgets, and snapshots that outlive the file
+8. [Running waggled & federation](docs/guide/08-daemon-and-federation.md) — lifecycle verbs, stop-vs-purge, the env knobs, two-machine setup, strict vs eventual freshness
 
 Landing next: the published handoff benchmark (0.1.x) and the network
 tier — remote subagents through a forwarding resolver, then the
