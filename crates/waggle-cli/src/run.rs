@@ -1,0 +1,99 @@
+//! Execution: CLI verb → the same [`waggle_mcp::Handler`] the MCP wire
+//! uses — one dispatcher, two surfaces, zero drift (design doc `09 §2`).
+//! This is also where effects finally become real: the system clock, OS
+//! entropy, and the store on disk all enter here and nowhere deeper.
+
+use std::io::{BufRead, Write as _};
+use std::path::PathBuf;
+
+use serde_json::{json, Value};
+use waggle_core::{EntropyError, Sharer, Timestamp};
+use waggle_mcp::{handle_message, Handler};
+use waggle_store_sqlite::SqliteStore;
+
+/// OS entropy as a closure — the only randomness source in the binary.
+fn os_entropy(buf: &mut [u8]) -> Result<(), EntropyError> {
+    getrandom::getrandom(buf).map_err(|e| EntropyError(e.to_string()))
+}
+
+/// The system clock, once per command — handlers stay clock-free.
+fn now() -> Timestamp {
+    let ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
+    Timestamp::from_unix_ms(ms)
+}
+
+/// Store location: `WAGGLE_STORE` overrides; default is
+/// `~/.waggle/waggle.db` (the machine-wide store, doc `16 §2`).
+fn store_path() -> PathBuf {
+    if let Ok(p) = std::env::var("WAGGLE_STORE") {
+        return PathBuf::from(p);
+    }
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+    PathBuf::from(home).join(".waggle").join("waggle.db")
+}
+
+fn open_handler() -> Result<Handler<SqliteStore>, String> {
+    let path = store_path();
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| format!("store dir {}: {e}", dir.display()))?;
+    }
+    let store = SqliteStore::open(&path).map_err(|e| e.to_string())?;
+    let sharer = std::env::var("WAGGLE_SHARER")
+        .ok()
+        .and_then(|s| Sharer::new(&s).ok())
+        .unwrap_or_else(|| Sharer::new("session").expect("static slug"));
+    Ok(Handler::new(store, sharer))
+}
+
+/// Run one tool call and print the envelope as JSON. Exit code: 0 on
+/// success, 1 when the envelope carries a hint (the error contract).
+#[allow(clippy::needless_pass_by_value)] // call sites build args inline
+pub fn tool_call(tool: &str, args: Value) -> i32 {
+    let handler = match open_handler() {
+        Ok(h) => h,
+        Err(e) => {
+            eprintln!("{}", json!({ "hint": e }));
+            return 1;
+        }
+    };
+    let envelope = pollster::block_on(handler.dispatch(tool, &args, now(), &mut os_entropy));
+    let is_err = envelope.hint.is_some();
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&envelope).unwrap_or_default()
+    );
+    i32::from(is_err)
+}
+
+/// `waggle serve --stdio`: the MCP server over stdin/stdout — the line a
+/// harness config points at. One JSON-RPC message per line in, one per
+/// line out; EOF ends the session (doc `16 §3`).
+pub fn serve_stdio() -> i32 {
+    let handler = match open_handler() {
+        Ok(h) => h,
+        Err(e) => {
+            eprintln!("waggle serve: {e}");
+            return 1;
+        }
+    };
+    let stdin = std::io::stdin();
+    let mut stdout = std::io::stdout();
+    for line in stdin.lock().lines() {
+        let Ok(line) = line else { break };
+        if line.trim().is_empty() {
+            continue;
+        }
+        let response = pollster::block_on(handle_message(&handler, &line, now(), &mut os_entropy));
+        if let Some(response) = response {
+            if writeln!(stdout, "{response}")
+                .and_then(|()| stdout.flush())
+                .is_err()
+            {
+                break; // client hung up
+            }
+        }
+    }
+    0
+}

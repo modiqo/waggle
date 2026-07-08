@@ -7,9 +7,13 @@
 //! drifted description fails the build, and the guard is itself tested to
 //! fail (CP-0 gate: the lint proves it lints).
 //!
-//! CP-0 ships the shape; handlers arrive with the daemon in CP-6.
+//! Verbs dispatch through the same [`waggle_mcp::Handler`] the MCP wire
+//! uses; `waggle serve --stdio` IS the MCP server harnesses spawn.
 
 use clap::{Parser, Subcommand};
+use serde_json::json;
+
+mod run;
 
 #[derive(Parser)]
 #[command(
@@ -89,23 +93,65 @@ enum Cmd {
 
 fn main() {
     let cli = Cli::parse();
-    let name = match cli.cmd {
-        Cmd::Mint { .. } => "mint",
-        Cmd::Resolve { .. } => "resolve",
-        Cmd::Record { .. } => "record",
-        Cmd::Mutate { .. } => "mutate",
-        Cmd::Funnel { .. } => "funnel",
-        Cmd::Map { .. } => "map",
-        Cmd::Serve { .. } => "serve",
+    // Every verb maps to the same dispatcher the MCP wire uses (09 §2):
+    // build the args object the tool expects, call, print the envelope.
+    let code = match cli.cmd {
+        Cmd::Mint {
+            target,
+            sharer,
+            channel,
+        } => run::tool_call(
+            "mint",
+            strip_nulls(json!({ "target": target, "sharer": sharer, "channel": channel })),
+        ),
+        Cmd::Resolve { token, context } => {
+            let ctx =
+                context.map(|c| serde_json::from_str::<serde_json::Value>(&c).unwrap_or(json!(c)));
+            run::tool_call(
+                "resolve",
+                strip_nulls(json!({ "token": token, "context": ctx })),
+            )
+        }
+        Cmd::Record { token, stage } => {
+            run::tool_call("record", json!({ "token": token, "stage": stage }))
+        }
+        Cmd::Mutate {
+            token,
+            change,
+            expected_version,
+        } => run::tool_call(
+            "mutate",
+            strip_nulls(json!({
+                "token": token,
+                "change": change,
+                "expected-version": expected_version,
+            })),
+        ),
+        Cmd::Funnel { token } => run::tool_call("funnel", json!({ "token": token })),
+        Cmd::Map { token } => run::tool_call("map", strip_nulls(json!({ "token": token }))),
+        Cmd::Serve { stdio } => {
+            if stdio {
+                run::serve_stdio()
+            } else {
+                eprintln!(
+                    "waggle serve: the HTTP daemon lands later in CP-6; \
+                     use --stdio (works with every MCP harness today)."
+                );
+                2
+            }
+        }
     };
-    // Handlers land in CP-6 with the daemon and the store. The spine keeps
-    // the fluency contract even here: say what exists and what to do next.
-    eprintln!(
-        "waggle {name}: not yet implemented — this is the CP-0 spine \
-         (catalog, core token, parity guards). Handlers arrive in CP-6; \
-         track docs/design/14-execution-plan.md."
-    );
-    std::process::exit(2);
+    std::process::exit(code);
+}
+
+/// Drop null members so handlers see 'absent', not 'null'.
+fn strip_nulls(v: serde_json::Value) -> serde_json::Value {
+    match v {
+        serde_json::Value::Object(map) => {
+            serde_json::Value::Object(map.into_iter().filter(|(_, v)| !v.is_null()).collect())
+        }
+        other => other,
+    }
 }
 
 /// Catalog↔CLI parity (design doc `09 §2`): returns every disagreement

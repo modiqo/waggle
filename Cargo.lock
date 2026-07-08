@@ -694,8 +694,13 @@ name = "waggle-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "getrandom 0.2.17",
+ "pollster",
+ "serde_json",
  "waggle-core",
+ "waggle-mcp",
  "waggle-ops",
+ "waggle-store-sqlite",
 ]
 
 [[package]]
