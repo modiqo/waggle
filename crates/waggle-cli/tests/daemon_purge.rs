@@ -32,7 +32,18 @@ fn purge_reaps_zombies_with_deleted_sockets() {
             .stderr(Stdio::null())
             .spawn()
             .unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(400));
+        // Wait until the daemon has BOUND (socket exists) — deleting the
+        // dir mid-startup makes a crashed process, not a zombie, and on
+        // slow CI runners 400ms lost that race.
+        let sock = dir.join("waggled.sock");
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        while !sock.exists() {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "daemon {i} never bound its socket"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
         std::fs::remove_dir_all(&dir).unwrap(); // socket + pidfile: gone
         zombies.push(child);
     }
