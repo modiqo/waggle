@@ -18,6 +18,7 @@ criterion midpoint estimate. Budgets from
 | **`event` append, durable** (WAL + `synchronous=FULL` — real fsync) | **39 µs** | — | ~25k events/s/writer |
 | **funnel fold over 1,000,000 events** (SoA scan) | **334 µs** | < 10 ms | 30× |
 | **socket round-trip** (shim → waggled → resolve → back, p50) | **323 µs** (p99 806 µs) | p50 < 2 ms | 6× |
+| **edge resolve** (HTTP → worker → Durable Object → engine, p50, local-Miniflare) | **2.08 ms** | < 10 ms | 5× |
 | event flood, 10k burst (in-memory store, per-event acks) | 280 ms (~36k/s) | — | — |
 
 Reading the table:

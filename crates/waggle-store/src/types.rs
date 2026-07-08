@@ -3,18 +3,21 @@
 
 use std::sync::Arc;
 
+use serde::{Deserialize, Serialize};
 use waggle_core::{ActorClass, AttributionManifest, Change, Seq, Stage, Timestamp, Token};
 
 /// Client-supplied idempotency nonce for mint (C-8). The MCP layer
 /// auto-generates one when absent; retries reuse it, and the store returns
 /// the *original* manifest instead of minting a duplicate.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct MintNonce(pub u64);
 
 /// What a caller asks the store to append. Sequencing is absent on
 /// purpose: the committer assigns it (C-3) — callers state intent, stores
 /// establish order.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case", tag = "intent")]
 pub enum AppendIntent {
     /// A freshly minted manifest (version 1, from [`waggle_core::mint`]).
     Mint {

@@ -11,6 +11,18 @@ dev-install:
 demo:
     bash scripts/demo.sh
 
+# Boot wrangler dev and run the full Miniflare matrix (CP-10e) — needs node
+edge-test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PORT=43811
+    rm -rf edge-worker/.wrangler/state   # fresh hive per run — DO storage persists
+    (cd edge-worker && npx --yes wrangler dev --port $PORT >/tmp/wrangler-edge.log 2>&1 &)
+    for i in $(seq 1 420); do curl -sf http://127.0.0.1:$PORT/health >/dev/null && break; sleep 1; done
+    WAGGLE_EDGE_TESTS=1 WAGGLE_EDGE_EXTERNAL_PORT=$PORT cargo test -p waggle-edge-worker --test miniflare -- --nocapture
+    WAGGLE_EDGE_URL=http://127.0.0.1:$PORT WAGGLE_EDGE_BEARER=dev-tenant-token-0123456789abcdef cargo test -p waggle-cli --test federation e3_three_tier -- --nocapture
+    pkill -f "wrangler dev" || true
+
 # Model-check the cache layer with loom (15 §5.2)
 loom:
     RUSTFLAGS="--cfg loom" cargo test -p waggle-store-sqlite --test loom_cache --release

@@ -1,0 +1,38 @@
+[package]
+name = "waggle-edge-worker"
+description = "The waggle edge worker: /mcp + /store over a Durable-Object-per-tenant commit point (docs/design/08). Deploy artifact — never published to crates.io."
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# The worker runtime only exists on wasm32; native builds of the
+# workspace see an empty crate (everything is cfg-gated).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+worker = { version = "0.8", features = ["d1"] }
+waggle-core = { workspace = true }
+waggle-ops = { workspace = true }
+waggle-store = { path = "../crates/waggle-store", version = "0.1.0" }
+waggle-store-cloudflare = { path = "../crates/waggle-store-cloudflare", version = "0.1.0" }
+waggle-mcp = { path = "../crates/waggle-mcp", version = "0.1.0" }
+waggle-social = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+getrandom = { workspace = true, features = ["js"] }
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+ureq = "2"
+serde_json = { workspace = true }
+waggle-core = { workspace = true }
+waggle-store = { path = "../crates/waggle-store", version = "0.1.0" }
+waggle-store-sqlite = { path = "../crates/waggle-store-sqlite", version = "0.1.0" }
+pollster = { workspace = true }

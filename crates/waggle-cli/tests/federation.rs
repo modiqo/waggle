@@ -370,3 +370,118 @@ fn cli_verbs_federate_through_the_daemon() {
     }
     std::fs::remove_dir_all(&base).ok();
 }
+
+/// E3 at the edge (CP-10e): THE THREE-TIER CHAIN — plain CLI → local
+/// waggled → HTTP upstream → the edge worker. Gated on `WAGGLE_EDGE_URL`
+/// (+ `WAGGLE_EDGE_BEARER`): the `just edge-test` / CI recipe boots
+/// wrangler and exports them.
+#[test]
+fn e3_three_tier_chain_to_the_edge() {
+    let Ok(edge_url) = std::env::var("WAGGLE_EDGE_URL") else {
+        eprintln!("skipped: set WAGGLE_EDGE_URL (see `just edge-test`)");
+        return;
+    };
+    let bearer = std::env::var("WAGGLE_EDGE_BEARER").unwrap_or_default();
+    let dir = std::env::temp_dir().join(format!("waggle-3tier-{}", std::process::id()));
+    std::fs::remove_dir_all(&dir).ok();
+    std::fs::create_dir_all(&dir).unwrap();
+
+    // Tier 1+2: a local shim/daemon with the EDGE as its upstream.
+    let local = Shim::spawn(
+        &dir,
+        &[
+            ("WAGGLE_UPSTREAM", edge_url.clone()),
+            ("WAGGLE_UPSTREAM_TOKEN", bearer.clone()),
+        ],
+    );
+
+    // Mint AT THE EDGE (through its /mcp), so the token is edge-owned.
+    let mint_frame = serde_json::json!({
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": { "name": "mint", "arguments": { "target": "ws://three-tier/x" } },
+    });
+    let resp = ureq_post(&edge_url, &bearer, &mint_frame.to_string());
+    let rpc: serde_json::Value = serde_json::from_str(&resp).unwrap();
+    let envelope: serde_json::Value =
+        serde_json::from_str(rpc["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
+    let token = envelope["result"]["token"].as_str().unwrap().to_owned();
+
+    // The chain: CLI → daemon → HTTP → edge. One command, three tiers.
+    let out = Command::new(env!("CARGO_BIN_EXE_waggle"))
+        .args(["resolve", "--token", &token])
+        .env("WAGGLE_STORE", dir.join("waggle.db"))
+        .env("WAGGLE_SOCK", dir.join("waggled.sock"))
+        .output()
+        .unwrap();
+    let resolved: serde_json::Value =
+        serde_json::from_str(String::from_utf8_lossy(&out.stdout).trim()).unwrap();
+    assert!(out.status.success(), "{resolved}");
+    assert_eq!(
+        resolved["result"]["target"], "ws://three-tier/x",
+        "the CLI reached the edge through the daemon: {resolved}"
+    );
+
+    // Strict revocation bites end to end: revoke at the edge, strict
+    // resolve from the CLI sees the tombstone.
+    let revoke = serde_json::json!({
+        "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+        "params": { "name": "mutate", "arguments": {
+            "token": token, "change": "revoke", "expected-version": 1 } },
+    });
+    ureq_post(&edge_url, &bearer, &revoke.to_string());
+    let out = Command::new(env!("CARGO_BIN_EXE_waggle"))
+        .args(["resolve", "--token", &token, "--level", "strict"])
+        .env("WAGGLE_STORE", dir.join("waggle.db"))
+        .env("WAGGLE_SOCK", dir.join("waggled.sock"))
+        .output()
+        .unwrap();
+    let strict: serde_json::Value =
+        serde_json::from_str(String::from_utf8_lossy(&out.stdout).trim()).unwrap();
+    assert!(
+        strict["result"]["disposition"]
+            .to_string()
+            .contains("revoked"),
+        "strict revocation across three tiers: {strict}"
+    );
+
+    local.close();
+    stop_daemon(&dir);
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// Minimal HTTP POST for the test (std only — no client dep in the CLI).
+fn ureq_post(base: &str, bearer: &str, body: &str) -> String {
+    use std::io::{Read, Write};
+    let host = base.trim_start_matches("http://").trim_end_matches('/');
+    let mut stream = std::net::TcpStream::connect(host).unwrap();
+    write!(
+        stream,
+        "POST /mcp HTTP/1.1\r\nhost: {host}\r\nauthorization: Bearer {bearer}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+        body.len()
+    )
+    .unwrap();
+    let mut raw = String::new();
+    stream.read_to_string(&mut raw).unwrap();
+    let (head, body) = raw.split_once("\r\n\r\n").unwrap();
+    if head
+        .to_ascii_lowercase()
+        .contains("transfer-encoding: chunked")
+    {
+        // decode enough for one small chunked body
+        let mut out = String::new();
+        let mut rest = body;
+        while let Some((size, tail)) = rest.split_once("\r\n") {
+            let Ok(n) = usize::from_str_radix(size.trim(), 16) else {
+                break;
+            };
+            if n == 0 {
+                break;
+            }
+            out.push_str(&tail[..n.min(tail.len())]);
+            rest = tail.get(n..).map_or("", |r| r.trim_start_matches("\r\n"));
+        }
+        out
+    } else {
+        body.to_owned()
+    }
+}

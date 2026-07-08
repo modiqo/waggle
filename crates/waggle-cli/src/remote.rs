@@ -77,12 +77,18 @@ mod sha2_free {
 }
 
 /// Forward one frame to the upstream and return its response line.
-/// Connection-per-request keeps slice 1 simple; the measured local
-/// round-trip budget has plenty of headroom for a TCP connect on a LAN.
+/// Two upstream shapes: `host:port` speaks the daemon's newline
+/// JSON-RPC over raw TCP; `http://…` POSTs the frame to an edge
+/// worker's `/mcp` with a bearer (v1: plain http — Miniflare, LAN,
+/// tunnels; TLS federation arrives with the trust tier, recorded in
+/// the matrix). Connection-per-request keeps this simple.
 pub async fn forward(line: &str) -> Option<String> {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     let upstream = std::env::var("WAGGLE_UPSTREAM").ok()?;
     let token = std::env::var("WAGGLE_UPSTREAM_TOKEN").unwrap_or_default();
+    if upstream.starts_with("http://") || upstream.starts_with("https://") {
+        return forward_http(&upstream, &token, line).await;
+    }
     let stream = tokio::net::TcpStream::connect(&upstream).await.ok()?;
     let (read, mut write) = stream.into_split();
     let mut lines = BufReader::new(read).lines();
@@ -141,6 +147,63 @@ pub fn rewrap(envelope_text: &str, id: &Value) -> String {
         "result": { "content": [{ "type": "text", "text": envelope_text }], "isError": false },
     })
     .to_string()
+}
+
+/// POST one frame to an edge worker's `/mcp`. Hand-rolled HTTP/1.1 —
+/// no TLS, no client crate: exactly enough for Miniflare and tunnels.
+async fn forward_http(upstream: &str, bearer: &str, line: &str) -> Option<String> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let rest = upstream.strip_prefix("http://")?; // https deferred (matrix)
+    let (host, base) = rest.split_once('/').map_or((rest, ""), |(h, p)| (h, p));
+    let path = format!("/{}", base.trim_end_matches('/'))
+        .trim_end_matches('/')
+        .to_owned()
+        + "/mcp";
+    let mut stream = tokio::net::TcpStream::connect(host).await.ok()?;
+    let request = format!(
+        "POST {path} HTTP/1.1\r\nhost: {host}\r\nauthorization: Bearer {bearer}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{line}",
+        line.len(),
+    );
+    stream.write_all(request.as_bytes()).await.ok()?;
+    let mut raw = Vec::new();
+    stream.read_to_end(&mut raw).await.ok()?;
+    let text = String::from_utf8_lossy(&raw);
+    let (head, body) = text.split_once("\r\n\r\n")?;
+    if !head.starts_with("HTTP/1.1 200") && !head.starts_with("HTTP/1.0 200") {
+        return None;
+    }
+    // Chunked bodies: workerd streams; decode when flagged.
+    let body = if head
+        .to_ascii_lowercase()
+        .contains("transfer-encoding: chunked")
+    {
+        decode_chunked(body)
+    } else {
+        body.to_owned()
+    };
+    let trimmed = body.trim().to_owned();
+    (!trimmed.is_empty()).then_some(trimmed)
+}
+
+/// Minimal chunked-transfer decoder (sizes in hex, CRLF-separated).
+fn decode_chunked(body: &str) -> String {
+    let mut out = String::new();
+    let mut rest = body;
+    while let Some((size_line, tail)) = rest.split_once("\r\n") {
+        let Ok(size) = usize::from_str_radix(size_line.trim(), 16) else {
+            break;
+        };
+        if size == 0 {
+            break;
+        }
+        if tail.len() < size {
+            out.push_str(tail);
+            break;
+        }
+        out.push_str(&tail[..size]);
+        rest = tail[size..].trim_start_matches("\r\n");
+    }
+    out
 }
 
 /// The refusal a peer returns when a token is unknown locally and no

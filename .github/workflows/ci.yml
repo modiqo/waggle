@@ -46,3 +46,20 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo run -p xtask -- gen-docs
       - run: git diff --exit-code COMMANDS.md
+
+  edge:
+    name: edge (Miniflare matrix)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: Swatinem/rust-cache@v2
+      - name: Install worker-build
+        run: cargo install worker-build --locked
+      - name: Miniflare matrix (CP-10e)
+        run: just edge-test

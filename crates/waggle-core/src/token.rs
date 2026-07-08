@@ -141,8 +141,21 @@ impl Serialize for Token {
 
 impl<'de> Deserialize<'de> for Token {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let s = <&str>::deserialize(deserializer)?;
-        Self::parse(s).map_err(de::Error::custom)
+        // A visitor, not <&str>::deserialize: `serde_json::from_value`
+        // (the edge's store RPC) cannot lend borrowed strings — the
+        // borrowed-only form worked everywhere until the first consumer
+        // that couldn't borrow.
+        struct TokenVisitor;
+        impl de::Visitor<'_> for TokenVisitor {
+            type Value = Token;
+            fn expecting(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                f.write_str("a waggle token string")
+            }
+            fn visit_str<E: de::Error>(self, s: &str) -> Result<Token, E> {
+                Token::parse(s).map_err(de::Error::custom)
+            }
+        }
+        deserializer.deserialize_str(TokenVisitor)
     }
 }
 

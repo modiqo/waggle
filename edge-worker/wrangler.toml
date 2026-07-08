@@ -1,0 +1,13 @@
+name = "waggle-edge"
+main = "build/worker/shim.mjs"
+compatibility_date = "2026-06-01"
+
+[build]
+command = "cargo install -q worker-build && worker-build --release"
+
+[durable_objects]
+bindings = [{ name = "HIVE", class_name = "Hive" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Hive"]
