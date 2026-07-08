@@ -98,9 +98,12 @@ log** — migration is a stream, because the log is the truth.
 
 ```bash
 # the bootstrap, in its entirety
-cargo install waggle-cli
-claude mcp add --transport http waggle http://127.0.0.1:7411/mcp
+just dev-install                                  # (crates.io release at 0.1)
+claude mcp add waggle -- waggle serve --stdio
 ```
+
+The stdio server works today; the shared `waggled` HTTP daemon (one store,
+many harnesses at once) is landing in the same checkpoint.
 
 ## What makes it credible
 
@@ -126,12 +129,37 @@ discipline — the [design docs](docs/design/) are the contract:
 
 ## Status
 
-**Pre-0.1 — the spine.** The workspace, the operations catalog, the core
-token type, and the CI guards (file-size lint, catalog↔CLI parity, three-OS
-matrix, wasm build) are real and tested; handlers land checkpoint by
-checkpoint ([execution plan](docs/design/14-execution-plan.md)). Nothing
-here is ready to use yet — it is ready to **build on**, in the open, with
-the gates visible.
+**Pre-0.1 — usable.** The full local loop works end to end and every claim
+below is a passing test in CI (three-OS matrix + wasm; ~105 tests;
+[execution plan](docs/design/14-execution-plan.md) tracks each gate):
+
+- **mint → handoff → resolve → record → funnel → map** over MCP and CLI —
+  scenario A from the design docs runs as an integration test on real
+  JSON-RPC frames over the real SQLite store;
+- the **sealed matcher** serves each consumer its variant (selection-vector
+  table + determinism over 10⁴ random contexts);
+- the **event log reconstructs** (shuffle-immune, duplicate-immune,
+  snapshot+suffix ≡ full — R-1..R-4 as property tests);
+- three backends pass one **conformance suite** (memory, SQLite/WAL,
+  JSONL journal), with CAS mutations, idempotent mint, revoked-parent
+  rejection, and export→replay migration proven — plus a content-addressed
+  **blob sidecar** with verified reads and GC;
+- `waggle serve --stdio` is a **working MCP server**: the test spawns the
+  real binary, speaks the protocol through its pipes, and reads the writes
+  back from a second process.
+
+Try it from this checkout:
+
+```bash
+just dev-install
+waggle mint --target "file:///$PWD/README.md"   # → token + handoff line
+waggle resolve --token <token>                  # → your projection
+waggle map --token <token>                      # → where you are, what's next
+```
+
+Still landing before 0.1: the shared `waggled` daemon (concurrent
+harnesses), guided query slices, social renderers, and the published
+handoff benchmark.
 
 | Crate | Role |
 |---|---|
