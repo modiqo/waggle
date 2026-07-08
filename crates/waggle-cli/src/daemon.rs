@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::{UnixListener, UnixStream};
+use tokio::net::UnixListener;
 
 use waggle_mcp::{handle_message, Handler};
 use waggle_store::ReadStore as _;
@@ -26,6 +26,9 @@ struct DaemonState {
     started_unix_ms: u64,
     active_connections: AtomicU64,
     last_activity_secs: AtomicU64,
+    /// G-8: cached foreign resolutions, honoring each response's OWN
+    /// `revalidate_after` stamp. key → (envelope text, expires unix-ms).
+    resolutions: std::sync::Mutex<std::collections::HashMap<String, (String, u64)>>,
 }
 
 fn now_secs() -> u64 {
@@ -84,6 +87,7 @@ pub fn run_daemon() -> i32 {
             started_unix_ms: now_secs() * 1000,
             active_connections: AtomicU64::new(0),
             last_activity_secs: AtomicU64::new(now_secs()),
+            resolutions: std::sync::Mutex::new(std::collections::HashMap::new()),
         });
         spawn_idle_monitor(&state, &sock);
         spawn_tcp_listener(&handler, &state, &sock);
@@ -172,7 +176,38 @@ async fn serve_client<R, W>(
                     .ok()
                     .and_then(|m| m.get("id").cloned())
                     .unwrap_or(serde_json::Value::Null);
-                let response = match crate::remote::forward(&line).await {
+                // G-8: eventual serves a cached resolution inside its own
+                // revalidate window; strict always consults the owner.
+                let cache = crate::remote::resolve_cache_key(&line);
+                if let Some((key, level)) = &cache {
+                    if level != "strict" {
+                        let now_ms = now_secs() * 1000;
+                        let hit = state
+                            .resolutions
+                            .lock()
+                            .ok()
+                            .and_then(|m| m.get(key).cloned())
+                            .filter(|(_, expires)| now_ms < *expires);
+                        if let Some((envelope, _)) = hit {
+                            let response = crate::remote::rewrap(&envelope, &id);
+                            if write.write_all(response.as_bytes()).await.is_err()
+                                || write.write_all(b"\n").await.is_err()
+                            {
+                                break;
+                            }
+                            continue;
+                        }
+                    }
+                }
+                let forwarded = crate::remote::forward(&line).await;
+                if let (Some((key, _)), Some(r)) = (&cache, &forwarded) {
+                    if let Some((envelope, expires)) = crate::remote::cacheable_resolution(r) {
+                        if let Ok(mut m) = state.resolutions.lock() {
+                            m.insert(key.clone(), (envelope, expires));
+                        }
+                    }
+                }
+                let response = match forwarded {
                     Some(r) => r,
                     None => crate::remote::unreachable_response(&id, token),
                 };

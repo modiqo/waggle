@@ -21,6 +21,7 @@ impl Shim {
         cmd.args(["serve", "--stdio"])
             .env("WAGGLE_STORE", dir.join("waggle.db"))
             .env("WAGGLE_SOCK", dir.join("waggled.sock"))
+            .env("WAGGLE_IDLE_SECS", "20")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null());
@@ -37,7 +38,7 @@ impl Shim {
         }
     }
 
-    fn tool(&mut self, name: &str, args: serde_json::Value) -> serde_json::Value {
+    fn tool(&mut self, name: &str, args: &serde_json::Value) -> serde_json::Value {
         let frame = serde_json::json!({
             "jsonrpc": "2.0", "id": 1, "method": "tools/call",
             "params": { "name": name, "arguments": args },
@@ -72,7 +73,7 @@ fn two_waggleds_one_handoff_computation_at_the_owner() {
     std::fs::create_dir_all(&owner_dir).unwrap();
     std::fs::create_dir_all(&peer_dir).unwrap();
     let gate = "test-gate-token-0123456789abcdef".to_owned();
-    let tcp = "127.0.0.1:47611".to_owned();
+    let tcp = format!("127.0.0.1:{}", 40000 + std::process::id() % 20000);
 
     // The artifact lives ONLY on the owner's machine.
     let report = owner_dir.join("findings.md");
@@ -93,7 +94,7 @@ fn two_waggleds_one_handoff_computation_at_the_owner() {
     );
     let minted = owner.tool(
         "mint",
-        serde_json::json!({ "target": format!("file://{}", report.display()), "snapshot": true }),
+        &serde_json::json!({ "target": format!("file://{}", report.display()), "snapshot": true }),
     );
     assert!(minted["hint"].is_null(), "{minted}");
     let token = minted["result"]["token"].as_str().unwrap().to_owned();
@@ -109,7 +110,7 @@ fn two_waggleds_one_handoff_computation_at_the_owner() {
     );
 
     // The peer resolves the OWNER's token — forwarded, answered.
-    let resolved = peer.tool("resolve", serde_json::json!({ "token": token }));
+    let resolved = peer.tool("resolve", &serde_json::json!({ "token": token }));
     assert!(resolved["hint"].is_null(), "{resolved}");
     assert!(resolved["result"]["target"]
         .as_str()
@@ -120,7 +121,7 @@ fn two_waggleds_one_handoff_computation_at_the_owner() {
     // disk; the search ran there; only the match traveled (08 §0).
     let found = peer.tool(
         "search",
-        serde_json::json!({ "token": token, "pattern": "bespoke" }),
+        &serde_json::json!({ "token": token, "pattern": "bespoke" }),
     );
     assert!(found["hint"].is_null(), "{found}");
     assert_eq!(found["result"]["total_matches"], 1);
@@ -128,10 +129,10 @@ fn two_waggleds_one_handoff_computation_at_the_owner() {
     // The peer reports work; the OWNER's funnel shows the whole story.
     let rec = peer.tool(
         "record",
-        serde_json::json!({ "token": token, "stage": "run" }),
+        &serde_json::json!({ "token": token, "stage": "run" }),
     );
     assert!(rec["hint"].is_null());
-    let funnel = owner.tool("funnel", serde_json::json!({ "token": token }));
+    let funnel = owner.tool("funnel", &serde_json::json!({ "token": token }));
     assert_eq!(
         funnel["result"]["stages"]["resolve"], 1,
         "the remote resolve landed at the owner"
@@ -146,7 +147,7 @@ fn two_waggleds_one_handoff_computation_at_the_owner() {
     let lost_dir = base.join("lost");
     std::fs::create_dir_all(&lost_dir).unwrap();
     let mut lost = Shim::spawn(&lost_dir, &[]);
-    let refused = lost.tool("resolve", serde_json::json!({ "token": token }));
+    let refused = lost.tool("resolve", &serde_json::json!({ "token": token }));
     assert!(refused["hint"].as_str().unwrap().contains("unknown token"));
 
     owner.close();
@@ -165,7 +166,8 @@ fn tcp_gate_rejects_bad_bearers() {
     std::fs::remove_dir_all(&base).ok();
     let dir = base.join("owner");
     std::fs::create_dir_all(&dir).unwrap();
-    let tcp = "127.0.0.1:47612";
+    let tcp_s = format!("127.0.0.1:{}", 40002 + std::process::id() % 20000);
+    let tcp = tcp_s.as_str();
 
     let mut owner = Shim::spawn(
         &dir,
@@ -174,7 +176,7 @@ fn tcp_gate_rejects_bad_bearers() {
             ("WAGGLE_TCP_TOKEN", "correct-horse-battery-staple".into()),
         ],
     );
-    owner.tool("map", serde_json::json!({})); // ensure daemon is up
+    owner.tool("map", &serde_json::json!({})); // ensure daemon is up
 
     // Wrong bearer: the connection is dropped without a byte served.
     let mut bad = std::net::TcpStream::connect(tcp).unwrap();
@@ -195,5 +197,120 @@ fn tcp_gate_rejects_bad_bearers() {
 
     owner.close();
     stop_daemon(&dir);
+    std::fs::remove_dir_all(&base).ok();
+}
+
+/// G-8 (15 §5.3, `it_strict_vs_eventual_revoke`): after the owner
+/// revokes, a STRICT resolve at the peer sees the tombstone immediately;
+/// an EVENTUAL resolve inside its revalidate window still serves the
+/// cached resolution (the documented trade) — and once the window
+/// passes, eventual re-consults and sees the revocation too.
+#[test]
+fn g8_strict_vs_eventual_revoke_and_offline_window() {
+    let base = std::env::temp_dir().join(format!("waggle-g8-{}", std::process::id()));
+    std::fs::remove_dir_all(&base).ok();
+    let owner_dir = base.join("owner");
+    let peer_dir = base.join("peer");
+    std::fs::create_dir_all(&owner_dir).unwrap();
+    std::fs::create_dir_all(&peer_dir).unwrap();
+    let gate = "g8-gate-token-0123456789abcdef".to_owned();
+    let tcp = format!("127.0.0.1:{}", 40001 + std::process::id() % 20000);
+
+    let mut owner = Shim::spawn(
+        &owner_dir,
+        &[
+            ("WAGGLE_TCP", tcp.clone()),
+            ("WAGGLE_TCP_TOKEN", gate.clone()),
+        ],
+    );
+    // An explicit catch-all with a SHORT freshness window (800 ms) so the
+    // test exercises the cache boundary without waiting 15 minutes.
+    let minted = owner.tool(
+        "mint",
+        &serde_json::json!({
+            "target": "ws://g8/artifact",
+            "variants": [{
+                "match": {},
+                "body": { "inline": { "content_type": "text/plain", "data": "v1 content" } },
+                "revalidate_after_ms": 800,
+            }],
+        }),
+    );
+    assert!(minted["hint"].is_null(), "{minted}");
+    let token = minted["result"]["token"].as_str().unwrap().to_owned();
+
+    // Pre-start the peer daemon with captured stderr (debug visibility).
+    let peer_log = std::fs::File::create(base.join("peer.log")).unwrap();
+    let mut peer_daemon = Command::new(env!("CARGO_BIN_EXE_waggle"))
+        .args(["serve", "--daemon"])
+        .env("WAGGLE_STORE", peer_dir.join("waggle.db"))
+        .env("WAGGLE_SOCK", peer_dir.join("waggled.sock"))
+        .env("WAGGLE_UPSTREAM", tcp.clone())
+        .env("WAGGLE_UPSTREAM_TOKEN", gate.clone())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(peer_log)
+        .spawn()
+        .unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    let mut peer = Shim::spawn(
+        &peer_dir,
+        &[
+            ("WAGGLE_UPSTREAM", tcp.clone()),
+            ("WAGGLE_UPSTREAM_TOKEN", gate.clone()),
+        ],
+    );
+
+    // Prime the peer's cache (eventual is the default).
+    let first = peer.tool("resolve", &serde_json::json!({ "token": token }));
+    assert_eq!(
+        first["result"]["disposition"], "active",
+        "prime failed: {first}"
+    );
+
+    // The owner revokes.
+    let revoked = owner.tool(
+        "mutate",
+        &serde_json::json!({ "token": token, "change": "revoke", "expected-version": 1 }),
+    );
+    assert!(revoked["hint"].is_null(), "{revoked}");
+
+    // EVENTUAL inside the window: still the cached (stale) resolution —
+    // the documented trade, stamped with its own revalidate_after.
+    let eventual = peer.tool("resolve", &serde_json::json!({ "token": token }));
+    assert_eq!(
+        eventual["result"]["disposition"], "active",
+        "eventual serves cache inside the window: {eventual}"
+    );
+
+    // STRICT at the peer: the tombstone bites immediately…
+    let strict = peer.tool(
+        "resolve",
+        &serde_json::json!({ "token": token, "level": "strict" }),
+    );
+    assert!(
+        strict["result"]["disposition"]
+            .to_string()
+            .contains("revoked"),
+        "strict must see the revocation: {strict}"
+    );
+
+    // …and strict REFRESHES the shared cache — the next eventual serves
+    // the newer knowledge instead of the stale entry.
+    let refreshed = peer.tool("resolve", &serde_json::json!({ "token": token }));
+    assert!(
+        refreshed["result"]["disposition"]
+            .to_string()
+            .contains("revoked"),
+        "strict updates what eventual serves next: {refreshed}"
+    );
+
+    owner.close();
+    peer.close();
+    let _ = peer_daemon.kill();
+    let _ = peer_daemon.wait();
+    for d in [&owner_dir, &peer_dir] {
+        stop_daemon(d);
+    }
     std::fs::remove_dir_all(&base).ok();
 }

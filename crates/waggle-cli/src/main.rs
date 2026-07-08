@@ -69,6 +69,9 @@ enum Cmd {
         /// Resolver context (harness metadata, A2A agent card, or explicit JSON); defaults to negotiated.
         #[arg(long)]
         context: Option<String>,
+        /// For tokens owned elsewhere: eventual (default) serves a cached resolution inside its revalidate window; strict always revalidates at the owner — revocations bite immediately.
+        #[arg(long)]
+        level: Option<String>,
     },
     #[command(about = waggle_ops::RECORD.description)]
     Record {
@@ -203,12 +206,16 @@ fn main() {
                 "attach-type": attach_type,
             })),
         ),
-        Cmd::Resolve { token, context } => {
+        Cmd::Resolve {
+            token,
+            context,
+            level,
+        } => {
             let ctx =
                 context.map(|c| serde_json::from_str::<serde_json::Value>(&c).unwrap_or(json!(c)));
             run::tool_call(
                 "resolve",
-                strip_nulls(json!({ "token": token, "context": ctx })),
+                strip_nulls(json!({ "token": token, "context": ctx, "level": level })),
             )
         }
         Cmd::Record { token, stage } => {

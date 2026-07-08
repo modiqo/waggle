@@ -57,8 +57,7 @@ pub fn hello_ok(line: &str, gate: &str) -> bool {
         .pointer("/params/token")
         .and_then(Value::as_str)
         .unwrap_or_default();
-    use sha2_free::eq_hashed;
-    eq_hashed(presented.as_bytes(), gate.as_bytes())
+    sha2_free::eq_hashed(presented.as_bytes(), gate.as_bytes())
 }
 
 /// Length-independent comparison without pulling a crypto crate into the
@@ -93,6 +92,55 @@ pub async fn forward(line: &str) -> Option<String> {
     write.write_all(line.as_bytes()).await.ok()?;
     write.write_all(b"\n").await.ok()?;
     lines.next_line().await.ok().flatten()
+}
+
+/// Introspect a forwardable frame for the resolution cache: returns
+/// `(cache_key, level)` when this is a `resolve` call — the key covers
+/// token AND arguments (different contexts get different projections).
+#[must_use]
+pub fn resolve_cache_key(line: &str) -> Option<(String, String)> {
+    let msg: Value = serde_json::from_str(line).ok()?;
+    let params = msg.get("params")?;
+    if params.get("name")?.as_str()? != "resolve" {
+        return None;
+    }
+    let args = params.get("arguments")?;
+    let token = args.get("token")?.as_str()?.to_owned();
+    let level = args
+        .get("level")
+        .and_then(Value::as_str)
+        .unwrap_or("eventual")
+        .to_owned();
+    let ctx = args
+        .get("context")
+        .map(std::string::ToString::to_string)
+        .unwrap_or_default();
+    Some((format!("{token}\x1f{ctx}"), level))
+}
+
+/// Pull `(envelope_text, revalidate_after_unix_ms)` out of a forwarded
+/// resolve response — the response's own freshness stamp (G-3) is the
+/// cache policy; the peer invents nothing.
+#[must_use]
+pub fn cacheable_resolution(response: &str) -> Option<(String, u64)> {
+    let rpc: Value = serde_json::from_str(response).ok()?;
+    let text = rpc.pointer("/result/content/0/text")?.as_str()?;
+    let envelope: Value = serde_json::from_str(text).ok()?;
+    if envelope.get("hint").is_some_and(|h| !h.is_null()) {
+        return None; // errors are never cached
+    }
+    let revalidate = envelope.pointer("/result/revalidate_after")?.as_u64()?;
+    Some((text.to_owned(), revalidate))
+}
+
+/// Re-wrap a cached envelope for a new request id.
+#[must_use]
+pub fn rewrap(envelope_text: &str, id: &Value) -> String {
+    serde_json::json!({
+        "jsonrpc": "2.0", "id": id,
+        "result": { "content": [{ "type": "text", "text": envelope_text }], "isError": false },
+    })
+    .to_string()
 }
 
 /// The refusal a peer returns when a token is unknown locally and no
@@ -151,5 +199,42 @@ mod tests {
         assert!(!hello_ok(&auth_frame(""), "s3cret-bearer"));
         assert!(!hello_ok(r#"{"method":"tools/list"}"#, "s3cret-bearer"));
         assert!(!hello_ok("not json", "s3cret-bearer"));
+    }
+}
+
+#[cfg(test)]
+mod cache_tests {
+    use super::*;
+
+    #[test]
+    fn resolution_caching_roundtrip() {
+        let req = r#"{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"resolve","arguments":{"token":"abc123"}}}"#;
+        let (key, level) = resolve_cache_key(req).expect("resolve frame introspects");
+        assert_eq!(level, "eventual");
+
+        let envelope = r#"{"result":{"disposition":"active","revalidate_after":1783520469100},"next":[],"stats":{}}"#;
+        let response = serde_json::json!({
+            "jsonrpc": "2.0", "id": 7,
+            "result": { "content": [{ "type": "text", "text": envelope }], "isError": false },
+        })
+        .to_string();
+        let (cached, expires) = cacheable_resolution(&response).expect("success resolutions cache");
+        assert_eq!(expires, 1_783_520_469_100);
+        assert_eq!(cached, envelope);
+
+        // Same args → same key; strict is reported as such.
+        let strict_req = r#"{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"resolve","arguments":{"token":"abc123","level":"strict"}}}"#;
+        let (key2, level2) = resolve_cache_key(strict_req).unwrap();
+        assert_eq!(level2, "strict");
+        assert_eq!(key, key2, "level must not fork the cache key");
+
+        // Errors never cache.
+        let err_env = r#"{"result":null,"next":[],"hint":"nope","stats":{}}"#;
+        let err_resp = serde_json::json!({
+            "jsonrpc": "2.0", "id": 9,
+            "result": { "content": [{ "type": "text", "text": err_env }], "isError": true },
+        })
+        .to_string();
+        assert!(cacheable_resolution(&err_resp).is_none());
     }
 }

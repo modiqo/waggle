@@ -164,7 +164,7 @@ impl<S: Store> Handler<S> {
         };
         if let Some(path) = arg_str(args, "attach") {
             match self.attach_variant(path, arg_str(args, "attach-type")) {
-                Ok(v) => spec = spec.variant(v.match_expr, v.body),
+                Ok(v) => spec = spec.with_variant(v),
                 Err(e) => return e,
             }
         }
@@ -256,7 +256,7 @@ impl<S: Store> Handler<S> {
                     )
                 })?;
             for v in vs {
-                spec = spec.variant(v.match_expr, v.body);
+                spec = spec.with_variant(v); // full fidelity — incl. revalidate_after_ms
             }
         }
         Ok(spec)

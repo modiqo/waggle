@@ -127,6 +127,7 @@ pub const RESOLVE: OperationSpec = OperationSpec {
     args: &[
         ArgSpec { name: "token", required: true, doc: "The waggle token to resolve." },
         ArgSpec { name: "context", required: false, doc: "Resolver context (harness metadata, A2A agent card, or explicit JSON); defaults to negotiated." },
+        ArgSpec { name: "level", required: false, doc: "For tokens owned elsewhere: eventual (default) serves a cached resolution inside its revalidate window; strict always revalidates at the owner — revocations bite immediately." },
     ],
     forward: &[
         EdgeSpec { to: "search", why: "interrogate the content before ingesting any of it" },

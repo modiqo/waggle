@@ -109,6 +109,15 @@ impl MintSpec {
         self.target.as_str()
     }
 
+    /// Declare a variant in full — including `revalidate_after_ms`.
+    /// (`variant()` is the two-arg convenience; this preserves every
+    /// field a caller authored.)
+    #[must_use]
+    pub fn with_variant(mut self, variant: Variant) -> Self {
+        self.variants.push(variant);
+        self
+    }
+
     /// Pin the artifact's bytes: a content-addressed snapshot taken at
     /// mint (doc `18 §3`). Enables `read`/`search` anywhere the blobs
     /// replicate, immutable by hash.

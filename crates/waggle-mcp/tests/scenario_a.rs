@@ -294,3 +294,46 @@ fn envelope_error_shape_is_uniform() {
         }
     });
 }
+
+/// Regression (found via the G-8 federation hunt): a variant's declared
+/// `revalidate_after_ms` must survive the mint tool path — the two-arg
+/// builder was silently dropping it, turning every declared freshness
+/// window into the 15-minute default.
+#[test]
+fn declared_revalidate_window_survives_mint() {
+    pollster::block_on(async {
+        let handler = Handler::new(
+            SqliteStore::open_in_memory().unwrap(),
+            Sharer::new("fresh").unwrap(),
+        );
+        let mut e = entropy();
+        let minted = handler
+            .dispatch(
+                "mint",
+                &json!({
+                    "target": "ws://fresh/x",
+                    "variants": [{
+                        "match": {},
+                        "body": { "inline": { "content_type": "text/plain", "data": "v" } },
+                        "revalidate_after_ms": 800,
+                    }],
+                }),
+                Timestamp::from_unix_ms(1_000),
+                &mut e,
+            )
+            .await;
+        let token = minted.result["token"].as_str().unwrap().to_owned();
+        let resolved = handler
+            .dispatch(
+                "resolve",
+                &json!({ "token": token }),
+                Timestamp::from_unix_ms(2_000),
+                &mut e,
+            )
+            .await;
+        assert_eq!(
+            resolved.result["revalidate_after"], 2_800,
+            "the declared 800ms window applies — not the 15-minute default"
+        );
+    });
+}
