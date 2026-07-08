@@ -83,6 +83,10 @@ learn "searched 14× before anyone ran" — content stays dark to the log.
 
 ## 6 · Capability note
 
+*The remote form of everything in this doc is governed by the
+computation-travels-to-the-data contract — doc `08 §0`: the caller never
+learns where the bytes are and only ever receives budgeted answers.*
+
 Locally the daemon already runs as the user; a token adds no privilege.
 Remotely (token-gated TCP, edge) a token becomes a **read capability**
 for its content — scoped to `manifest.content` blobs (never live

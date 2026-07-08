@@ -13,6 +13,62 @@ KV caching, per-env wrangler config, Miniflare-based integration tests).*
 > `waggle serve --stdio` gives a laptop — one interface, two radii. Auth for
 > remote MCP rides the same per-tenant key scheme as `/api/mint` (§5).
 
+## 0. The principle this tier serves: computation travels to the data
+
+*Named in revision 2.7; implied since revision 2, load-bearing since
+doc 18. CP-10 builds against this contract.*
+
+Every classic handoff moves **data to the question** — download the
+artifact, then grep it locally. Waggle inverts it: **the question moves
+to where the bytes live**, and only the budgeted answer travels back.
+`resolve`, `query`, `read`, and `search` are all the same shape:
+
+```
+CALLER (anywhere)                     OWNER NODE (where the bytes live)
+──────────────────                    ─────────────────────────────────
+token + question   ──────────────►   decides locally:
+                                        snapshot blob or live target?
+                                        which lenses apply?
+                                        executes the lens HERE
+        ◄─────────────────────────    ONLY the budgeted result returns;
+                                       the read stage is recorded here
+```
+
+**The caller-side contract**, stated once and binding on every tier:
+
+1. The caller **never learns where the bytes are** — not the path, not
+   the store, not which resolution branch ran. It speaks
+   `token + question`; locality is the owner's private business.
+2. The caller **only ever receives budgeted answers** — every response
+   fits `max-bytes`, names the bytes it spared, and carries executable
+   `next` guidance. There is no "fetch the whole thing" verb in the
+   remote vocabulary; whole-artifact access exists only as an explicit
+   `MediaRef` fetch, hash-verified.
+3. The answer is **provably about the minted bytes** when content is
+   snapshotted: content-addressing means any replica's answer can be
+   checked against the manifest's hash — the caller trusts the math,
+   not the node.
+4. **Every question is attributed at the owner** — the `read`/`resolve`
+   stage lands in the funnel where the content lives, as counts only
+   (I-1), regardless of which machine asked.
+
+This is predicate pushdown from the database world applied to agent
+artifact exchange — and it is the wedge no adjacent standard occupies:
+A2A ships artifacts by URL as whole payloads; MCP resources return
+whole resources. Waggle's remote story is *"ask the reference, receive
+the slice."*
+
+The proof this isn't aspirational: the pattern already runs at machine
+scale. Every `waggle` CLI/MCP call ships a JSON-RPC frame over the unix
+socket to `waggled`, which decides snapshot-vs-live-file, dispatches the
+lens, and returns the budgeted envelope — the caller never touches the
+filesystem (measured round trip: p50 323 µs). This tier is the same
+frames over a longer wire, plus three ingredients: authenticated
+transport (§1, §5), replicated content (blobs → R2 — why
+`--snapshot`/`--content` matter), and capability semantics for remote
+readers (never live filesystem reads for remote callers — 18 §6; signing
+in CP-11).
+
 ## 1. Shape: two workers + one cron host
 
 ```text
