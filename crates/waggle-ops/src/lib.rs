@@ -107,6 +107,7 @@ pub const MINT: OperationSpec = OperationSpec {
         ArgSpec { name: "parent", required: false, doc: "Parent token: forms the delegation tree at mint; revoking the parent tombstones this child." },
         ArgSpec { name: "snapshot", required: false, doc: "Pin the target's bytes content-addressed at mint: read/search then work anywhere the blobs replicate, immutable by hash." },
         ArgSpec { name: "private", required: false, doc: "Mint a capability URL: a 16-char unguessable token (possession IS the credential); public unfurls and social renders refuse it." },
+        ArgSpec { name: "tree", required: false, doc: "For a DIRECTORY target: also mint every file inside (recursive, snapshot-pinned) as children of this token — one revocation covers the whole tree, and the folder's funnel rolls its children up." },
         ArgSpec { name: "content", required: false, doc: "Path to extracted text for a BINARY target (you extracted it with your own abilities): becomes the searchable content while the target stays the original. Mutually exclusive with snapshot." },
         ArgSpec { name: "attach", required: false, doc: "Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all." },
         ArgSpec { name: "attach-type", required: false, doc: "Content type of the attachment; inferred from the extension when omitted." },

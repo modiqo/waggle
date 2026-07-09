@@ -56,6 +56,9 @@ enum Cmd {
         /// Mint a capability URL: a 16-char unguessable token (possession IS the credential); public unfurls and social renders refuse it.
         #[arg(long)]
         private: bool,
+        /// For a DIRECTORY target: also mint every file inside (recursive, snapshot-pinned) as children of this token.
+        #[arg(long)]
+        tree: bool,
         /// Path to extracted text for a BINARY target (you extracted it with your own abilities): becomes the searchable content while the target stays the original. Mutually exclusive with snapshot.
         #[arg(long)]
         content: Option<String>,
@@ -213,6 +216,7 @@ fn main() {
             parent,
             snapshot,
             private,
+            tree,
             content,
             attach,
             attach_type,
@@ -225,6 +229,7 @@ fn main() {
                 "parent": parent,
                 "snapshot": if snapshot { Some(true) } else { None },
                 "private": if private { Some(true) } else { None },
+                "tree": if tree { Some(true) } else { None },
                 "content": content,
                 "attach": attach,
                 "attach-type": attach_type,

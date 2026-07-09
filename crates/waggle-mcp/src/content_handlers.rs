@@ -59,6 +59,14 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             Ok(None) => return Err(store_err(&StoreError::UnknownToken(token))),
             Err(e) => return Err(store_err(&e)),
         };
+        if view.manifest.revoked_at.is_some()
+            || self.ancestor_revoked_at(&view.manifest).await.is_some()
+        {
+            return Err(Envelope::err(
+                format!("{token} is revoked (directly or through its lineage) — revoked content serves nothing"),
+                vec![],
+            ));
+        }
         let (bytes, content_type) = if let Some(media) = &view.manifest.content {
             let bytes = self
                 .blobs

@@ -431,3 +431,116 @@ fn folder_targets_teach_the_lineage_pattern() {
         }
     });
 }
+
+/// The folder story, end to end: --tree mints the files as snapshot
+/// children; the root's funnel ROLLS UP child stages; revoking the root
+/// tombstones every child (resolve AND content refuse through lineage).
+#[test]
+fn folder_tree_rollup_and_cascade() {
+    pollster::block_on(async {
+        let dir = tempfile::tempdir().unwrap();
+        let docs = dir.path().join("docs");
+        std::fs::create_dir_all(docs.join("nested")).unwrap();
+        std::fs::write(docs.join("a.md"), "alpha bespoke\n").unwrap();
+        std::fs::write(docs.join("nested/b.md"), "beta\n").unwrap();
+        std::fs::write(docs.join(".hidden"), "skip me\n").unwrap();
+        let handler = handler_with_blobs(dir.path());
+        let mut e = entropy();
+
+        let minted = handler
+            .dispatch(
+                "mint",
+                &serde_json::json!({
+                    "target": format!("file://{}", docs.display()),
+                    "tree": true,
+                }),
+                waggle_core::Timestamp::from_unix_ms(1),
+                &mut e,
+            )
+            .await;
+        assert!(minted.hint.is_none(), "{minted:?}");
+        let root = minted.result["token"].as_str().unwrap().to_owned();
+        let children = minted.result["children"].as_array().unwrap();
+        assert_eq!(
+            children.len(),
+            2,
+            "recursive, dotfiles skipped: {children:?}"
+        );
+        let child = children[0]["token"].as_str().unwrap().to_owned();
+
+        // Resolving the ROOT serves the index — how a folder token
+        // works on a machine where the folder never existed.
+        let root_resolved = handler
+            .dispatch(
+                "resolve",
+                &serde_json::json!({ "token": root }),
+                waggle_core::Timestamp::from_unix_ms(2),
+                &mut e,
+            )
+            .await;
+        let index = root_resolved.result["children"].as_array().unwrap();
+        assert_eq!(index.len(), 2, "the folder's projection is its index");
+        assert!(index[0]["target"].as_str().unwrap().starts_with("file://"));
+
+        // Children are real snapshot tokens: grep works.
+        let hit = handler
+            .dispatch(
+                "search",
+                &serde_json::json!({ "token": child, "pattern": "bespoke" }),
+                waggle_core::Timestamp::from_unix_ms(2),
+                &mut e,
+            )
+            .await;
+        assert!(hit.hint.is_none());
+        assert_eq!(hit.result["total_matches"], 1);
+
+        // Rollup: the root's funnel includes the child's read.
+        let funnel = handler
+            .dispatch(
+                "funnel",
+                &serde_json::json!({ "token": root }),
+                waggle_core::Timestamp::from_unix_ms(3),
+                &mut e,
+            )
+            .await;
+        assert_eq!(
+            funnel.result["rollup"]["read"], 1,
+            "the folder answers for its tree: {funnel:?}"
+        );
+
+        // One revocation, whole tree.
+        let revoked = handler
+            .dispatch(
+                "mutate",
+                &serde_json::json!({ "token": root, "change": "revoke", "expected-version": 1 }),
+                waggle_core::Timestamp::from_unix_ms(4),
+                &mut e,
+            )
+            .await;
+        assert!(revoked.hint.is_none());
+        let resolved = handler
+            .dispatch(
+                "resolve",
+                &serde_json::json!({ "token": child }),
+                waggle_core::Timestamp::from_unix_ms(5),
+                &mut e,
+            )
+            .await;
+        assert!(
+            resolved.result["disposition"].get("revoked").is_some(),
+            "child tombstoned through lineage: {resolved:?}"
+        );
+        let read = handler
+            .dispatch(
+                "read",
+                &serde_json::json!({ "token": child }),
+                waggle_core::Timestamp::from_unix_ms(6),
+                &mut e,
+            )
+            .await;
+        assert!(
+            read.hint.expect("refusal").contains("revoked"),
+            "content serves nothing through a revoked lineage"
+        );
+    });
+}
