@@ -1,0 +1,22 @@
+[package]
+name = "waggle-tmux"
+version = "0.3.0"
+edition = "2021"
+rust-version = "1.85"
+description = "The seamless switchboard: move outcomes between Claude Code, Codex, and other tmux-resident harnesses as waggle tokens — minted in one gesture, resolved by the act of switching."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/modiqo/waggle"
+publish = false # claims its crates.io name with the next release train
+
+[dependencies]
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+toml = "0.8"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

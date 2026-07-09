@@ -343,17 +343,9 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             Ok(None) => return store_err(&StoreError::UnknownToken(token)),
             Err(e) => return store_err(&e),
         };
-        let ctx = match args.get("context") {
-            Some(v) => match serde_json::from_value::<ResolverContext>(v.clone()) {
-                Ok(c) => c,
-                Err(e) => {
-                    return Envelope::err(
-                        format!("context: {e} — pass a resolver context object or omit it"),
-                        vec![],
-                    )
-                }
-            },
-            None => negotiate(&ConsumerHint::UserAgent("waggle-mcp")),
+        let ctx = match parse_context(args) {
+            Ok(c) => c,
+            Err(e) => return e,
         };
         // The cascade the catalog promises: a revoked ANCESTOR tombstones
         // this token too — checked at resolution time, where it bites.
@@ -673,6 +665,24 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         let children = self.store.children(token).await.unwrap_or_default();
         token_map(&view.manifest, &funnel, children.len(), now)
     }
+}
+
+/// The resolver context from args: an object, a JSON STRING of one
+/// (how CLIs deliver --context), or negotiated when absent.
+fn parse_context(args: &Map<String, Value>) -> Result<ResolverContext, Envelope> {
+    let Some(v) = args.get("context") else {
+        return Ok(negotiate(&ConsumerHint::UserAgent("waggle-mcp")));
+    };
+    let value = match v.as_str() {
+        Some(s) => serde_json::from_str::<Value>(s).unwrap_or_else(|_| v.clone()),
+        None => v.clone(),
+    };
+    serde_json::from_value::<ResolverContext>(value).map_err(|e| {
+        Envelope::err(
+            format!("context: {e} — pass a resolver context object or omit it"),
+            vec![],
+        )
+    })
 }
 
 /// Extension → content type, for the common media cases.

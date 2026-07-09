@@ -27,6 +27,10 @@ jobs:
       - run: cargo test --workspace
         env:
           WAGGLE_PURGE_TEST: 1
+          # tmux ships on ubuntu runners; the switchboard's real-tmux
+          # suite runs there and self-skips elsewhere.
+          WAGGLE_TMUX_TESTS: ${{ matrix.os == 'ubuntu-latest' && '1' || '0' }}
+          WAGGLE_TMUX_BIN: ${{ github.workspace }}/target/debug/waggle
 
   wasm:
     # The Workers build target (08) — Linux only.
