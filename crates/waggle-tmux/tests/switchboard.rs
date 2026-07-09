@@ -252,3 +252,113 @@ fn watch_auto_delivers_channel_addressed_outcomes() {
         "auto-delivered without a human courier: {captured}"
     );
 }
+
+/// Multiple outcomes: several paths mint as ONE lineage bundle (a note
+/// root + every piece as a child — folders as trees), and a switch
+/// delivers EVERYTHING queued for the destination; nothing is orphaned
+/// by a later mint.
+#[test]
+fn bundles_and_the_pending_queue() {
+    if !gated() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let ws = dir.path();
+    let session = format!("waggle-bundle-{}", std::process::id());
+    let _guard = TmuxGuard(session.clone());
+    let store = ws.join("waggle.db").display().to_string();
+    let sock = ws.join("no-daemon.sock").display().to_string();
+    let envs: Vec<(&str, &str)> = vec![("WAGGLE_STORE", &store), ("WAGGLE_SOCK", &sock)];
+    let me = env!("CARGO_BIN_EXE_waggle-tmux");
+
+    assert!(Command::new("tmux")
+        .args(["new-session", "-d", "-s", &session, "-n", "w", "cat"])
+        .status()
+        .unwrap()
+        .success());
+    let pane = String::from_utf8(
+        Command::new("tmux")
+            .args(["list-panes", "-t", &session, "-F", "#{pane_id}"])
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap()
+    .trim()
+    .to_owned();
+    let (ok, out) = run(
+        me,
+        ws,
+        &envs,
+        &["register", "codex", "--profile", "codex", "--pane", &pane],
+    );
+    assert!(ok, "{out}");
+    let events = ws.join(".waggle/tmux/events.jsonl");
+    let owned = std::fs::read_to_string(&events)
+        .unwrap()
+        .replace("\"owned\":false", "\"owned\":true");
+    std::fs::write(&events, owned).unwrap();
+
+    // The user's exact scenario: an images folder AND three files.
+    std::fs::create_dir_all(ws.join("images")).unwrap();
+    std::fs::write(ws.join("images/a.txt"), "img-a\n").unwrap();
+    std::fs::write(ws.join("one.md"), "one\n").unwrap();
+    std::fs::write(ws.join("two.md"), "two\n").unwrap();
+    std::fs::write(ws.join("three.md"), "three\n").unwrap();
+
+    let (ok, out) = run(
+        me,
+        ws,
+        &envs,
+        &[
+            "mint", "images", "one.md", "two.md", "three.md", "--to", "codex",
+        ],
+    );
+    assert!(ok, "{out}");
+    assert!(out.contains("4 piece(s) as children"), "{out}");
+    let root = out.split_whitespace().nth(2).unwrap().to_owned();
+
+    // The root resolves to its index: 4 children, the folder among them.
+    let (ok, out) = run(&waggle_bin(), ws, &envs, &["resolve", "--token", &root]);
+    assert!(ok, "{out}");
+    let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(
+        v["result"]["children"].as_array().unwrap().len(),
+        4,
+        "{out}"
+    );
+
+    // A second, independent outcome QUEUES (old single-slot dropped it).
+    std::fs::write(ws.join("extra.md"), "extra\n").unwrap();
+    let (ok, out) = run(me, ws, &envs, &["mint", "extra.md", "--to", "codex"]);
+    assert!(ok, "{out}");
+    let extra = out.split_whitespace().nth(1).unwrap().to_owned();
+
+    // One switch delivers BOTH queued handoffs.
+    let (ok, out) = run(me, ws, &envs, &["switch", "codex"]);
+    assert!(ok, "{out}");
+    assert_eq!(
+        out.matches("delivered into codex's prompt").count(),
+        2,
+        "both queued tokens travel on one switch: {out}"
+    );
+    std::thread::sleep(std::time::Duration::from_millis(600));
+    let captured = String::from_utf8(
+        Command::new("tmux")
+            .args(["capture-pane", "-t", &pane, "-p", "-S", "-200", "-J"])
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap();
+    // Each instruction appears twice in a cat pane (tty echo + output) —
+    // assert BOTH tokens were delivered rather than counting echoes.
+    assert!(
+        captured.contains(&format!("Resolve {root} via waggle")),
+        "bundle root delivered: {captured}"
+    );
+    assert!(
+        captured.contains(&format!("Resolve {extra} via waggle")),
+        "queued extra delivered too: {captured}"
+    );
+}

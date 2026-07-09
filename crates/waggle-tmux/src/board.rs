@@ -54,7 +54,8 @@ pub fn build_rows(world: &waggle_core::WorldState, state: &State, now_ms: u64) -
         .filter_map(|s| s.last_delivery.as_ref())
         .map(|(t, b)| (t.as_str(), *b))
         .collect();
-    let pending = state.pending.as_ref().map(|(t, _, _)| t.clone());
+    let pending: std::collections::BTreeSet<&str> =
+        state.pending.iter().map(|(t, _, _)| t.as_str()).collect();
 
     let mut roots: Vec<&waggle_core::Token> = ours
         .iter()
@@ -66,15 +67,7 @@ pub fn build_rows(world: &waggle_core::WorldState, state: &State, now_ms: u64) -
     let mut rows = Vec::new();
     for root in roots {
         push_row(
-            root,
-            0,
-            true,
-            &ours,
-            world,
-            &baselines,
-            pending.as_deref(),
-            now_ms,
-            &mut rows,
+            root, 0, true, &ours, world, &baselines, &pending, now_ms, &mut rows,
         );
     }
     rows
@@ -88,7 +81,7 @@ fn push_row(
     ours: &BTreeMap<&waggle_core::Token, &waggle_core::AttributionManifest>,
     world: &waggle_core::WorldState,
     baselines: &BTreeMap<&str, u64>,
-    pending: Option<&str>,
+    pending: &std::collections::BTreeSet<&str>,
     now_ms: u64,
     rows: &mut Vec<Row>,
 ) {
@@ -128,7 +121,7 @@ fn push_row(
         last,
         stages: (resolves, count("read"), count("run")),
         consumed,
-        pending: pending == Some(token.as_str()),
+        pending: pending.contains(token.as_str()),
         age_secs: now_ms.saturating_sub(manifest.minted_at.as_unix_ms()) / 1000,
     });
     let children = world.lineage.get(token).cloned().unwrap_or_default();
@@ -160,15 +153,21 @@ fn age(secs: u64) -> String {
 #[must_use]
 pub fn render(rows: &[Row], state: &State, height: usize) -> String {
     let mut out = String::new();
-    let pending_note = state.pending.as_ref().map_or_else(
-        || "none".to_owned(),
-        |(t, _, to)| {
-            format!(
-                "{t}{}",
-                to.as_ref().map(|d| format!(" -> {d}")).unwrap_or_default()
-            )
-        },
-    );
+    let pending_note = if state.pending.is_empty() {
+        "none".to_owned()
+    } else {
+        state
+            .pending
+            .iter()
+            .map(|(t, _, to)| {
+                format!(
+                    "{t}{}",
+                    to.as_ref().map(|d| format!(" -> {d}")).unwrap_or_default()
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
     let _ = writeln!(
         out,
         "{BOLD}waggle{RESET} {DIM}|{RESET} {} outcome(s) {DIM}|{RESET} pending: {YELLOW}{pending_note}{RESET}",

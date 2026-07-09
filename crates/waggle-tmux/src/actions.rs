@@ -9,6 +9,57 @@ use crate::state::{self, Event, State};
 use crate::tmux::{self, TmuxBackend};
 use crate::waggle::{self, WaggleClient};
 
+/// `mint` with SEVERAL paths: one lineage BUNDLE. A note file becomes
+/// the root; every path (files and folders alike — folders as trees)
+/// is minted as its child. ONE token travels; the destination resolves
+/// the root's index and picks its pieces; one revocation kills all.
+pub fn mint_bundle<W: WaggleClient>(
+    waggle_client: &W,
+    workspace: &Path,
+    paths: &[String],
+    to: Option<&str>,
+) -> Result<String> {
+    for path in paths {
+        if !workspace.join(path).exists() {
+            return Err(Error::NotFound(format!(
+                "`{path}` does not exist — every bundle piece must be inside the workspace"
+            )));
+        }
+    }
+    let dir = workspace.join(".waggle-handoffs");
+    std::fs::create_dir_all(&dir)?;
+    let note = dir.join(format!("bundle-{}.md", std::process::id()));
+    let listing: Vec<String> = paths.iter().map(|p| format!("- {p}")).collect();
+    std::fs::write(
+        &note,
+        format!(
+            "# Handoff bundle\n\nResolve this token's children for the pieces:\n{}\n",
+            listing.join("\n")
+        ),
+    )?;
+    let root_target = format!("file://{}", note.canonicalize()?.display());
+    let root = waggle::mint(waggle_client, &root_target, false, None)?;
+    for path in paths {
+        let full = workspace.join(path).canonicalize()?;
+        let target = format!("file://{}", full.display());
+        waggle::mint(waggle_client, &target, full.is_dir(), Some(&root))?;
+    }
+    state::append(
+        workspace,
+        &Event::OutcomeMinted {
+            token: root.clone(),
+            target: root_target,
+            to: to.map(str::to_owned),
+        },
+    )?;
+    println!(
+        "minted bundle {root} ({} piece(s) as children) — pending handoff{}",
+        paths.len(),
+        to.map(|t| format!(" for `{t}`")).unwrap_or_default()
+    );
+    Ok(root)
+}
+
 /// `mint`: any outcome → a pending handoff. A directory becomes a
 /// `--tree` (root + snapshot children); a file becomes a snapshot.
 pub fn mint<W: WaggleClient>(
@@ -79,52 +130,62 @@ pub fn switch<T: TmuxBackend, W: WaggleClient>(
 ) -> Result<()> {
     let st = state::load(workspace);
     let session = state::session(&st, dest)?;
-    let Some(token) = token
-        .map(str::to_owned)
-        .or_else(|| st.pending.as_ref().map(|p| p.0.clone()))
-    else {
-        return Err(Error::NotFound(
-            "no pending outcome — mint one first: waggle-tmux mint <file-or-dir>".into(),
-        ));
+    // Everything queued for this destination travels on one switch —
+    // explicitly addressed first, unaddressed riding along.
+    let tokens: Vec<String> = match token {
+        Some(t) => vec![t.to_owned()],
+        None => st
+            .pending
+            .iter()
+            .filter(|(_, _, to)| to.as_deref().is_none_or(|d| d == dest))
+            .map(|(t, _, _)| t.clone())
+            .collect(),
     };
+    if tokens.is_empty() {
+        return Err(Error::NotFound(
+            "no pending outcome for this destination — mint one first: waggle-tmux mint <paths…>"
+                .into(),
+        ));
+    }
 
     // The matcher runs at switch time, with the destination's context.
     let profiles = profile::load(&workspace.join(".waggle/tmux/config.toml"))?;
     let dest_profile = profile::find(&profiles, &session.profile)?;
-    match waggle::preview(waggle_client, &token, &dest_profile.resolver_context()) {
-        Ok(line) => println!("{dest} will receive: {line}"),
-        Err(e) => println!("preview unavailable ({e}) — delivering anyway"),
-    }
-
-    waggle::record(waggle_client, &token, "handoff-sent")?;
-    let baseline = waggle::resolve_count(waggle_client, &token)?;
-
     tmux::select(tmux_backend, &session.pane)?;
-    let line = dest_profile.inject_line(&token);
     let foreground = tmux::list_panes(tmux_backend)?
         .into_iter()
         .find(|p| p.pane_id == session.pane)
         .map(|p| p.current_cmd)
         .unwrap_or_default();
-    if tmux::is_shell(&foreground) {
-        // No harness listening — typing here becomes zsh noise.
-        println!(
-            "{dest}'s pane is a bare shell ({foreground}) — start the harness there, then paste:\n  {line}"
-        );
-    } else if session.owned && !no_inject {
-        tmux::send_line(tmux_backend, &session.pane, &line)?;
-        println!("delivered into {dest}'s prompt — it resolves as itself");
-    } else {
-        println!("paste into {dest}:\n  {line}");
+
+    for token in tokens {
+        match waggle::preview(waggle_client, &token, &dest_profile.resolver_context()) {
+            Ok(line) => println!("{dest} will receive: {line}"),
+            Err(e) => println!("preview unavailable ({e}) — delivering anyway"),
+        }
+        waggle::record(waggle_client, &token, "handoff-sent")?;
+        let baseline = waggle::resolve_count(waggle_client, &token)?;
+        let line = dest_profile.inject_line(&token);
+        if tmux::is_shell(&foreground) {
+            // No harness listening — typing here becomes zsh noise.
+            println!(
+                "{dest}'s pane is a bare shell ({foreground}) — start the harness there, then paste:\n  {line}"
+            );
+        } else if session.owned && !no_inject {
+            tmux::send_line(tmux_backend, &session.pane, &line)?;
+            println!("delivered into {dest}'s prompt — it resolves as itself");
+        } else {
+            println!("paste into {dest}:\n  {line}");
+        }
+        state::append(
+            workspace,
+            &Event::HandoffSent {
+                token,
+                to: dest.to_owned(),
+                resolves_at_send: baseline,
+            },
+        )?;
     }
-    state::append(
-        workspace,
-        &Event::HandoffSent {
-            token,
-            to: dest.to_owned(),
-            resolves_at_send: baseline,
-        },
-    )?;
     state::append(
         workspace,
         &Event::SwitchedTo {
@@ -141,9 +202,9 @@ pub fn next<T: TmuxBackend, W: WaggleClient>(
     workspace: &Path,
 ) -> Result<()> {
     let st = state::load(workspace);
-    let Some((token, _, to)) = st.pending.clone() else {
+    let Some((token, _, to)) = st.pending.first().cloned() else {
         return Err(Error::NotFound(
-            "no pending outcome — mint one first: waggle-tmux mint <file-or-dir>".into(),
+            "no pending outcome — mint one first: waggle-tmux mint <paths…>".into(),
         ));
     };
     let dest = to.or_else(|| other_session(&st)).ok_or_else(|| {
@@ -198,7 +259,7 @@ pub fn status<W: WaggleClient>(waggle_client: &W, workspace: &Path) {
             if s.owned { "yes" } else { "no" },
         );
     }
-    if let Some((token, target, to)) = &st.pending {
+    for (token, target, to) in &st.pending {
         println!(
             "\npending: {token} ({target}){}",
             to.as_ref().map(|t| format!(" → {t}")).unwrap_or_default()

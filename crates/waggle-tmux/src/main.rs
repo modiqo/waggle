@@ -26,10 +26,11 @@ enum Cmd {
         /// Profile ids (e.g. claude-code codex); empty = detect.
         harnesses: Vec<String>,
     },
-    /// Mint any outcome (file, or directory as a --tree) into the pending handoff.
+    /// Mint outcomes into the pending queue: one path mints directly
+    /// (folders as trees); several paths become ONE lineage bundle.
     Mint {
-        /// Path inside the workspace; omit with --pick-git to list candidates.
-        path: Option<String>,
+        /// Paths inside the workspace; omit with --pick-git to list candidates.
+        paths: Vec<String>,
         /// Destination session this outcome is for.
         #[arg(long)]
         to: Option<String>,
@@ -78,21 +79,27 @@ fn main() -> std::process::ExitCode {
     let waggle = waggle::BinWaggle;
     let result = match Cmd::parse() {
         Cmd::Up { harnesses } => up::run(&tmux, &workspace, &harnesses),
-        Cmd::Mint { path, to, pick_git } => match (path, pick_git) {
-            (Some(p), _) => actions::mint(&waggle, &workspace, &p, to.as_deref()).map(|_| ()),
-            (None, true) => actions::pick_git(&workspace).map(|files| {
+        Cmd::Mint {
+            paths,
+            to,
+            pick_git,
+        } => match (paths.len(), pick_git) {
+            (1, _) => actions::mint(&waggle, &workspace, &paths[0], to.as_deref()).map(|_| ()),
+            (n, _) if n > 1 => {
+                actions::mint_bundle(&waggle, &workspace, &paths, to.as_deref()).map(|_| ())
+            }
+            (_, true) => actions::pick_git(&workspace).map(|files| {
                 if files.is_empty() {
                     println!("nothing changed — outcomes come from work");
                 } else {
-                    println!("candidates (mint one: waggle-tmux mint <path>):");
+                    println!("candidates (mint: waggle-tmux mint <paths…>):");
                     for f in files {
                         println!("  {f}");
                     }
                 }
             }),
-            (None, false) => Err(error::Error::NotFound(
-                "what outcome? waggle-tmux mint <file-or-dir>, or --pick-git to list candidates"
-                    .into(),
+            _ => Err(error::Error::NotFound(
+                "what outcome? waggle-tmux mint <paths…>, or --pick-git to list candidates".into(),
             )),
         },
         Cmd::Switch {

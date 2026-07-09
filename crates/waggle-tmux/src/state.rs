@@ -70,8 +70,9 @@ pub struct Session {
 pub struct State {
     /// session id → session.
     pub sessions: BTreeMap<String, Session>,
-    /// The pending handoff: newest minted, not yet delivered.
-    pub pending: Option<(String, String, Option<String>)>, // (token, target, to)
+    /// Pending handoffs, FIFO — every minted outcome queues until
+    /// delivered; nothing is silently dropped by a later mint.
+    pub pending: Vec<(String, String, Option<String>)>, // (token, target, to)
     /// Where focus last went.
     pub focused: Option<String>,
 }
@@ -135,16 +136,14 @@ fn apply(state: &mut State, event: Event) {
             );
         }
         Event::OutcomeMinted { token, target, to } => {
-            state.pending = Some((token, target, to));
+            state.pending.push((token, target, to));
         }
         Event::HandoffSent {
             token,
             to,
             resolves_at_send,
         } => {
-            if state.pending.as_ref().is_some_and(|(t, _, _)| *t == token) {
-                state.pending = None;
-            }
+            state.pending.retain(|(t, _, _)| *t != token);
             if let Some(session) = state.sessions.get_mut(&to) {
                 session.last_delivery = Some((token, resolves_at_send));
             }
@@ -193,7 +192,7 @@ mod tests {
         .unwrap();
 
         let mid = load(ws);
-        assert_eq!(mid.pending.as_ref().unwrap().0, "7Kp2xQ9f");
+        assert_eq!(mid.pending[0].0, "7Kp2xQ9f");
         assert!(mid.sessions["codex"].owned);
 
         append(
@@ -208,7 +207,7 @@ mod tests {
         append(ws, &Event::SwitchedTo { id: "codex".into() }).unwrap();
 
         let end = load(ws);
-        assert!(end.pending.is_none(), "delivery consumes pending");
+        assert!(end.pending.is_empty(), "delivery consumes pending");
         assert_eq!(
             end.sessions["codex"].last_delivery,
             Some(("7Kp2xQ9f".into(), 1))
