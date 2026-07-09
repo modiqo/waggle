@@ -6,6 +6,7 @@ default:
 # Build and install the waggle CLI from this checkout (like rote's dev-install)
 dev-install:
     cargo install --path crates/waggle-cli --locked --force
+    -waggle daemon restart
 
 # Run the full-lifecycle demo (docs/guide/06) against a throwaway store
 demo:

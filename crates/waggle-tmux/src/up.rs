@@ -56,11 +56,38 @@ pub fn run<T: TmuxBackend>(tmux: &T, workspace: &Path, chosen: &[String]) -> Res
             p.id
         );
     }
-    tmux::bind_keys(tmux);
-    println!(
-        "workspace up. Work, then: waggle-tmux mint <outcome> && waggle-tmux switch <session>"
-    );
+    let session_ids: Vec<String> = picked.iter().map(|p| p.id.clone()).collect();
+    tmux::bind_keys(tmux, &session_ids);
+
+    // Land the user INSIDE the first harness pane — `up` should feel
+    // like walking into the room, not being handed a map of it.
+    if let Some(first) = picked.first() {
+        if let Some(session) = state::load(workspace).sessions.get(&first.id) {
+            let _ = tmux::select(tmux, &session.pane);
+        }
+    }
+    println!("workspace up — prefix+W is the switchboard menu (switch / mint / status)");
+    attach(tmux);
     Ok(())
+}
+
+/// Step inside: switch-client when already in tmux, attach on a real
+/// terminal, print the command otherwise (CI, scripts).
+fn attach<T: TmuxBackend>(tmux: &T) {
+    use std::io::IsTerminal as _;
+    if std::env::var("TMUX").is_ok() {
+        let _ = tmux.run(&["switch-client", "-t", SESSION]);
+    } else if std::io::stdout().is_terminal() {
+        // exec replaces this process with the attach — the natural end
+        // of `up` on a terminal.
+        use std::os::unix::process::CommandExt as _;
+        let err = std::process::Command::new("tmux")
+            .args(["attach", "-t", SESSION])
+            .exec();
+        eprintln!("attach yourself: tmux attach -t {SESSION} ({err})");
+    } else {
+        println!("attach: tmux attach -t {SESSION}");
+    }
 }
 
 fn pick(profiles: &[HarnessProfile], chosen: &[String]) -> Result<Vec<HarnessProfile>> {

@@ -123,19 +123,32 @@ pub fn capture_tail<T: TmuxBackend>(tmux: &T, pane_id: &str, lines: u32) -> Resu
     ])
 }
 
-/// Bind the prefix+key menu entries (best effort — a missing bind never
-/// blocks the workspace).
-pub fn bind_keys<T: TmuxBackend>(tmux: &T) {
-    let binds: [(&str, &str); 2] = [
-        (
-            "T",
-            "display-popup -E 'waggle-tmux status; echo; read -n 1'",
-        ),
-        ("S", "display-popup -E 'waggle-tmux next || read -n 1'"),
-    ];
-    for (key, action) in binds {
-        let _ = tmux.run(&["bind-key", key, "run-shell", &format!("tmux {action}")]);
+/// Bind prefix+W to the switchboard menu: switch to any session (the
+/// switch delivers the pending handoff), mint an outcome by path, see
+/// status. Best effort — a missing bind never blocks the workspace.
+pub fn bind_keys<T: TmuxBackend>(tmux: &T, sessions: &[String]) {
+    let mut args: Vec<String> = ["bind-key", "W", "display-menu", "-T", "waggle"]
+        .iter()
+        .map(|s| (*s).to_owned())
+        .collect();
+    for (i, id) in sessions.iter().enumerate() {
+        args.push(format!("switch to {id}"));
+        args.push((i + 1).to_string());
+        args.push(format!(
+            "run-shell 'waggle-tmux switch {id} >/tmp/waggle-tmux.last 2>&1; tmux display-message \"$(tail -1 /tmp/waggle-tmux.last)\"'"
+        ));
     }
+    args.push("mint outcome".into());
+    args.push("m".into());
+    args.push(
+        "command-prompt -p 'mint (file or dir):' {run-shell 'waggle-tmux mint %1 >/tmp/waggle-tmux.last 2>&1; tmux display-message \"$(tail -1 /tmp/waggle-tmux.last)\"'}"
+            .into(),
+    );
+    args.push("status".into());
+    args.push("t".into());
+    args.push("display-popup -E 'waggle-tmux status; echo; echo [any key]; read -n 1'".into());
+    let refs: Vec<&str> = args.iter().map(String::as_str).collect();
+    let _ = tmux.run(&refs);
 }
 
 #[cfg(test)]
