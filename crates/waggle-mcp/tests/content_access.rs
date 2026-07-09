@@ -589,7 +589,7 @@ fn deep_search_over_the_root_token() {
         assert!(
             files
                 .iter()
-                .any(|f| f["target"].as_str().unwrap().contains("deep/notes.md")),
+                .any(|f| f["target"].as_str().unwrap().contains("notes.md")), // sep-agnostic (Windows)
             "nested files are in the tree: {files:?}"
         );
         // The grep→open chain points into the first matching file.
