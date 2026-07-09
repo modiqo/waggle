@@ -126,7 +126,11 @@ pub fn capture_tail<T: TmuxBackend>(tmux: &T, pane_id: &str, lines: u32) -> Resu
 /// Bind prefix+W to the switchboard menu: switch to any session (the
 /// switch delivers the pending handoff), mint an outcome by path, see
 /// status. Best effort — a missing bind never blocks the workspace.
-pub fn bind_keys<T: TmuxBackend>(tmux: &T, sessions: &[String]) {
+pub fn bind_keys<T: TmuxBackend>(tmux: &T, workspace: &std::path::Path, sessions: &[String]) {
+    // run-shell executes in the tmux SERVER's cwd — every command must
+    // carry the workspace (found live: switch bookkeeping landed in the
+    // wrong directory while the delivery itself worked).
+    let ws = workspace.display();
     let mut args: Vec<String> = ["bind-key", "W", "display-menu", "-T", "waggle"]
         .iter()
         .map(|s| (*s).to_owned())
@@ -135,18 +139,19 @@ pub fn bind_keys<T: TmuxBackend>(tmux: &T, sessions: &[String]) {
         args.push(format!("switch to {id}"));
         args.push((i + 1).to_string());
         args.push(format!(
-            "run-shell 'waggle-tmux switch {id} >/tmp/waggle-tmux.last 2>&1; tmux display-message \"$(tail -1 /tmp/waggle-tmux.last)\"'"
+            "run-shell 'cd {ws} && waggle-tmux switch {id} >/tmp/waggle-tmux.last 2>&1; tmux display-message \"$(tail -1 /tmp/waggle-tmux.last)\"'"
         ));
     }
     args.push("mint outcome".into());
     args.push("m".into());
-    args.push(
-        "command-prompt -p 'mint (file or dir):' {run-shell 'waggle-tmux mint %1 >/tmp/waggle-tmux.last 2>&1; tmux display-message \"$(tail -1 /tmp/waggle-tmux.last)\"'}"
-            .into(),
-    );
+    args.push(format!(
+        "command-prompt -p 'mint (file or dir):' {{run-shell 'cd {ws} && waggle-tmux mint %1 >/tmp/waggle-tmux.last 2>&1; tmux display-message \"$(tail -1 /tmp/waggle-tmux.last)\"'}}"
+    ));
     args.push("status".into());
     args.push("t".into());
-    args.push("display-popup -E 'waggle-tmux status; echo; echo [any key]; read -n 1'".into());
+    args.push(format!(
+        "display-popup -E 'cd {ws} && waggle-tmux status; echo; echo [any key]; read -n 1'"
+    ));
     let refs: Vec<&str> = args.iter().map(String::as_str).collect();
     let _ = tmux.run(&refs);
 }

@@ -30,7 +30,7 @@ pub fn run<T: TmuxBackend>(tmux: &T, workspace: &Path, chosen: &[String]) -> Res
     if !tmux::has_session(tmux, SESSION) {
         tmux::new_session(tmux, SESSION, &window, &workspace.to_string_lossy())?;
     }
-    let mut panes = existing_panes(tmux)?;
+    let mut panes = existing_panes(tmux, workspace)?;
     for p in &picked {
         if state::load(workspace).sessions.contains_key(&p.id) {
             continue; // convergent: already registered
@@ -56,8 +56,8 @@ pub fn run<T: TmuxBackend>(tmux: &T, workspace: &Path, chosen: &[String]) -> Res
             p.id
         );
     }
-    let session_ids: Vec<String> = picked.iter().map(|p| p.id.clone()).collect();
-    tmux::bind_keys(tmux, &session_ids);
+    let session_ids: Vec<String> = state::load(workspace).sessions.keys().cloned().collect();
+    tmux::bind_keys(tmux, workspace, &session_ids);
 
     // Land the user INSIDE the first harness pane — `up` should feel
     // like walking into the room, not being handed a map of it.
@@ -196,10 +196,18 @@ fn ensure_daemon() {
         .output();
 }
 
-fn existing_panes<T: TmuxBackend>(tmux: &T) -> Result<Vec<String>> {
+/// Free panes in our session — live, and NOT already bound to a
+/// registered session (never hand someone's working pane to a new
+/// harness).
+fn existing_panes<T: TmuxBackend>(tmux: &T, workspace: &Path) -> Result<Vec<String>> {
+    let bound: std::collections::BTreeSet<String> = state::load(workspace)
+        .sessions
+        .values()
+        .map(|s| s.pane.clone())
+        .collect();
     Ok(tmux::list_panes(tmux)?
         .into_iter()
-        .filter(|p| p.session == SESSION)
+        .filter(|p| p.session == SESSION && !bound.contains(&p.pane_id))
         .map(|p| p.pane_id)
         .rev()
         .collect())
