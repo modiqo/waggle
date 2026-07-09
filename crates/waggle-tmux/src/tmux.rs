@@ -156,11 +156,12 @@ pub fn capture_tail<T: TmuxBackend>(tmux: &T, pane_id: &str, lines: u32) -> Resu
 /// Bind prefix+W to the switchboard menu: switch to any session (the
 /// switch delivers the pending handoff), mint an outcome by path, see
 /// status. Best effort — a missing bind never blocks the workspace.
-pub fn bind_keys<T: TmuxBackend>(tmux: &T, workspace: &std::path::Path, sessions: &[String]) {
-    // run-shell executes in the tmux SERVER's cwd — every command must
-    // carry the workspace (found live: switch bookkeeping landed in the
-    // wrong directory while the delivery itself worked).
-    let ws = workspace.display();
+pub fn bind_keys<T: TmuxBackend>(tmux: &T, sessions: &[String]) {
+    // Binds are SERVER-GLOBAL; a workspace baked in at bind time goes
+    // stale the moment another workspace runs `up` (found live: every
+    // key cd'd into a dead sandbox). The workspace derives at KEYPRESS
+    // time from the pane under the cursor instead.
+    let ws = "#{pane_current_path}";
     let mut args: Vec<String> = ["bind-key", "W", "display-menu", "-T", "waggle"]
         .iter()
         .map(|s| (*s).to_owned())

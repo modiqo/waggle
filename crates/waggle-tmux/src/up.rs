@@ -56,6 +56,10 @@ pub fn run<T: TmuxBackend>(tmux: &T, workspace: &Path, chosen: &[String]) -> Res
         )?;
         session_is_new = true;
     }
+    // Mac-friendly driving: the mouse works everywhere — click a
+    // window name in the bar to swap harnesses, click a pane to focus,
+    // DRAG the board strip's border to expand/minimize it.
+    let _ = tmux.run(&["set", "-t", SESSION, "mouse", "on"]);
     // Pane titles come from the profiles; show them on the borders.
     let _ = tmux.run(&["set", "-t", SESSION, "pane-border-status", "top"]);
     let _ = tmux.run(&[
@@ -107,7 +111,7 @@ pub fn run<T: TmuxBackend>(tmux: &T, workspace: &Path, chosen: &[String]) -> Res
         .filter(|id| !id.starts_with('_'))
         .cloned()
         .collect();
-    tmux::bind_keys(tmux, workspace, &session_ids);
+    tmux::bind_keys(tmux, &session_ids);
 
     // Land the user INSIDE the first harness pane — `up` should feel
     // like walking into the room, not being handed a map of it.
