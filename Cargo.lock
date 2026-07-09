@@ -1948,11 +1948,15 @@ name = "waggle-tmux"
 version = "0.3.0"
 dependencies = [
  "clap",
+ "pollster",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror",
  "toml",
+ "waggle-core",
+ "waggle-store",
+ "waggle-store-sqlite",
 ]
 
 [[package]]

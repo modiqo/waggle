@@ -56,7 +56,15 @@ pub fn run<T: TmuxBackend>(tmux: &T, workspace: &Path, chosen: &[String]) -> Res
             p.id
         );
     }
-    let session_ids: Vec<String> = state::load(workspace).sessions.keys().cloned().collect();
+    ensure_watch_pane(tmux, workspace)?;
+    write_agent_block(workspace, &picked);
+
+    let session_ids: Vec<String> = state::load(workspace)
+        .sessions
+        .keys()
+        .filter(|id| !id.starts_with('_'))
+        .cloned()
+        .collect();
     tmux::bind_keys(tmux, workspace, &session_ids);
 
     // Land the user INSIDE the first harness pane — `up` should feel
@@ -211,6 +219,88 @@ fn existing_panes<T: TmuxBackend>(tmux: &T, workspace: &Path) -> Result<Vec<Stri
         .map(|p| p.pane_id)
         .rev()
         .collect())
+}
+
+/// A slim always-on pane running the watcher — the automation is on by
+/// default; killing the pane turns it off.
+fn ensure_watch_pane<T: TmuxBackend>(tmux: &T, workspace: &Path) -> Result<()> {
+    if state::load(workspace).sessions.contains_key("_watch") {
+        return Ok(());
+    }
+    let pane = tmux.run(&[
+        "split-window",
+        "-v",
+        "-l",
+        "4",
+        "-t",
+        SESSION,
+        "-c",
+        &workspace.to_string_lossy(),
+        "-P",
+        "-F",
+        "#{pane_id}",
+    ])?;
+    let pane = pane.trim().to_owned();
+    tmux::send_line(tmux, &pane, "waggle-tmux watch")?;
+    state::append(
+        workspace,
+        &Event::SessionRegistered {
+            id: "_watch".into(),
+            profile: "generic".into(),
+            pane,
+            owned: false,
+        },
+    )?;
+    println!("watcher live (bottom pane) — agents mint to tmux/<session>, the switchboard jumps");
+    Ok(())
+}
+
+/// The workspace instruction agents read (managed block in the harness
+/// convention files): finish → mint YOUR outcome, addressed by channel.
+fn write_agent_block(workspace: &Path, picked: &[HarnessProfile]) {
+    const BEGIN: &str = "<!-- waggle-tmux:begin (managed by `waggle-tmux up`) -->";
+    const END: &str = "<!-- waggle-tmux:end -->";
+    let all: Vec<String> = state::load(workspace)
+        .sessions
+        .keys()
+        .filter(|id| !id.starts_with('_'))
+        .cloned()
+        .chain(picked.iter().map(|p| p.id.clone()))
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    let block = format!(
+        "{BEGIN}
+## Harness handoffs (waggle-tmux)
+This workspace runs a switchboard. When your task is COMPLETE, mint the
+outcome yourself and address it — the watcher delivers it and the
+destination harness takes over:
+
+    waggle mint --target <file-or-dir> --snapshot --channel tmux/<destination>
+
+Destinations here: {}. Address your review requests back the same way.
+{END}
+",
+        all.join(", ")
+    );
+    for name in ["CLAUDE.md", "AGENTS.md"] {
+        let path = workspace.join(name);
+        let existing = std::fs::read_to_string(&path).unwrap_or_default();
+        let updated = if let (Some(b), Some(e)) = (existing.find(BEGIN), existing.find(END)) {
+            format!(
+                "{}{}{}",
+                &existing[..b],
+                block.trim_end(),
+                &existing[e + END.len()..]
+            )
+        } else {
+            format!(
+                "{existing}
+{block}"
+            )
+        };
+        let _ = std::fs::write(&path, updated);
+    }
 }
 
 fn task_window() -> String {

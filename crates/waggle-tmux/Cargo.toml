@@ -10,6 +10,10 @@ publish = false # claims its crates.io name with the next release train
 
 [dependencies]
 clap = { workspace = true }
+pollster = { workspace = true }
+waggle-core = { workspace = true }
+waggle-store = { workspace = true }
+waggle-store-sqlite = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

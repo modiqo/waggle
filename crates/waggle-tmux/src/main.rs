@@ -11,6 +11,7 @@ mod state;
 mod tmux;
 mod up;
 mod waggle;
+mod watch;
 
 #[derive(Parser)]
 #[command(
@@ -50,6 +51,13 @@ enum Cmd {
     Next,
     /// Sessions, deliveries, and funnel-derived consumption.
     Status,
+    /// The automation loop: agents mint to tmux/<session>; the watcher
+    /// jumps there and delivers. Run it in a spare pane (up does).
+    Watch {
+        /// One scan instead of the loop (scripting, tests).
+        #[arg(long)]
+        once: bool,
+    },
     /// Register an existing pane (external — never injected).
     Register {
         /// Local session id.
@@ -99,6 +107,7 @@ fn main() -> std::process::ExitCode {
             no_inject,
         ),
         Cmd::Next => actions::next(&tmux, &waggle, &workspace),
+        Cmd::Watch { once } => watch::run(&tmux, &waggle, &workspace, once),
         Cmd::Status => {
             actions::status(&waggle, &workspace);
             Ok(())

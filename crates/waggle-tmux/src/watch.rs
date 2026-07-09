@@ -1,0 +1,103 @@
+//! `waggle-tmux watch` — the automation loop (seamless-mode Phase 4).
+//!
+//! Agents already hold the waggle MCP tools. When one finishes, it
+//! mints its own outcome ADDRESSED BY CHANNEL — `tmux/<destination>` —
+//! and this watcher, polling the shared store read-only, performs the
+//! jump: focus the destination pane, deliver the resolve instruction.
+//! The humans watch the match; nobody plays courier.
+
+use std::collections::BTreeSet;
+use std::path::Path;
+
+use waggle_store::ReadStore as _;
+
+use crate::error::{Error, Result};
+use crate::tmux::TmuxBackend;
+use crate::waggle::WaggleClient;
+use crate::{actions, state};
+
+/// The channel prefix that addresses a switchboard destination.
+pub const CHANNEL_PREFIX: &str = "tmux/";
+
+/// Where the shared store lives (the daemon's default, or the env).
+fn store_path() -> String {
+    std::env::var("WAGGLE_STORE").unwrap_or_else(|_| {
+        format!(
+            "{}/.waggle/waggle.db",
+            std::env::var("HOME").unwrap_or_else(|_| ".".into())
+        )
+    })
+}
+
+/// One scan: any UNSEEN outcome minted on a `tmux/<dest>` channel gets
+/// delivered. Returns how many were delivered.
+pub fn tick<T: TmuxBackend, W: WaggleClient>(
+    tmux: &T,
+    waggle: &W,
+    workspace: &Path,
+    seen: &mut BTreeSet<String>,
+) -> Result<u32> {
+    let store = waggle_store_sqlite::SqliteStore::open(Path::new(&store_path()))
+        .map_err(|e| Error::Waggle(format!("store: {e}")))?;
+    let records =
+        pollster::block_on(store.scan_all()).map_err(|e| Error::Waggle(format!("scan: {e}")))?;
+    let mut delivered = 0;
+    for record in records {
+        let waggle_core::LogRecord::Minted { manifest } = record else {
+            continue;
+        };
+        let Some(dest) = manifest.channel.as_str().strip_prefix(CHANNEL_PREFIX) else {
+            continue;
+        };
+        let token = manifest.token.as_str().to_owned();
+        if !seen.insert(token.clone()) {
+            continue;
+        }
+        let st = state::load(workspace);
+        if !st.sessions.contains_key(dest) {
+            // Not ours (another workspace's outcome, or 'outcome' itself).
+            continue;
+        }
+        println!("watch: {token} → {dest}");
+        match actions::switch(tmux, waggle, workspace, dest, Some(&token), false) {
+            Ok(()) => delivered += 1,
+            Err(e) => eprintln!("watch: {token} → {dest}: {e}"),
+        }
+    }
+    Ok(delivered)
+}
+
+/// The loop (or one pass with `once`). Priming marks everything already
+/// in the store as seen — the watcher delivers the FUTURE, not history.
+pub fn run<T: TmuxBackend, W: WaggleClient>(
+    tmux: &T,
+    waggle: &W,
+    workspace: &Path,
+    once: bool,
+) -> Result<()> {
+    let mut seen = BTreeSet::new();
+    if !once {
+        prime(&mut seen)?;
+        println!("watch: live — agents mint to tmux/<session> and the switchboard jumps");
+    }
+    loop {
+        tick(tmux, waggle, workspace, &mut seen)?;
+        if once {
+            return Ok(());
+        }
+        std::thread::sleep(std::time::Duration::from_secs(2));
+    }
+}
+
+fn prime(seen: &mut BTreeSet<String>) -> Result<()> {
+    let store = waggle_store_sqlite::SqliteStore::open(Path::new(&store_path()))
+        .map_err(|e| Error::Waggle(format!("store: {e}")))?;
+    let records =
+        pollster::block_on(store.scan_all()).map_err(|e| Error::Waggle(format!("scan: {e}")))?;
+    for record in records {
+        if let waggle_core::LogRecord::Minted { manifest } = record {
+            seen.insert(manifest.token.as_str().to_owned());
+        }
+    }
+    Ok(())
+}

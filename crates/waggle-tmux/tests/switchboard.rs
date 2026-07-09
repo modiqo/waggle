@@ -170,3 +170,85 @@ fn tree_outcomes_mint_directories() {
         "deep search over the tree: {out}"
     );
 }
+
+/// Phase 4: full automation — an AGENT mints an outcome addressed by
+/// channel (tmux/<dest>); `watch --once` sees it in the shared store
+/// and performs the jump: the destination pane receives the resolve
+/// instruction with no human courier.
+#[test]
+fn watch_auto_delivers_channel_addressed_outcomes() {
+    if !gated() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let ws = dir.path();
+    let session = format!("waggle-watch-{}", std::process::id());
+    let _guard = TmuxGuard(session.clone());
+    let store = ws.join("waggle.db").display().to_string();
+    let sock = ws.join("no-daemon.sock").display().to_string();
+    let envs: Vec<(&str, &str)> = vec![("WAGGLE_STORE", &store), ("WAGGLE_SOCK", &sock)];
+    let me = env!("CARGO_BIN_EXE_waggle-tmux");
+
+    assert!(Command::new("tmux")
+        .args(["new-session", "-d", "-s", &session, "-n", "w", "cat"])
+        .status()
+        .unwrap()
+        .success());
+    let pane = String::from_utf8(
+        Command::new("tmux")
+            .args(["list-panes", "-t", &session, "-F", "#{pane_id}"])
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap()
+    .trim()
+    .to_owned();
+    let (ok, out) = run(
+        me,
+        ws,
+        &envs,
+        &["register", "codex", "--profile", "codex", "--pane", &pane],
+    );
+    assert!(ok, "{out}");
+    let events = ws.join(".waggle/tmux/events.jsonl");
+    let owned = std::fs::read_to_string(&events)
+        .unwrap()
+        .replace("\"owned\":false", "\"owned\":true");
+    std::fs::write(&events, owned).unwrap();
+
+    // THE AGENT mints, addressed by channel — no waggle-tmux involved.
+    std::fs::write(ws.join("review.md"), "# Review\nship it\n").unwrap();
+    let (ok, out) = run(
+        &waggle_bin(),
+        ws,
+        &envs,
+        &[
+            "mint",
+            "--target",
+            &format!("file://{}/review.md", ws.display()),
+            "--snapshot",
+            "--channel",
+            "tmux/codex",
+        ],
+    );
+    assert!(ok, "{out}");
+
+    // The watcher notices and jumps.
+    let (ok, out) = run(me, ws, &envs, &["watch", "--once"]);
+    assert!(ok, "{out}");
+    assert!(out.contains("→ codex"), "watch narrated the jump: {out}");
+    std::thread::sleep(std::time::Duration::from_millis(400));
+    let captured = String::from_utf8(
+        Command::new("tmux")
+            .args(["capture-pane", "-t", &pane, "-p"])
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap();
+    assert!(
+        captured.contains("via waggle for your working context"),
+        "auto-delivered without a human courier: {captured}"
+    );
+}
