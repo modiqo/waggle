@@ -23,9 +23,44 @@ pub const MANIFEST_SCHEMA_VERSION: u16 = 1;
 ///
 /// Match dimensions for variants (doc `06 §2`); `vision`/`audio` are what
 /// make multimodal variants ride the ordinary matcher.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 #[serde(transparent)]
 pub struct ModalitySet(u8);
+
+impl<'de> Deserialize<'de> for ModalitySet {
+    /// Accepts BOTH wire forms: the compact bits (`5`) and the humane
+    /// names (`["text", "shell"]`) — hosts and switchboards write names;
+    /// the log and the vectors keep bits.
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct V;
+        impl<'de> serde::de::Visitor<'de> for V {
+            type Value = ModalitySet;
+            fn expecting(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                f.write_str("modality bits (u8) or names ([\"text\", ...])")
+            }
+            fn visit_u64<E: serde::de::Error>(self, bits: u64) -> Result<ModalitySet, E> {
+                Ok(ModalitySet::from_bits_truncate(
+                    u8::try_from(bits).map_err(E::custom)?,
+                ))
+            }
+            fn visit_seq<A: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: A,
+            ) -> Result<ModalitySet, A::Error> {
+                let mut set = ModalitySet::empty();
+                while let Some(name) = seq.next_element::<String>()? {
+                    set = set.with(ModalitySet::from_name(&name).ok_or_else(|| {
+                        serde::de::Error::custom(format!(
+                            "unknown modality `{name}` — text, browser, shell, vision, audio"
+                        ))
+                    })?);
+                }
+                Ok(set)
+            }
+        }
+        deserializer.deserialize_any(V)
+    }
+}
 
 impl ModalitySet {
     /// Plain text I/O.
@@ -55,6 +90,19 @@ impl ModalitySet {
     #[must_use]
     pub const fn contains(self, required: Self) -> bool {
         self.0 & required.0 == required.0
+    }
+
+    /// A single modality by its wire name.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "text" => Some(Self::TEXT),
+            "browser" => Some(Self::BROWSER),
+            "shell" => Some(Self::SHELL),
+            "vision" => Some(Self::VISION),
+            "audio" => Some(Self::AUDIO),
+            _ => None,
+        }
     }
 
     /// Build from raw bits, ignoring undefined ones — for hosts

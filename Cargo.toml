@@ -33,6 +33,7 @@ waggle-ops = { path = "crates/waggle-ops", version = "0.3.0" }
 waggle-agent = { path = "crates/waggle-agent", version = "0.3.0" }
 waggle-social = { path = "crates/waggle-social", version = "0.3.0" }
 waggle-store = { path = "crates/waggle-store", version = "0.3.0" }
+waggle-store-sqlite = { path = "crates/waggle-store-sqlite", version = "0.3.0" }
 
 [workspace.lints.rust]
 missing_docs = "deny"
