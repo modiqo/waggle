@@ -15,6 +15,7 @@ Create an attributed reference (a waggle token) for an artifact instead of pasti
 | `--snapshot` | false | Pin the target's bytes content-addressed at mint: read/search then work anywhere the blobs replicate, immutable by hash. |
 | `--private` | false | Mint a capability URL: a 16-char unguessable token (possession IS the credential); public unfurls and social renders refuse it. |
 | `--tree` | false | For a DIRECTORY target: also mint every file inside (recursive, snapshot-pinned) as children of this token — one revocation covers the whole tree, and the folder's funnel rolls its children up. |
+| `--tag` | false | Name the token for humans (repeatable, k=v or a bare name): cosmetic labels that `find` matches on. A tag is a convenience, never identity — resolution stays token-only. |
 | `--content` | false | Path to extracted text for a BINARY target (you extracted it with your own abilities): becomes the searchable content while the target stays the original. Mutually exclusive with snapshot. |
 | `--attach` | false | Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all. |
 | `--attach-type` | false | Content type of the attachment; inferred from the extension when omitted. |
@@ -115,6 +116,16 @@ Slice a token's document (manifest, funnel, lineage) by path instead of pulling 
 
 - forward → `query`: follow a next path one level deeper
 
+## `find` — CLI + MCP tool
+
+Find tokens by what humans remember: matches the query against target basenames, tags, channel, and sharer. Returns ranked CANDIDATES (newest first, disposition shown) — you choose which token to resolve; a name never resolves by itself.
+
+| arg | required | doc |
+|---|---|---|
+| `--query` | true | Substring to match (case-insensitive) against basename, tags, channel, sharer. |
+
+- forward → `resolve`: resolve the candidate you meant
+
 ## `map` — CLI + MCP tool
 
 Orientation. With no arguments: the global map of operations from where you stand. With a token: its current state (here), ranked forward paths, and reverse paths — derived live from the manifest and funnel, so it can never be stale instruction.
@@ -124,6 +135,7 @@ Orientation. With no arguments: the global map of operations from where you stan
 | `--token` | false | Token to orient around; omit for the global map. |
 
 - forward → `mint`: start: turn an artifact into an attributed reference
+- forward → `find`: don't remember the token? find it by name or tag
 - forward → `resolve`: consume: fetch a token's projection for your context
 
 ## `init` — CLI only

@@ -53,6 +53,7 @@ fn every_operation_reports_its_stats() {
             ("read", json!({ "token": token, "lines": "1-2" })),
             ("search", json!({ "token": token, "pattern": "needle" })),
             ("query", json!({ "token": token })),
+            ("find", json!({ "query": "artifact" })),
             ("map", json!({ "token": token })),
             ("map", json!({})),
             (

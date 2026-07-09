@@ -59,6 +59,9 @@ enum Cmd {
         /// For a DIRECTORY target: also mint every file inside (recursive, snapshot-pinned) as children of this token.
         #[arg(long)]
         tree: bool,
+        /// Name the token for humans (repeatable, k=v or a bare name): cosmetic labels that `find` matches on. A tag is a convenience, never identity — resolution stays token-only.
+        #[arg(long)]
+        tag: Vec<String>,
         /// Path to extracted text for a BINARY target (you extracted it with your own abilities): becomes the searchable content while the target stays the original. Mutually exclusive with snapshot.
         #[arg(long)]
         content: Option<String>,
@@ -156,6 +159,11 @@ enum Cmd {
         #[arg(long)]
         max_bytes: Option<u64>,
     },
+    #[command(about = waggle_ops::FIND.description)]
+    Find {
+        /// Substring to match (case-insensitive) against basename, tags, channel, sharer.
+        query: String,
+    },
     #[command(about = waggle_ops::MAP.description)]
     Map {
         /// Token to orient around; omit for the global map.
@@ -217,6 +225,7 @@ fn main() {
             snapshot,
             private,
             tree,
+            tag,
             content,
             attach,
             attach_type,
@@ -230,6 +239,7 @@ fn main() {
                 "snapshot": if snapshot { Some(true) } else { None },
                 "private": if private { Some(true) } else { None },
                 "tree": if tree { Some(true) } else { None },
+                "tag": if tag.is_empty() { None } else { Some(tag) },
                 "content": content,
                 "attach": attach,
                 "attach-type": attach_type,
@@ -303,6 +313,7 @@ fn main() {
             "query",
             strip_nulls(json!({ "token": token, "path": path, "max-bytes": max_bytes })),
         ),
+        Cmd::Find { query } => run::tool_call("find", json!({ "query": query })),
         Cmd::Map { token } => run::tool_call("map", strip_nulls(json!({ "token": token }))),
         Cmd::Edge {
             action,
