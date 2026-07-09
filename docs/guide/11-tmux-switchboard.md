@@ -22,10 +22,36 @@ waggle-tmux up claude-code codex
 ```
 
 `up` is convergent — run it again anytime; it repairs rather than
-errors. It leaves you attached, with each harness running **as its
-pane's own process** (no shell in between), a slim watcher pane at the
-bottom, `prefix+W` bound to the switchboard menu, and this convention
-written into `CLAUDE.md`/`AGENTS.md` where every agent reads it:
+errors (dead panes are re-created, missing wiring re-applied). It
+leaves you attached inside a **window-per-harness workspace**:
+
+```text
+status bar:   [waggle]  0:claude-code*  1:codex  2:wgd
+              ─ your harnesses, by name; the active one starred ─
+
+each window:  ┌─ claude-code | * Claude Code ──────────────┐
+              │  the harness, running AS the pane process   │
+              ├─ claude-code | waggle ──────────────────────┤
+              │  the live board: lineage tree + receipts    │
+              └─────────────────────────────────────────────┘
+```
+
+Every harness runs as its pane's own process (no shell in between —
+nothing to race, nothing for `oh-my-zsh` to swallow), each window
+carries its own **board strip**, and `wgd` is the single hidden
+deliverer. The keyboard and mouse surface:
+
+| Gesture | Does |
+|---|---|
+| `prefix+W` | the menu: switch to any session / mint by path / status / board |
+| `prefix+B` | board cycle: strip (6 lines) → maximized (half) → minimized (1 line) |
+| `prefix+z` | zoom the active pane truly full-screen (native) |
+| `prefix+1`/`2` | jump to a harness window (native) |
+| mouse | click a bar name to swap harnesses; drag the board border to size it |
+| `/exit` in a harness | its window closes; the SURVIVOR is foregrounded; last one out closes the room |
+
+And this convention is written into `CLAUDE.md`/`AGENTS.md` where every
+agent reads it:
 
 ```markdown
 ## Harness handoffs (waggle-tmux)
@@ -46,6 +72,12 @@ The three gears, from most manual to none:
 | by hand | `waggle-tmux mint <path> --to codex` then `waggle-tmux switch codex` |
 | one key | `prefix+W` → `m` (mint) / `1..n` (switch) / `t` (status) |
 | automatic | nothing — agents mint with `--channel tmux/<dest>`, the watcher jumps |
+
+Two shapes for many outcomes: **several paths in one mint make a
+bundle** (`waggle-tmux mint images one.md two.md --to codex` — a note
+root with every piece as a child; one token travels), and independent
+mints **queue** — a switch delivers everything pending for that
+destination, in order, each with its own receipt.
 
 ---
 
@@ -97,7 +129,8 @@ it surgically, and reviews. Ask Opus to send its verdict back the same
 way — `--channel tmux/fable` — and the screen returns to Fable with the
 review token.
 
-**The receipts** (`prefix+W` → `t`, or `waggle-tmux status`):
+**The receipts** (`prefix+W` → `t`, or `waggle-tmux status` — and the
+board strip under every window shows the same truth live):
 
 ```text
 SESSION  PROFILE  PANE  OWNED  LAST TOKEN  CONSUMED?
@@ -177,6 +210,32 @@ waggle funnel --token 7Kp2xQ9f     # the PLAN's funnel now carries a
 waggle map --token 7Kp2xQ9f        # where it stands, children counted,
 #   ranked forward/reverse paths
 ```
+
+**Step 3.5 — the review PROOF.** When Codex hands the folder back and
+claims "reviewed", don't take its word — take the receipts:
+
+```sh
+waggle coverage --token b2uQyZUC
+#  read 2/3 · run 0/3 · complete: false
+#  MISSED: notes.md            ← the skipped file, named
+#  next: read {token: pV5m}    ← close the gap, executable
+```
+
+Three honest levels per file: `unread` (never touched), `read` (bytes
+actually served — resolve, read, or a deep search reaching it), `run`
+(the consumer recorded using it). Misses are absence of RECEIPTS, not
+surveillance — the funnel never sees content. And when the review must
+be provable even against a side-reading local agent, seal the handoff:
+
+```sh
+waggle-tmux mint review_me --seal --to codex
+# sealed: review_me moved to .waggle-handoffs/sealed/<token>/ — the
+# token is now the ONLY door
+```
+
+The source moves out of the working tree (non-destructive — the vault
+keeps it; move back to unseal), so the snapshot-backed token is the
+only access path and coverage receipts become enforcement-grade.
 
 **Step 4 — the kill switch.** The plan was wrong? One revocation
 tombstones the whole line — plan, implementation tree, every file:
@@ -260,5 +319,14 @@ crossed a prompt boundary **zero** times.
 - **Killed the tmux server?** `waggle-tmux up …` again — it detects dead
   panes and rebuilds; tokens, snapshots, and receipts all live in
   `~/.waggle`, which tmux never touches.
-- **Go manual** — kill the bottom watcher pane; `prefix+W` still works.
-  `waggle-tmux watch` brings automation back.
+- **Go manual** — kill the `wgd` window (the single deliverer);
+  `prefix+W` still works. `waggle-tmux watch --headless` brings
+  automation back; board strips (`watch --board-only`) are pure readers
+  and never deliver.
+- **Keys dead on a Mac?** Some terminal apps intercept `Ctrl-b` — the
+  mouse does everything (click bar names, drag borders), or attach from
+  a plain terminal. Bindings derive their workspace at keypress time,
+  so multiple projects never poison each other.
+- **Can't find a token?** `waggle find <name>` — basenames, tags
+  (`mint --tag name=...`), channels, sharers; ranked candidates with
+  disposition shown.

@@ -32,7 +32,7 @@ where your question is.
 8. [waggled & federation](guide/08-daemon-and-federation.md) — lifecycle verbs, two-machine setup, strict vs eventual freshness
 9. [The edge](guide/09-the-edge.md) — deploy to Cloudflare in 5 minutes; `waggle edge status|push|smoke`
 10. [The edge, walked through](guide/10-edge-walkthrough.md) — every command against a real account, with diagrams
-11. [The tmux switchboard](guide/11-tmux-switchboard.md) — Fable ↔ Opus, Claude → Codex with lineage, and the delegation chain; files and folders; the receipts at every step
+11. [The tmux switchboard](guide/11-tmux-switchboard.md) — window-per-harness workspaces, the live board, agent-driven screen swaps; Fable ↔ Opus, Claude → Codex with lineage, the delegation chain, coverage proof, sealed handoffs
 
 ## What exactly does it promise? *(the reference)*
 

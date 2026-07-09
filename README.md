@@ -182,9 +182,27 @@ waggle edge status   # {"health":"ok","tools":9}
 ```
 
 Every response carries executable `next` steps; `waggle map` answers
-"where am I?" live. The **[documentation map](docs/README.md)** holds
-the ten guides in reading order — from the five-minute loop to minting
-on a laptop and grepping on Cloudflare.
+"where am I?" live; `waggle find <name>` looks tokens up by tag or
+basename; and `waggle coverage` proves which files of a folder handoff
+were actually read — misses named. The
+**[documentation map](docs/README.md)** holds the eleven guides in
+reading order — from the five-minute loop to the tmux switchboard.
+
+### The tmux switchboard
+
+For the full multi-harness experience, `waggle-tmux` turns handoffs
+into the interface itself ([guide 11](docs/guide/11-tmux-switchboard.md)):
+
+```bash
+cargo install --path crates/waggle-tmux   # ships with the repo
+waggle-tmux up claude-code codex          # choose once — everything wires itself
+```
+
+One window per harness (the tmux bar is your harness switcher), a live
+lineage board under each, and when an agent finishes it mints its
+outcome to `tmux/<destination>` — your screen SWAPS to that harness
+with the resolve instruction typing itself. Receipts on the board,
+`/exit` handled gracefully, `--seal` when the review must be provable.
 
 ## Wiring it into Claude Code, Codex & Cursor
 
@@ -315,6 +333,10 @@ feature set is complete on `main` and every claim is a passing test in CI
   never invalidate, by construction); capability-URL private tokens;
 - **the spec** — normative document plus conformance vectors generated
   from the implementation, drift-checked in CI;
+- **the switchboard** — `waggle-tmux`: window-per-harness workspaces
+  where agent-minted outcomes swap the screen and resolve on arrival;
+  discovery (`--tag`/`find`), review proof (`coverage`), sealed
+  handoffs;
 - **measured, not promised** ([benches/PERF.md](benches/PERF.md)) —
   39 ns cache-hit resolves, 39 us durable appends (real fsync), a
   million-event funnel fold in 334 us.

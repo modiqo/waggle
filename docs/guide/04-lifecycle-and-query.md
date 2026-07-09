@@ -86,3 +86,30 @@ The JSONL journal backend and the SQLite backend both speak the same
 export → replay, idempotent under retries and duplicates by contract
 (C-4/C-8). The `export`/`replay` CLI verbs land with the 0.2 edge tier;
 the mechanics are already tested end to end.
+
+
+## Finding tokens: tags and `find`
+
+Nobody remembers `7Kp2xQ9f`. Tag at mint (cosmetic labels — outside the
+signed core, so renaming never breaks a signature):
+
+```sh
+waggle mint --target ./design_docs --tree --tag design_docs --tag kind=reference
+waggle mint --target plan.md --snapshot --tag "name=q3 plan"
+```
+
+Then discover by anything a human remembers — basename, tag, channel,
+sharer:
+
+```sh
+waggle find design_docs
+#  rszskHrD  design_docs  active  {name: design_docs, kind: reference}
+waggle find q3
+#  eQTEmhf3 ... -> next: resolve {token: eQTEmhf3}
+```
+
+The design line: **names are LOOKUP, tokens are IDENTITY.** `find`
+returns ranked candidates (newest first, disposition visible — a
+revoked `plan.md` says so instead of resolving silently); you choose
+what to resolve. A name never resolves by itself. Old tokens join the
+party retroactively: `waggle mutate --token <t> --change "label name=..."`.
