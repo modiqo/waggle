@@ -70,16 +70,33 @@ pub fn has_session<T: TmuxBackend>(tmux: &T, name: &str) -> bool {
     tmux.run(&["has-session", "-t", name]).is_ok()
 }
 
-/// Create a detached session with one window; returns nothing — pane ids
-/// come from [`list_panes`] afterward (never trust indexes).
-pub fn new_session<T: TmuxBackend>(tmux: &T, name: &str, window: &str, cwd: &str) -> Result<()> {
-    tmux.run(&["new-session", "-d", "-s", name, "-n", window, "-c", cwd])?;
+/// Create a detached session with one window; the pane RUNS `cmd` as
+/// its own process when given — no shell init to race, no update
+/// prompt to swallow the launch (the send-keys race, retired).
+pub fn new_session<T: TmuxBackend>(
+    tmux: &T,
+    name: &str,
+    window: &str,
+    cwd: &str,
+    cmd: Option<&str>,
+) -> Result<()> {
+    let mut args = vec!["new-session", "-d", "-s", name, "-n", window, "-c", cwd];
+    if let Some(c) = cmd {
+        args.push(c);
+    }
+    tmux.run(&args)?;
     Ok(())
 }
 
-/// Split the target, returning the NEW pane's id via -P.
-pub fn split<T: TmuxBackend>(tmux: &T, target: &str, cwd: &str) -> Result<String> {
-    let id = tmux.run(&[
+/// Split the target, returning the NEW pane's id via -P; same
+/// command-as-pane-process rule as [`new_session`].
+pub fn split<T: TmuxBackend>(
+    tmux: &T,
+    target: &str,
+    cwd: &str,
+    cmd: Option<&str>,
+) -> Result<String> {
+    let mut args = vec![
         "split-window",
         "-h",
         "-t",
@@ -89,8 +106,19 @@ pub fn split<T: TmuxBackend>(tmux: &T, target: &str, cwd: &str) -> Result<String
         "-P",
         "-F",
         "#{pane_id}",
-    ])?;
+    ];
+    if let Some(c) = cmd {
+        args.push(c);
+    }
+    let id = tmux.run(&args)?;
     Ok(id.trim().to_owned())
+}
+
+/// Is the pane's foreground process still a plain shell? Then no
+/// harness is listening — delivery must not type into it.
+#[must_use]
+pub fn is_shell(current_cmd: &str) -> bool {
+    matches!(current_cmd, "zsh" | "bash" | "fish" | "sh" | "tcsh" | "nu")
 }
 
 /// Focus a pane (and its window).

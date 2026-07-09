@@ -27,21 +27,40 @@ pub fn run<T: TmuxBackend>(tmux: &T, workspace: &Path, chosen: &[String]) -> Res
     ensure_daemon();
 
     let window = task_window();
-    if !tmux::has_session(tmux, SESSION) {
-        tmux::new_session(tmux, SESSION, &window, &workspace.to_string_lossy())?;
+    let cwd = workspace.to_string_lossy();
+    let live: std::collections::BTreeSet<String> = if tmux::has_session(tmux, SESSION) {
+        tmux::list_panes(tmux)?
+            .into_iter()
+            .filter(|p| p.session == SESSION)
+            .map(|p| p.pane_id)
+            .collect()
+    } else {
+        std::collections::BTreeSet::new()
+    };
+    let mut first_pane_free = false;
+    if live.is_empty() {
+        // The harness runs AS the first pane's process — no shell init
+        // to race, no update prompt to swallow the launch.
+        let first_cmd = picked.first().and_then(|p| p.launch_command.clone());
+        tmux::new_session(tmux, SESSION, &window, &cwd, first_cmd.as_deref())?;
+        first_pane_free = true;
     }
-    let mut panes = existing_panes(tmux, workspace)?;
-    for p in &picked {
-        if state::load(workspace).sessions.contains_key(&p.id) {
-            continue; // convergent: already registered
+    for (i, p) in picked.iter().enumerate() {
+        let st = state::load(workspace);
+        if let Some(existing) = st.sessions.get(&p.id) {
+            if live.contains(&existing.pane) {
+                continue; // convergent: registered AND alive
+            }
         }
-        let pane = match panes.pop() {
-            Some(free) => free,
-            None => tmux::split(tmux, SESSION, &workspace.to_string_lossy())?,
+        let pane = if i == 0 && first_pane_free {
+            tmux::list_panes(tmux)?
+                .into_iter()
+                .find(|info| info.session == SESSION)
+                .map(|info| info.pane_id)
+                .ok_or_else(|| Error::Tmux("first pane vanished".into()))?
+        } else {
+            tmux::split(tmux, SESSION, &cwd, p.launch_command.as_deref())?
         };
-        if let Some(cmd) = &p.launch_command {
-            tmux::send_line(tmux, &pane, cmd)?;
-        }
         state::append(
             workspace,
             &Event::SessionRegistered {
@@ -204,23 +223,6 @@ fn ensure_daemon() {
         .output();
 }
 
-/// Free panes in our session — live, and NOT already bound to a
-/// registered session (never hand someone's working pane to a new
-/// harness).
-fn existing_panes<T: TmuxBackend>(tmux: &T, workspace: &Path) -> Result<Vec<String>> {
-    let bound: std::collections::BTreeSet<String> = state::load(workspace)
-        .sessions
-        .values()
-        .map(|s| s.pane.clone())
-        .collect();
-    Ok(tmux::list_panes(tmux)?
-        .into_iter()
-        .filter(|p| p.session == SESSION && !bound.contains(&p.pane_id))
-        .map(|p| p.pane_id)
-        .rev()
-        .collect())
-}
-
 /// A slim always-on pane running the watcher — the automation is on by
 /// default; killing the pane turns it off.
 fn ensure_watch_pane<T: TmuxBackend>(tmux: &T, workspace: &Path) -> Result<()> {
@@ -239,9 +241,10 @@ fn ensure_watch_pane<T: TmuxBackend>(tmux: &T, workspace: &Path) -> Result<()> {
         "-P",
         "-F",
         "#{pane_id}",
+        "waggle-tmux",
+        "watch",
     ])?;
     let pane = pane.trim().to_owned();
-    tmux::send_line(tmux, &pane, "waggle-tmux watch")?;
     state::append(
         workspace,
         &Event::SessionRegistered {
@@ -256,7 +259,7 @@ fn ensure_watch_pane<T: TmuxBackend>(tmux: &T, workspace: &Path) -> Result<()> {
 }
 
 /// The workspace instruction agents read (managed block in the harness
-/// convention files): finish → mint YOUR outcome, addressed by channel.
+/// convention files): finish -> mint YOUR outcome, addressed by channel.
 fn write_agent_block(workspace: &Path, picked: &[HarnessProfile]) {
     const BEGIN: &str = "<!-- waggle-tmux:begin (managed by `waggle-tmux up`) -->";
     const END: &str = "<!-- waggle-tmux:end -->";
@@ -270,17 +273,7 @@ fn write_agent_block(workspace: &Path, picked: &[HarnessProfile]) {
         .into_iter()
         .collect();
     let block = format!(
-        "{BEGIN}
-## Harness handoffs (waggle-tmux)
-This workspace runs a switchboard. When your task is COMPLETE, mint the
-outcome yourself and address it — the watcher delivers it and the
-destination harness takes over:
-
-    waggle mint --target <file-or-dir> --snapshot --channel tmux/<destination>
-
-Destinations here: {}. Address your review requests back the same way.
-{END}
-",
+        "{BEGIN}\n## Harness handoffs (waggle-tmux)\nThis workspace runs a switchboard. When your task is COMPLETE, mint the\noutcome yourself and address it — the watcher delivers it and the\ndestination harness takes over:\n\n    waggle mint --target <file-or-dir> --snapshot --channel tmux/<destination>\n\nDestinations here: {}. Address your review requests back the same way.\n{END}\n",
         all.join(", ")
     );
     for name in ["CLAUDE.md", "AGENTS.md"] {
@@ -294,10 +287,7 @@ Destinations here: {}. Address your review requests back the same way.
                 &existing[e + END.len()..]
             )
         } else {
-            format!(
-                "{existing}
-{block}"
-            )
+            format!("{existing}\n{block}")
         };
         let _ = std::fs::write(&path, updated);
     }

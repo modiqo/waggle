@@ -101,7 +101,17 @@ pub fn switch<T: TmuxBackend, W: WaggleClient>(
 
     tmux::select(tmux_backend, &session.pane)?;
     let line = dest_profile.inject_line(&token);
-    if session.owned && !no_inject {
+    let foreground = tmux::list_panes(tmux_backend)?
+        .into_iter()
+        .find(|p| p.pane_id == session.pane)
+        .map(|p| p.current_cmd)
+        .unwrap_or_default();
+    if tmux::is_shell(&foreground) {
+        // No harness listening — typing here becomes zsh noise.
+        println!(
+            "{dest}'s pane is a bare shell ({foreground}) — start the harness there, then paste:\n  {line}"
+        );
+    } else if session.owned && !no_inject {
         tmux::send_line(tmux_backend, &session.pane, &line)?;
         println!("delivered into {dest}'s prompt — it resolves as itself");
     } else {
