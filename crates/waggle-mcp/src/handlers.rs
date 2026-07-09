@@ -202,6 +202,37 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         match receipt {
             Ok(Appended::Minted { view, replayed }) => {
                 let token = view.manifest.token;
+                let mut next = vec![
+                    NextCall {
+                        tool: "resolve".into(),
+                        args: json!({ "token": token.as_str() }),
+                        why: "self-check the projection consumers will receive".into(),
+                    },
+                    NextCall {
+                        tool: "map".into(),
+                        args: json!({ "token": token.as_str() }),
+                        why: "orient around the new token".into(),
+                    },
+                ];
+                // A directory target is a fine LOCATOR but read/search
+                // need files — teach the lineage pattern up front.
+                let target = view.manifest.target.as_str();
+                if crate::content_handlers::local_path(target)
+                    .is_some_and(|p| std::path::Path::new(&p).is_dir())
+                {
+                    next.insert(
+                        0,
+                        NextCall {
+                            tool: "mint".into(),
+                            args: json!({
+                                "target": format!("{target}/<file>"),
+                                "parent": token.as_str(),
+                            }),
+                            why: "the target is a folder — mint its files as children;                                   this token becomes their lineage root (read/search                                   work per file)"
+                                .into(),
+                        },
+                    );
+                }
                 Envelope::ok(
                     json!({
                         "token": token.as_str(),
@@ -209,18 +240,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                         "replayed": replayed,
                         "variants": view.manifest.variants.len(),
                     }),
-                    vec![
-                        NextCall {
-                            tool: "resolve".into(),
-                            args: json!({ "token": token.as_str() }),
-                            why: "self-check the projection consumers will receive".into(),
-                        },
-                        NextCall {
-                            tool: "map".into(),
-                            args: json!({ "token": token.as_str() }),
-                            why: "orient around the new token".into(),
-                        },
-                    ],
+                    next,
                 )
                 .with_stats(Stats {
                     records: Some(1),

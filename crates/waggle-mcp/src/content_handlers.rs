@@ -229,7 +229,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
 }
 
 /// A target the daemon can read directly: file:// URI or absolute path.
-fn local_path(target: &str) -> Option<String> {
+pub(crate) fn local_path(target: &str) -> Option<String> {
     if let Some(p) = target.strip_prefix("file://") {
         return Some(p.to_owned());
     }
@@ -241,6 +241,14 @@ fn read_capped(path: &str) -> Result<Vec<u8>, Envelope> {
     const CAP: u64 = 16 * 1024 * 1024;
     let meta = std::fs::metadata(path)
         .map_err(|e| Envelope::err(format!("content {path}: {e}"), vec![]))?;
+    if meta.is_dir() {
+        return Err(Envelope::err(
+            format!(
+                "`{path}` is a directory — waggle references artifacts, not trees:                  mint each file with parent=<this-token> so the folder token becomes                  their lineage root (revoking it tombstones them all)"
+            ),
+            vec![],
+        ));
+    }
     if meta.len() > CAP {
         return Err(Envelope::err(
             format!(

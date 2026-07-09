@@ -384,3 +384,50 @@ fn binary_target_with_extracted_content_the_pdf_story() {
     });
     std::fs::remove_dir_all(&dir).ok();
 }
+
+/// Folder targets: minting one is legal (it's a locator and a lineage
+/// root), the envelope teaches the children pattern up front, and the
+/// content verbs refuse with the same lesson — never a raw OS error.
+#[test]
+fn folder_targets_teach_the_lineage_pattern() {
+    pollster::block_on(async {
+        let dir = tempfile::tempdir().unwrap();
+        let reports = dir.path().join("reports");
+        std::fs::create_dir_all(&reports).unwrap();
+        std::fs::write(reports.join("a.md"), "alpha\n").unwrap();
+        let handler = handler_with_blobs(dir.path());
+        let mut e = entropy();
+
+        let minted = handler
+            .dispatch(
+                "mint",
+                &serde_json::json!({ "target": format!("file://{}", reports.display()) }),
+                waggle_core::Timestamp::from_unix_ms(1),
+                &mut e,
+            )
+            .await;
+        assert!(minted.hint.is_none());
+        let token = minted.result["token"].as_str().unwrap().to_owned();
+        // The first next step teaches children-of-this-folder.
+        assert_eq!(minted.next[0].tool, "mint", "{:?}", minted.next);
+        assert_eq!(minted.next[0].args["parent"], token);
+
+        // read/search refuse with the fix named — not "os error 21".
+        for (op, args) in [
+            ("read", serde_json::json!({ "token": token })),
+            (
+                "search",
+                serde_json::json!({ "token": token, "pattern": "alpha" }),
+            ),
+        ] {
+            let envelope = handler
+                .dispatch(op, &args, waggle_core::Timestamp::from_unix_ms(2), &mut e)
+                .await;
+            let hint = envelope.hint.expect("refusal expected");
+            assert!(
+                hint.contains("directory") && hint.contains("parent"),
+                "`{op}` hint must teach the lineage pattern: {hint}"
+            );
+        }
+    });
+}
