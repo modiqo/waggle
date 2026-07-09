@@ -1,6 +1,11 @@
 # Waggle + tmux: Durable Agent Sessions and Checkpointed Handoffs
 
-Status: design proposal for implementation.
+Status: design proposal for implementation. Read with its two companions:
+[harness-switching-standards.md](harness-switching-standards.md) (the
+discipline contract — what must be true to belong in this repo) and
+[seamless-mode.md](seamless-mode.md) (design v2: choose harnesses at `up`,
+auto-wire waggle MCP, mint any outcome, resolve upon switch — the
+waggle-native mode for panes the switchboard owns).
 
 Audience: the next Codex, Claude Code, or human session that will implement a
 tmux-backed Waggle extension for switching work between agent harnesses.
