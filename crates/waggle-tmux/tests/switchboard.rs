@@ -362,3 +362,113 @@ fn bundles_and_the_pending_queue() {
         "queued extra delivered too: {captured}"
     );
 }
+
+/// Exits are first-class: when one harness dies, reap closes its
+/// window (strip included) and FOREGROUNDS the survivor; when the last
+/// one dies, the whole session closes gracefully.
+#[test]
+fn reap_foregrounds_the_survivor_then_closes_the_room() {
+    if !gated() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let ws = dir.path();
+    let session = format!("waggle-reap-{}", std::process::id());
+    let _guard = TmuxGuard(session.clone());
+    let envs: Vec<(&str, &str)> = vec![];
+    let me = env!("CARGO_BIN_EXE_waggle-tmux");
+
+    // Two "harness" panes (cat) in separate windows + a strip each,
+    // registered the way `up` would register them.
+    assert!(Command::new("tmux")
+        .args([
+            "new-session",
+            "-d",
+            "-s",
+            &session,
+            "-n",
+            "claude-code",
+            "cat"
+        ])
+        .status()
+        .unwrap()
+        .success());
+    let claude_pane = String::from_utf8(
+        Command::new("tmux")
+            .args(["list-panes", "-t", &session, "-F", "#{pane_id}"])
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap()
+    .trim()
+    .to_owned();
+    let codex_pane = String::from_utf8(
+        Command::new("tmux")
+            .args([
+                "new-window",
+                "-t",
+                &session,
+                "-n",
+                "codex",
+                "-P",
+                "-F",
+                "#{pane_id}",
+                "cat",
+            ])
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap()
+    .trim()
+    .to_owned();
+    for (id, pane) in [("claude-code", &claude_pane), ("codex", &codex_pane)] {
+        let (ok, out) = run(
+            me,
+            ws,
+            &envs,
+            &["register", id, "--profile", id, "--pane", pane],
+        );
+        assert!(ok, "{out}");
+    }
+
+    // Kill the claude "harness" (the /exit) and reap.
+    assert!(Command::new("tmux")
+        .args(["kill-pane", "-t", &claude_pane])
+        .status()
+        .unwrap()
+        .success());
+    let (ok, out) = run(me, ws, &envs, &["reap"]);
+    assert!(ok, "{out}");
+
+    // Survivor foregrounded: codex's window is now the active one.
+    let active = String::from_utf8(
+        Command::new("tmux")
+            .args(["display-message", "-t", &session, "-p", "#{window_name}"])
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap();
+    assert_eq!(active.trim(), "codex", "the survivor is foregrounded");
+    let (ok, out) = run(me, ws, &envs, &["status"]);
+    assert!(
+        ok && !out.contains("claude-code"),
+        "closed session leaves status: {out}"
+    );
+
+    // The last harness dies -> the room closes.
+    assert!(Command::new("tmux")
+        .args(["kill-pane", "-t", &codex_pane])
+        .status()
+        .unwrap()
+        .success());
+    let (_ok, _out) = run(me, ws, &envs, &["reap"]);
+    let alive = Command::new("tmux")
+        .args(["has-session", "-t", &session])
+        .status()
+        .unwrap()
+        .success();
+    assert!(!alive, "last exit closes the whole session");
+}

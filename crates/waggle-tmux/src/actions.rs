@@ -279,11 +279,11 @@ pub fn register<T: TmuxBackend>(
     let profiles = profile::load(&workspace.join(".waggle/tmux/config.toml"))?;
     profile::find(&profiles, profile_id)?;
     let live = tmux::list_panes(tmux_backend)?;
-    if !live.iter().any(|p| p.pane_id == pane) {
+    let Some(info) = live.iter().find(|p| p.pane_id == pane) else {
         return Err(Error::NotFound(format!(
             "pane {pane} not found — list live panes: tmux list-panes -a"
         )));
-    }
+    };
     state::append(
         workspace,
         &Event::SessionRegistered {
@@ -291,6 +291,7 @@ pub fn register<T: TmuxBackend>(
             profile: profile_id.to_owned(),
             pane: pane.to_owned(),
             owned: false,
+            room: Some(info.session.clone()),
         },
     )?;
     println!("registered `{id}` → {pane} (external — delivery prints the resolve line)");
@@ -319,4 +320,61 @@ pub fn board_toggle<T: TmuxBackend>(tmux_backend: &T) -> Result<()> {
     Err(Error::NotFound(
         "no board strip in this window — waggle-tmux up creates one per harness window".into(),
     ))
+}
+
+/// Reconcile exits: a harness whose pane died gets closed out — its
+/// board strip killed (the window follows), its registration ended —
+/// and a SURVIVING harness is foregrounded. When the last one leaves,
+/// the whole workspace closes gracefully. Idempotent and quiet: safe
+/// from hooks and from every watcher tick.
+pub fn reap<T: TmuxBackend>(tmux_backend: &T, workspace: &Path) -> Result<()> {
+    let st = state::load(workspace);
+    let live: std::collections::BTreeSet<String> = tmux::list_panes(tmux_backend)?
+        .into_iter()
+        .map(|p| p.pane_id)
+        .collect();
+    let dead: Vec<String> = st
+        .sessions
+        .iter()
+        .filter(|(id, s)| !id.starts_with('_') && !live.contains(&s.pane))
+        .map(|(id, _)| id.clone())
+        .collect();
+    if dead.is_empty() {
+        return Ok(());
+    }
+    for id in &dead {
+        // The strip kept the window alive; take it down with the harness.
+        if let Some(strip) = st.sessions.get(&format!("_board-{id}")) {
+            let _ = tmux_backend.run(&["kill-pane", "-t", &strip.pane]);
+        }
+        state::append(workspace, &Event::SessionClosed { id: id.clone() })?;
+        state::append(
+            workspace,
+            &Event::SessionClosed {
+                id: format!("_board-{id}"),
+            },
+        )?;
+    }
+    let survivors: Vec<(&String, &state::Session)> = st
+        .sessions
+        .iter()
+        .filter(|(id, s)| !id.starts_with('_') && live.contains(&s.pane) && !dead.contains(id))
+        .collect();
+    if let Some((id, session)) = survivors.first() {
+        let _ = tmux::select(tmux_backend, &session.pane);
+        let _ = tmux_backend.run(&[
+            "display-message",
+            &format!("{} exited — {id} foregrounded", dead.join(", ")),
+        ]);
+    } else {
+        // The last harness left: close the room it lived in — recorded
+        // at registration, so tests and future multi-room setups reap
+        // the RIGHT session, never a guess.
+        let room = dead
+            .iter()
+            .find_map(|id| st.sessions.get(id).and_then(|s| s.room.clone()))
+            .unwrap_or_else(|| crate::up::SESSION.to_owned());
+        let _ = tmux_backend.run(&["kill-session", "-t", &room]);
+    }
+    Ok(())
 }

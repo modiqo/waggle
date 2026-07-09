@@ -69,6 +69,8 @@ enum Cmd {
     },
     /// Toggle the current window's board strip between tall and short.
     BoardToggle,
+    /// Reconcile harness exits (hook/watcher-driven; safe to run anytime).
+    Reap,
     /// Register an existing pane (external — never injected).
     Register {
         /// Local session id.
@@ -139,6 +141,7 @@ fn main() -> std::process::ExitCode {
             },
         ),
         Cmd::BoardToggle => actions::board_toggle(&tmux),
+        Cmd::Reap => actions::reap(&tmux, &workspace),
         Cmd::Status => {
             actions::status(&waggle, &workspace);
             Ok(())

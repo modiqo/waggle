@@ -95,6 +95,9 @@ pub fn run<T: TmuxBackend, W: WaggleClient>(
     loop {
         if mode.deliver {
             tick(tmux, waggle, workspace, &mut seen)?;
+            // Exit backstop: hooks catch most deaths; the deliverer
+            // sweeps for any they missed.
+            let _ = crate::actions::reap(tmux, workspace);
         }
         if once {
             return Ok(());

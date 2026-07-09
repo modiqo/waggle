@@ -56,6 +56,15 @@ pub fn run<T: TmuxBackend>(tmux: &T, workspace: &Path, chosen: &[String]) -> Res
         )?;
         session_is_new = true;
     }
+    // Exits are first-class: any pane death triggers the reaper, which
+    // closes the dead harness's window and foregrounds a survivor.
+    let _ = tmux.run(&[
+        "set-hook",
+        "-t",
+        SESSION,
+        "pane-exited",
+        &format!("run-shell 'cd {cwd} && waggle-tmux reap'"),
+    ]);
     // Mac-friendly driving: the mouse works everywhere — click a
     // window name in the bar to swap harnesses, click a pane to focus,
     // DRAG the board strip's border to expand/minimize it.
@@ -95,6 +104,7 @@ pub fn run<T: TmuxBackend>(tmux: &T, workspace: &Path, chosen: &[String]) -> Res
                 profile: p.id.clone(),
                 pane: pane.clone(),
                 owned: true,
+                room: Some(SESSION.to_owned()),
             },
         )?;
         println!(
@@ -296,6 +306,7 @@ fn ensure_board_strip<T: TmuxBackend>(
             profile: "generic".into(),
             pane,
             owned: false,
+            room: Some(SESSION.to_owned()),
         },
     )?;
     Ok(())
@@ -338,6 +349,7 @@ fn ensure_watch_pane<T: TmuxBackend>(tmux: &T, workspace: &Path) -> Result<()> {
             profile: "generic".into(),
             pane,
             owned: false,
+            room: Some(SESSION.to_owned()),
         },
     )?;
     println!("deliverer live (window `wgd`) — agents mint to tmux/<session>, windows swap");

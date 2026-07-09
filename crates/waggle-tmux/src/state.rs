@@ -25,6 +25,10 @@ pub enum Event {
         pane: String,
         /// Created by `up` → injection allowed.
         owned: bool,
+        /// The tmux session hosting the pane (the "room") — lets the
+        /// reaper close the right room when the last harness exits.
+        #[serde(default)]
+        room: Option<String>,
     },
     /// An outcome token was minted (or adopted); becomes pending.
     OutcomeMinted {
@@ -50,6 +54,11 @@ pub enum Event {
         /// Destination session id.
         id: String,
     },
+    /// A harness exited; its registration ends.
+    SessionClosed {
+        /// The session that ended.
+        id: String,
+    },
 }
 
 /// A registered session, replayed.
@@ -61,6 +70,8 @@ pub struct Session {
     pub pane: String,
     /// Injection permission (seamless §3.4).
     pub owned: bool,
+    /// The tmux session hosting the pane.
+    pub room: Option<String>,
     /// Last token delivered TO this session, with its baseline.
     pub last_delivery: Option<(String, u64)>,
 }
@@ -124,6 +135,7 @@ fn apply(state: &mut State, event: Event) {
             profile,
             pane,
             owned,
+            room,
         } => {
             state.sessions.insert(
                 id,
@@ -131,6 +143,7 @@ fn apply(state: &mut State, event: Event) {
                     profile,
                     pane,
                     owned,
+                    room,
                     last_delivery: None,
                 },
             );
@@ -149,6 +162,12 @@ fn apply(state: &mut State, event: Event) {
             }
         }
         Event::SwitchedTo { id } => state.focused = Some(id),
+        Event::SessionClosed { id } => {
+            state.sessions.remove(&id);
+            if state.focused.as_deref() == Some(id.as_str()) {
+                state.focused = None;
+            }
+        }
     }
 }
 
@@ -178,6 +197,7 @@ mod tests {
                 profile: "codex".into(),
                 pane: "%2".into(),
                 owned: true,
+                room: None,
             },
         )
         .unwrap();
