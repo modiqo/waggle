@@ -175,3 +175,23 @@ content pins *your extraction*), and passing a binary as the
 Errors always name the fix: a bad section returns the outline; a bad
 pointer returns the valid roots; a token with no readable content says
 *"mint with snapshot=true so content travels with the token."*
+
+
+## Coverage: proof the tree was read
+
+For any lineage root (a `--tree` mint or a bundle), the per-child
+funnels already know which files were consumed — `coverage` turns that
+into proof, with misses NAMED:
+
+```sh
+waggle coverage --token <root>
+#  read 2/3 · run 0/3 · complete: false
+#  unread: [.../notes.md]      <- what the review skipped
+```
+
+Three honest levels: `unread` / `read` (bytes served — a deep search
+over the root counts, because it really reads every file) / `run` (the
+consumer recorded use — the strong, intentional bar). It's receipts,
+not surveillance (payload-free, I-1), and receipts turn
+enforcement-grade when the handoff is SEALED (`waggle-tmux mint --seal`)
+or remote — where the token is the only door.

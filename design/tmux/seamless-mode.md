@@ -185,3 +185,28 @@ adapter boundaries (§12), review gates (§13), what stays out of core
 
 Choose your harnesses once; from then on outcomes move between them as
 30-byte tokens — minted in one gesture, resolved by the act of switching.
+
+
+## 9. As Built (post-implementation deltas)
+
+Field-driving reshaped several choices; the code is the authority:
+
+- **Focus layout replaced split panes**: one WINDOW per harness (names
+  in the status bar are the switcher), each with a board strip; a
+  handoff SWAPS windows. `prefix+z` zooms; mouse mode is on.
+- **The watch loop split into modes**: exactly one DELIVERER
+  (`watch --headless`, the `wgd` window — duplicates would
+  double-deliver) and freely replicated BOARDS (`watch --board-only`,
+  one strip per window, height-adaptive, 3-state cycle via
+  `board-toggle`/`prefix+B`).
+- **Harnesses run AS the pane process** — the send-keys launch race is
+  structurally gone; delivery refuses to type into bare shells.
+- **Exits are first-class**: a `pane-exited` hook (plus a deliverer-tick
+  sweep) reaps dead harnesses, forwards focus to a survivor, and closes
+  the room after the last exit (the room is recorded at registration).
+- **Bindings derive their workspace at keypress time**
+  (`#{pane_current_path}`) — server-global binds can't go stale across
+  projects.
+- **Pending is a QUEUE; multi-path mints are lineage BUNDLES**; and
+  `mint --seal` moves sources into the vault so the token is the only
+  door (coverage receipts become enforcement-grade locally).
