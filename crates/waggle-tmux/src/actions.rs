@@ -311,9 +311,17 @@ pub fn board_toggle<T: TmuxBackend>(tmux_backend: &T) -> Result<()> {
             continue;
         };
         if title == "waggle" {
-            let tall = height.parse::<u32>().unwrap_or(0) > 12;
-            let target = if tall { "6" } else { "50%" };
+            // Cycle: strip (6) -> maximized (half) -> minimized (2) -> strip.
+            let h = height.parse::<u32>().unwrap_or(6);
+            let (target, name) = if h <= 3 {
+                ("6", "strip")
+            } else if h <= 12 {
+                ("50%", "maximized")
+            } else {
+                ("2", "minimized")
+            };
             tmux_backend.run(&["resize-pane", "-t", id, "-y", target])?;
+            let _ = tmux_backend.run(&["display-message", &format!("waggle board: {name}")]);
             return Ok(());
         }
     }

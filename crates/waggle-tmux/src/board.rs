@@ -153,6 +153,17 @@ fn age(secs: u64) -> String {
 #[must_use]
 pub fn render(rows: &[Row], state: &State, height: usize) -> String {
     let mut out = String::new();
+    // Minimized: one line carries the essentials.
+    if height <= 3 {
+        let consumed = rows.iter().filter(|r| r.consumed).count();
+        let _ = write!(
+            out,
+            "{BOLD}waggle{RESET} {} outcome(s) {DIM}|{RESET} {GREEN}{consumed} consumed{RESET} {DIM}|{RESET} {YELLOW}{} pending{RESET}",
+            rows.len(),
+            state.pending.len()
+        );
+        return out;
+    }
     let pending_note = if state.pending.is_empty() {
         "none".to_owned()
     } else {
