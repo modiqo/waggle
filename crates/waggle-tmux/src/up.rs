@@ -79,12 +79,18 @@ fn attach<T: TmuxBackend>(tmux: &T) {
         let _ = tmux.run(&["switch-client", "-t", SESSION]);
     } else if std::io::stdout().is_terminal() {
         // exec replaces this process with the attach — the natural end
-        // of `up` on a terminal.
-        use std::os::unix::process::CommandExt as _;
-        let err = std::process::Command::new("tmux")
-            .args(["attach", "-t", SESSION])
-            .exec();
-        eprintln!("attach yourself: tmux attach -t {SESSION} ({err})");
+        // of `up` on a terminal. (Unix-only, like tmux itself; the
+        // crate still compiles everywhere the workspace lints.)
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt as _;
+            let err = std::process::Command::new("tmux")
+                .args(["attach", "-t", SESSION])
+                .exec();
+            eprintln!("attach yourself: tmux attach -t {SESSION} ({err})");
+        }
+        #[cfg(not(unix))]
+        println!("attach: tmux attach -t {SESSION}");
     } else {
         println!("attach: tmux attach -t {SESSION}");
     }
