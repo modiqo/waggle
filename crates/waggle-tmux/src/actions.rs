@@ -68,6 +68,30 @@ pub fn mint<W: WaggleClient>(
     path: &str,
     to: Option<&str>,
 ) -> Result<String> {
+    mint_inner(waggle_client, workspace, path, to, false)
+}
+
+/// `mint --seal`: after snapshot-minting, MOVE the source out of the
+/// working tree into `.waggle-handoffs/sealed/<token>/` — the token
+/// becomes the ONLY door, so coverage receipts are enforcement-grade
+/// even locally. Non-destructive: the bytes live in the CAS AND the
+/// sealed archive; unseal by moving the directory back.
+pub fn mint_sealed<W: WaggleClient>(
+    waggle_client: &W,
+    workspace: &Path,
+    path: &str,
+    to: Option<&str>,
+) -> Result<String> {
+    mint_inner(waggle_client, workspace, path, to, true)
+}
+
+fn mint_inner<W: WaggleClient>(
+    waggle_client: &W,
+    workspace: &Path,
+    path: &str,
+    to: Option<&str>,
+    seal: bool,
+) -> Result<String> {
     let full = workspace.join(path);
     if !full.exists() {
         return Err(Error::NotFound(format!(
@@ -92,6 +116,16 @@ pub fn mint<W: WaggleClient>(
             to: to.map(str::to_owned),
         },
     )?;
+    if seal {
+        let vault = workspace.join(".waggle-handoffs/sealed").join(&token);
+        std::fs::create_dir_all(&vault)?;
+        let dest = vault.join(full.file_name().unwrap_or_default());
+        std::fs::rename(&full, &dest)?;
+        println!(
+            "sealed: {path} moved to {} — the token is now the only door",
+            dest.display()
+        );
+    }
     println!(
         "minted {token}{} — pending handoff{}",
         if tree {

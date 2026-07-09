@@ -472,3 +472,62 @@ fn reap_foregrounds_the_survivor_then_closes_the_room() {
         .success();
     assert!(!alive, "last exit closes the whole session");
 }
+
+/// Sealed handoffs: after mint --seal the source is GONE from the
+/// working tree (the token is the only door), yet the content still
+/// serves from snapshots — coverage receipts become enforcement-grade.
+#[test]
+fn sealed_mints_remove_the_side_door() {
+    if !gated() {
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let ws = dir.path();
+    let store = ws.join("waggle.db").display().to_string();
+    let sock = ws.join("no-daemon.sock").display().to_string();
+    let envs: Vec<(&str, &str)> = vec![("WAGGLE_STORE", &store), ("WAGGLE_SOCK", &sock)];
+    let me = env!("CARGO_BIN_EXE_waggle-tmux");
+
+    std::fs::create_dir_all(ws.join("secret_review")).unwrap();
+    std::fs::write(
+        ws.join("secret_review/findings.md"),
+        "the bespoke finding\n",
+    )
+    .unwrap();
+
+    let (ok, out) = run(me, ws, &envs, &["mint", "secret_review", "--seal"]);
+    assert!(ok, "{out}");
+    assert!(out.contains("the token is now the only door"), "{out}");
+    let token = out
+        .lines()
+        .find(|l| l.starts_with("minted "))
+        .unwrap()
+        .split_whitespace()
+        .nth(1)
+        .unwrap()
+        .to_owned();
+
+    // The side door is gone…
+    assert!(
+        !ws.join("secret_review").exists(),
+        "source moved out of the working tree"
+    );
+    // …the vault holds the original…
+    assert!(ws
+        .join(format!(
+            ".waggle-handoffs/sealed/{token}/secret_review/findings.md"
+        ))
+        .exists());
+    // …and the token still serves everything from snapshots.
+    let (ok, out) = run(
+        &waggle_bin(),
+        ws,
+        &envs,
+        &["search", "--token", &token, "--pattern", "bespoke"],
+    );
+    assert!(ok, "{out}");
+    assert!(
+        out.contains("\"total_matches\": 1"),
+        "sealed content serves: {out}"
+    );
+}

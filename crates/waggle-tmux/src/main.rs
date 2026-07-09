@@ -37,6 +37,10 @@ enum Cmd {
         /// List git-modified files as candidates instead of minting.
         #[arg(long)]
         pick_git: bool,
+        /// After minting, MOVE the source into .waggle-handoffs/sealed/<token>/ —
+        /// the token becomes the ONLY door (coverage receipts turn enforcement-grade).
+        #[arg(long)]
+        seal: bool,
     },
     /// Switch to a session — and deliver + resolve the pending token there.
     Switch {
@@ -94,7 +98,14 @@ fn main() -> std::process::ExitCode {
             paths,
             to,
             pick_git,
+            seal,
         } => match (paths.len(), pick_git) {
+            (1, _) if seal => {
+                actions::mint_sealed(&waggle, &workspace, &paths[0], to.as_deref()).map(|_| ())
+            }
+            (n, _) if n > 1 && seal => Err(error::Error::NotFound(
+                "--seal takes ONE path (a folder seals its whole tree); bundle first, then seal the bundle dir".into(),
+            )),
             (1, _) => actions::mint(&waggle, &workspace, &paths[0], to.as_deref()).map(|_| ()),
             (n, _) if n > 1 => {
                 actions::mint_bundle(&waggle, &workspace, &paths, to.as_deref()).map(|_| ())
