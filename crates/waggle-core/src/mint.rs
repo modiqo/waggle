@@ -60,6 +60,7 @@ pub struct MintSpec {
     parent: Option<Token>,
     content: Option<crate::MediaRef>,
     private: bool,
+    labels: std::collections::BTreeMap<String, String>,
     ttl_ms: Option<u64>,
 }
 
@@ -76,6 +77,7 @@ impl MintSpec {
             parent: None,
             content: None,
             private: false,
+            labels: std::collections::BTreeMap::new(),
             ttl_ms: None,
         }
     }
@@ -117,6 +119,14 @@ impl MintSpec {
     #[must_use]
     pub fn with_variant(mut self, variant: Variant) -> Self {
         self.variants.push(variant);
+        self
+    }
+
+    /// Tag at birth: a cosmetic label (the mutable LWW zone — a name is
+    /// a convenience, never an attributed claim; `find` matches on it).
+    #[must_use]
+    pub fn label(mut self, key: &str, value: &str) -> Self {
+        self.labels.insert(key.to_owned(), value.to_owned());
         self
     }
 
@@ -188,7 +198,7 @@ pub fn mint(
         variants,
         version: 1,
         campaign: None,
-        labels: std::collections::BTreeMap::new(),
+        labels: spec.labels,
         expires_at: spec.ttl_ms.map(|ttl| now.plus_ms(ttl)),
         revoked_at: None,
         superseded_by: None,

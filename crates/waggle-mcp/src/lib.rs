@@ -20,6 +20,7 @@
 
 pub mod content;
 mod content_handlers;
+mod discovery;
 mod envelope;
 mod handlers;
 mod lineage;

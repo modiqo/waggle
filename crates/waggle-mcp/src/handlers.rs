@@ -138,6 +138,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             "search" => self.search_content(args, now).await,
             "query" => self.query(args).await,
             "map" => self.map(args, now).await,
+            "find" => self.find(args).await,
             other => Envelope::err(
                 format!("`{other}` is not a waggle tool — `map` lists what exists"),
                 vec![NextCall {
@@ -252,6 +253,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         {
             spec = spec.private();
         }
+        spec = crate::discovery::apply_tags(spec, args);
         if let Some(path) = arg_str(args, "attach") {
             match self
                 .attach_variant(path, arg_str(args, "attach-type"))

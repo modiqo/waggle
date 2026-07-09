@@ -596,3 +596,93 @@ fn deep_search_over_the_root_token() {
         assert_eq!(found.next[0].tool, "read");
     });
 }
+
+/// Tags at mint + find: discovery by what humans remember — ranked
+/// candidates with disposition, never name-as-identity.
+#[test]
+fn tags_and_find_discovery() {
+    pollster::block_on(async {
+        let dir = tempfile::tempdir().unwrap();
+        let handler = handler_with_blobs(dir.path());
+        let mut e = entropy();
+
+        std::fs::create_dir_all(dir.path().join("design_docs")).unwrap();
+        std::fs::write(dir.path().join("design_docs/a.md"), "arch\n").unwrap();
+        std::fs::write(dir.path().join("plan.md"), "plan\n").unwrap();
+
+        let folder = handler
+            .dispatch(
+                "mint",
+                &serde_json::json!({
+                    "target": format!("file://{}/design_docs", dir.path().display()),
+                    "tree": true,
+                    "tag": ["design_docs", "kind=reference"],
+                }),
+                waggle_core::Timestamp::from_unix_ms(1),
+                &mut e,
+            )
+            .await;
+        assert!(folder.hint.is_none(), "{folder:?}");
+        let plan = handler
+            .dispatch(
+                "mint",
+                &serde_json::json!({
+                    "target": format!("file://{}/plan.md", dir.path().display()),
+                    "snapshot": true,
+                }),
+                waggle_core::Timestamp::from_unix_ms(2),
+                &mut e,
+            )
+            .await;
+        let plan_token = plan.result["token"].as_str().unwrap().to_owned();
+
+        // Find by TAG (bare tag became name=design_docs).
+        let by_tag = handler
+            .dispatch(
+                "find",
+                &serde_json::json!({ "query": "design_docs" }),
+                waggle_core::Timestamp::from_unix_ms(3),
+                &mut e,
+            )
+            .await;
+        assert!(by_tag.result["total"].as_u64().unwrap() >= 1, "{by_tag:?}");
+        assert_eq!(
+            by_tag.result["candidates"][0]["tags"]["name"],
+            "design_docs"
+        );
+
+        // Find by BASENAME; newest-first ranking; executable next.
+        let by_name = handler
+            .dispatch(
+                "find",
+                &serde_json::json!({ "query": "plan.md" }),
+                waggle_core::Timestamp::from_unix_ms(4),
+                &mut e,
+            )
+            .await;
+        assert_eq!(by_name.result["candidates"][0]["token"], plan_token);
+        assert_eq!(by_name.next[0].tool, "resolve");
+
+        // Disposition is visible: a revoked candidate says so.
+        handler
+            .dispatch(
+                "mutate",
+                &serde_json::json!({ "token": plan_token, "change": "revoke", "expected-version": 1 }),
+                waggle_core::Timestamp::from_unix_ms(5),
+                &mut e,
+            )
+            .await;
+        let after = handler
+            .dispatch(
+                "find",
+                &serde_json::json!({ "query": "plan.md" }),
+                waggle_core::Timestamp::from_unix_ms(6),
+                &mut e,
+            )
+            .await;
+        assert_eq!(
+            after.result["candidates"][0]["disposition"], "revoked",
+            "a dead name is VISIBLY dead: {after:?}"
+        );
+    });
+}
