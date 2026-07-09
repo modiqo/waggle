@@ -186,6 +186,7 @@ pub const FUNNEL: OperationSpec = OperationSpec {
         ArgSpec { name: "token", required: true, doc: "The waggle token whose funnel to report." },
     ],
     forward: &[
+        EdgeSpec { to: "coverage", why: "a lineage root? see which files were ACTUALLY consumed" },
         EdgeSpec { to: "map", why: "orient: the funnel feeds the map's ranked suggestions" },
         EdgeSpec { to: "mutate", why: "a stalled or wrong share can be revoked or superseded" },
     ],
@@ -248,6 +249,23 @@ pub const QUERY: OperationSpec = OperationSpec {
     forward: &[EdgeSpec { to: "query", why: "follow a next path one level deeper" }],
     reverse: &[],
     core_fn: "waggle_mcp::query::slice_at",
+};
+
+/// `coverage` — the folder handoff's proof of reading.
+pub const COVERAGE: OperationSpec = OperationSpec {
+    name: "coverage",
+    surface: Surface::Both,
+    kind: OpKind::Read,
+    description: "For a lineage root (a folder or bundle): which descendants were actually consumed? Three honest levels per file — unread (never touched), read (bytes served: a resolve, read, or search reached it), run (the consumer recorded using it). Misses are NAMED: the unread list is the proof of what a review skipped.",
+    args: &[
+        ArgSpec { name: "token", required: true, doc: "The lineage root whose tree to audit." },
+    ],
+    forward: &[
+        EdgeSpec { to: "read", why: "close the gap: read the first unread file" },
+        EdgeSpec { to: "funnel", why: "the root's stage counts and rollup" },
+    ],
+    reverse: &[],
+    core_fn: "waggle_mcp::lineage::coverage",
 };
 
 /// `find` — discovery by name, never identity.
@@ -356,8 +374,8 @@ pub const IDENTITY: OperationSpec = OperationSpec {
 
 /// The catalog. Order is presentation order (CLI help, docs, global map).
 pub const OPERATIONS: &[&OperationSpec] = &[
-    &MINT, &RESOLVE, &RECORD, &MUTATE, &FUNNEL, &READ, &SEARCH, &QUERY, &FIND, &MAP, &INIT, &SERVE,
-    &DAEMON, &EDGE, &IDENTITY,
+    &MINT, &RESOLVE, &RECORD, &MUTATE, &FUNNEL, &READ, &SEARCH, &QUERY, &FIND, &COVERAGE, &MAP,
+    &INIT, &SERVE, &DAEMON, &EDGE, &IDENTITY,
 ];
 
 /// Look an operation up by name.

@@ -139,6 +139,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             "query" => self.query(args).await,
             "map" => self.map(args, now).await,
             "find" => self.find(args).await,
+            "coverage" => self.coverage(args).await,
             other => Envelope::err(
                 format!("`{other}` is not a waggle tool — `map` lists what exists"),
                 vec![NextCall {

@@ -4,12 +4,12 @@
 //! descendants up, and a revoked ancestor tombstones everything
 //! beneath it — one revocation for the whole tree.
 
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 use waggle_core::Timestamp;
 use waggle_store::{BlobSink, Store};
 
 use crate::envelope::{Envelope, NextCall, Stats};
-use crate::handlers::Handler;
+use crate::handlers::{parse_token_arg, store_err, Handler};
 use crate::map::handoff_line;
 
 impl<S: Store, B: BlobSink> Handler<S, B> {
@@ -193,5 +193,103 @@ fn collect_files(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
         } else if meta.is_file() {
             out.push(path);
         }
+    }
+}
+
+impl<S: Store, B: BlobSink> Handler<S, B> {
+    /// `coverage`: the folder handoff's proof of reading (see the
+    /// catalog description). BFS over descendants; per file, the
+    /// funnel says unread / read / run — and misses are NAMED.
+    pub(crate) async fn coverage(&self, args: &Map<String, Value>) -> Envelope {
+        let root = match parse_token_arg(args) {
+            Ok(t) => t,
+            Err(e) => return e,
+        };
+        if let Err(e) = self.store.manifest(root).await.map_err(|e| store_err(&e)) {
+            return e;
+        }
+        let mut queue: std::collections::VecDeque<_> = match self.store.children(root).await {
+            Ok(c) => c.into(),
+            Err(e) => return store_err(&e),
+        };
+        let mut files = 0u64;
+        let mut read = 0u64;
+        let mut run = 0u64;
+        let mut unread: Vec<Value> = Vec::new();
+        let mut unread_total = 0u64;
+        let mut visited = 0;
+        while let Some(child) = queue.pop_front() {
+            visited += 1;
+            if visited > 1000 {
+                break; // runaway-lineage backstop, counts stay honest per-file
+            }
+            if let Ok(more) = self.store.children(child).await {
+                queue.extend(more);
+            }
+            let Ok(Some(view)) = self.store.manifest(child).await else {
+                continue;
+            };
+            files += 1;
+            let funnel = self.store.funnel(child).await.unwrap_or_default();
+            let count = |stage: &str| {
+                funnel
+                    .iter()
+                    .find(|(s, _)| s.as_str() == stage)
+                    .map_or(0, |(_, n)| *n)
+            };
+            let touched = count("read") + count("resolve");
+            if count("run") > 0 {
+                run += 1;
+                read += 1;
+            } else if touched > 0 {
+                read += 1;
+            } else {
+                unread_total += 1;
+                if unread.len() < 20 {
+                    unread.push(json!({
+                        "token": child.as_str(),
+                        "target": view.manifest.target.as_str(),
+                    }));
+                }
+            }
+        }
+        if files == 0 {
+            return Envelope::err(
+                format!(
+                    "{root} has no children — coverage audits lineage roots (mint --tree, bundles)"
+                ),
+                vec![],
+            );
+        }
+        let complete = unread_total == 0;
+        let next = if let Some(first) = unread.first() {
+            vec![NextCall {
+                tool: "read".into(),
+                args: json!({ "token": first["token"] }),
+                why: "close the gap: the first file nobody has opened".into(),
+            }]
+        } else {
+            vec![NextCall {
+                tool: "funnel".into(),
+                args: json!({ "token": root.as_str() }),
+                why: "full coverage — the rollup has the totals".into(),
+            }]
+        };
+        Envelope::ok(
+            json!({
+                "token": root.as_str(),
+                "files": files,
+                "read": format!("{read}/{files}"),
+                "run": format!("{run}/{files}"),
+                "complete": complete,
+                "unread": unread,
+                "unread_total": unread_total,
+            }),
+            next,
+        )
+        .with_stats(Stats {
+            records: Some(files),
+            seq: None,
+        })
     }
 }
