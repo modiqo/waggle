@@ -7,6 +7,7 @@
 //! The humans watch the match; nobody plays courier.
 
 use std::collections::BTreeSet;
+use std::io::Write as _;
 use std::path::Path;
 
 use waggle_store::ReadStore as _;
@@ -78,15 +79,39 @@ pub fn run<T: TmuxBackend, W: WaggleClient>(
     let mut seen = BTreeSet::new();
     if !once {
         prime(&mut seen)?;
-        println!("watch: live — agents mint to tmux/<session> and the switchboard jumps");
     }
     loop {
         tick(tmux, waggle, workspace, &mut seen)?;
         if once {
             return Ok(());
         }
+        draw_board(workspace);
         std::thread::sleep(std::time::Duration::from_secs(2));
     }
+}
+
+/// Redraw the pane as the live board (best effort — a broken store
+/// read leaves the last frame standing rather than crashing the loop).
+fn draw_board(workspace: &Path) {
+    let Ok(store) = waggle_store_sqlite::SqliteStore::open(Path::new(&store_path())) else {
+        return;
+    };
+    let Ok(records) = pollster::block_on(store.scan_all()) else {
+        return;
+    };
+    let world = waggle_core::reconstruct(records);
+    let st = state::load(workspace);
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(0));
+    let rows = crate::board::build_rows(&world, &st, now_ms);
+    let height = std::env::var("LINES")
+        .ok()
+        .and_then(|l| l.parse().ok())
+        .unwrap_or(10);
+    // Clear + home, then the frame.
+    print!("\x1b[2J\x1b[H{}", crate::board::render(&rows, &st, height));
+    let _ = std::io::stdout().flush();
 }
 
 fn prime(seen: &mut BTreeSet<String>) -> Result<()> {

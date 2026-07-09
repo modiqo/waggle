@@ -233,7 +233,7 @@ fn ensure_watch_pane<T: TmuxBackend>(tmux: &T, workspace: &Path) -> Result<()> {
         "split-window",
         "-v",
         "-l",
-        "4",
+        "10",
         "-t",
         SESSION,
         "-c",

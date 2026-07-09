@@ -5,6 +5,7 @@
 use clap::Parser;
 
 mod actions;
+mod board;
 mod error;
 mod profile;
 mod state;
