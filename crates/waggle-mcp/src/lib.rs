@@ -22,6 +22,7 @@ pub mod content;
 mod content_handlers;
 mod envelope;
 mod handlers;
+mod lineage;
 mod map;
 pub mod query;
 mod rpc;

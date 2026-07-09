@@ -544,3 +544,55 @@ fn folder_tree_rollup_and_cascade() {
         );
     });
 }
+
+/// Deep search: grep the ROOT token and hit every file in the tree —
+/// matches grouped per file, nested files included.
+#[test]
+fn deep_search_over_the_root_token() {
+    pollster::block_on(async {
+        let dir = tempfile::tempdir().unwrap();
+        let docs = dir.path().join("corpus");
+        std::fs::create_dir_all(docs.join("deep")).unwrap();
+        std::fs::write(docs.join("plan.md"), "the needle sits here\n").unwrap();
+        std::fs::write(
+            docs.join("deep/notes.md"),
+            "another needle, nested\nno match line\n",
+        )
+        .unwrap();
+        std::fs::write(docs.join("blank.md"), "nothing relevant\n").unwrap();
+        let handler = handler_with_blobs(dir.path());
+        let mut e = entropy();
+
+        let minted = handler
+            .dispatch(
+                "mint",
+                &serde_json::json!({ "target": format!("file://{}", docs.display()), "tree": true }),
+                waggle_core::Timestamp::from_unix_ms(1),
+                &mut e,
+            )
+            .await;
+        let root = minted.result["token"].as_str().unwrap().to_owned();
+
+        let found = handler
+            .dispatch(
+                "search",
+                &serde_json::json!({ "token": root, "pattern": "needle" }),
+                waggle_core::Timestamp::from_unix_ms(2),
+                &mut e,
+            )
+            .await;
+        assert!(found.hint.is_none(), "{found:?}");
+        assert_eq!(found.result["total_matches"], 2, "{found:?}");
+        assert_eq!(found.result["tree"]["files_searched"], 3);
+        let files = found.result["files"].as_array().unwrap();
+        assert_eq!(files.len(), 2, "only matching files listed");
+        assert!(
+            files
+                .iter()
+                .any(|f| f["target"].as_str().unwrap().contains("deep/notes.md")),
+            "nested files are in the tree: {files:?}"
+        );
+        // The grep→open chain points into the first matching file.
+        assert_eq!(found.next[0].tool, "read");
+    });
+}

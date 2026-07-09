@@ -192,6 +192,17 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 vec![],
             );
         };
+        // A lineage root with no content of its own searches DEEPLY:
+        // every descendant's content, matches grouped per file — the
+        // folder token greps as a tree, locally and at the edge alike.
+        if let Ok(Some(view)) = self.store.manifest(token).await {
+            if view.manifest.content.is_none() {
+                let children = self.store.children(token).await.unwrap_or_default();
+                if !children.is_empty() {
+                    return self.search_tree(token, pattern, args, now).await;
+                }
+            }
+        }
         let (text, _content_type) = match self.content_of(token).await {
             Ok(x) => x,
             Err(e) => return e,
@@ -267,6 +278,143 @@ fn read_capped(path: &str) -> Result<Vec<u8>, Envelope> {
         ));
     }
     std::fs::read(path).map_err(|e| Envelope::err(format!("content {path}: {e}"), vec![]))
+}
+
+impl<S: Store, B: BlobSink> Handler<S, B> {
+    /// Deep search over a lineage tree: BFS the descendants, grep each
+    /// one that carries content, group matches per file. Totals are
+    /// counted in full; listings are capped per file and by the byte
+    /// budget — truncation is named, never silent.
+    async fn search_tree(
+        &self,
+        root: waggle_core::Token,
+        pattern: &str,
+        args: &Map<String, Value>,
+        now: Timestamp,
+    ) -> Envelope {
+        let context = args
+            .get("context")
+            .and_then(Value::as_u64)
+            .map_or(1, |v| usize::try_from(v).unwrap_or(1));
+        let per_file = args
+            .get("max-matches")
+            .and_then(Value::as_u64)
+            .map_or(3, |v| usize::try_from(v).unwrap_or(3));
+        let max_bytes = args
+            .get("max-bytes")
+            .and_then(Value::as_u64)
+            .and_then(|v| usize::try_from(v).ok())
+            .unwrap_or(crate::query::DEFAULT_MAX_BYTES);
+
+        let mut queue: std::collections::VecDeque<_> =
+            self.store.children(root).await.unwrap_or_default().into();
+        let mut files = Vec::new();
+        let mut total: u64 = 0;
+        let mut searched = 0u64;
+        let mut skipped = 0u64;
+        let mut visited = 0;
+        while let Some(child) = queue.pop_front() {
+            visited += 1;
+            if visited > 200 {
+                skipped += 1 + queue.len() as u64;
+                break;
+            }
+            queue.extend(self.store.children(child).await.unwrap_or_default());
+            let Ok(Some(view)) = self.store.manifest(child).await else {
+                continue;
+            };
+            let Ok((text, _)) = self.content_of(child).await else {
+                skipped += 1; // no snapshot here (or binary) — named below
+                continue;
+            };
+            searched += 1;
+            let Ok(found) =
+                crate::content::search(&text, pattern, context, per_file, max_bytes / 4)
+            else {
+                continue; // bad regex reports once, below, via the empty case
+            };
+            let file_total = found["total_matches"].as_u64().unwrap_or(0);
+            if file_total > 0 {
+                total += file_total;
+                files.push(json!({
+                    "token": child.as_str(),
+                    "target": view.manifest.target.as_str(),
+                    "total_matches": file_total,
+                    "matches": found["matches"],
+                }));
+            }
+        }
+        // Regex sanity: if nothing was searchable the pattern never ran.
+        if searched == 0 {
+            return Envelope::err(
+                format!(
+                    "no searchable content under {root} — its children have no snapshots here;                      `waggle edge push` (or re-mint with --tree) pins the bytes"
+                ),
+                vec![],
+            );
+        }
+        let mut result = json!({
+            "token": root.as_str(),
+            "pattern": pattern,
+            "tree": { "files_searched": searched, "files_skipped": skipped },
+            "total_matches": total,
+            "files": files,
+        });
+        // The byte budget holds for the whole tree answer.
+        let rendered = serde_json::to_vec(&result).map_or(0, |b| b.len());
+        if rendered > max_bytes {
+            let files = result["files"].as_array().cloned().unwrap_or_default();
+            let mut kept = Vec::new();
+            let mut used = 200; // envelope skeleton allowance
+            for f in files {
+                let size = serde_json::to_vec(&f).map_or(0, |b| b.len());
+                if used + size > max_bytes {
+                    break;
+                }
+                used += size;
+                kept.push(f);
+            }
+            let dropped = result["files"].as_array().map_or(0, Vec::len) - kept.len();
+            result["files"] = json!(kept);
+            result["truncated"] = json!(format!(
+                "{dropped} matching file(s) beyond the {max_bytes}-byte budget — raise max-bytes or search a child directly"
+            ));
+        }
+        self.record_read(root, now).await;
+        let next = files_next(&result, root);
+        Envelope::ok(result, next).with_stats(Stats {
+            records: Some(searched),
+            seq: None,
+        })
+    }
+}
+
+/// The grep→open chain for tree results: read the first matching file.
+fn files_next(result: &Value, root: waggle_core::Token) -> Vec<NextCall> {
+    let mut next = Vec::new();
+    if let Some(first) = result["files"].as_array().and_then(|f| f.first()) {
+        if let (Some(token), Some(line)) = (
+            first["token"].as_str(),
+            first["matches"]
+                .as_array()
+                .and_then(|m| m.first())
+                .and_then(|m| m["line"].as_u64()),
+        ) {
+            let from = line.saturating_sub(5).max(1);
+            next.push(NextCall {
+                tool: "read".into(),
+                args: json!({ "token": token, "lines": format!("{from}-{}", line + 10) }),
+                why: "open the first matching file at its hit".into(),
+            });
+        }
+    }
+    next.push(NextCall {
+        tool: "resolve".into(),
+        args: json!({ "token": root.as_str() }),
+        why: "the root's index: every child token by filename".into(),
+    });
+    next.truncate(3);
+    next
 }
 
 /// Continuation guidance for read results.
