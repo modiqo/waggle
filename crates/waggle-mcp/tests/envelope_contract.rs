@@ -11,8 +11,12 @@ use waggle_mcp::Handler;
 use waggle_store_sqlite::{BlobStore, SqliteStore};
 
 fn entropy() -> impl FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError> {
-    |b: &mut [u8]| {
-        b.fill(99);
+    // Varies per call: constant entropy would make every later mint an
+    // idempotent REPLAY of the first (same sharer+nonce, C-8).
+    let mut n = 0u8;
+    move |b: &mut [u8]| {
+        n = n.wrapping_add(1);
+        b.fill(99u8.wrapping_add(n));
         Ok(())
     }
 }
@@ -44,6 +48,21 @@ fn every_operation_reports_its_stats() {
             .await;
         assert!(minted.hint.is_none(), "seed mint failed: {minted:?}");
         let token = minted.result["token"].as_str().unwrap().to_owned();
+        // A child under the seed token, so lineage ops (coverage) have
+        // a tree to audit.
+        let child = handler
+            .dispatch(
+                "mint",
+                &json!({
+                    "target": format!("file://{}", artifact.display()),
+                    "snapshot": true,
+                    "parent": token,
+                }),
+                Timestamp::from_unix_ms(2),
+                &mut e,
+            )
+            .await;
+        assert!(child.hint.is_none(), "seed child failed: {child:?}");
 
         // Every MCP-facing operation, with working args for that token.
         let calls: Vec<(&str, Value)> = vec![
@@ -54,6 +73,7 @@ fn every_operation_reports_its_stats() {
             ("search", json!({ "token": token, "pattern": "needle" })),
             ("query", json!({ "token": token })),
             ("find", json!({ "query": "artifact" })),
+            ("coverage", json!({ "token": token })),
             ("map", json!({ "token": token })),
             ("map", json!({})),
             (

@@ -164,6 +164,12 @@ enum Cmd {
         /// Substring to match (case-insensitive) against basename, tags, channel, sharer.
         query: String,
     },
+    #[command(about = waggle_ops::COVERAGE.description)]
+    Coverage {
+        /// The lineage root whose tree to audit.
+        #[arg(long)]
+        token: String,
+    },
     #[command(about = waggle_ops::MAP.description)]
     Map {
         /// Token to orient around; omit for the global map.
@@ -314,6 +320,7 @@ fn main() {
             strip_nulls(json!({ "token": token, "path": path, "max-bytes": max_bytes })),
         ),
         Cmd::Find { query } => run::tool_call("find", json!({ "query": query })),
+        Cmd::Coverage { token } => run::tool_call("coverage", json!({ "token": token })),
         Cmd::Map { token } => run::tool_call("map", strip_nulls(json!({ "token": token }))),
         Cmd::Edge {
             action,

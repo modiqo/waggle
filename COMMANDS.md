@@ -72,6 +72,7 @@ A token's funnel: stage counts (impression → resolve → run → repeat) plus 
 |---|---|---|
 | `--token` | true | The waggle token whose funnel to report. |
 
+- forward → `coverage`: a lineage root? see which files were ACTUALLY consumed
 - forward → `map`: orient: the funnel feeds the map's ranked suggestions
 - forward → `mutate`: a stalled or wrong share can be revoked or superseded
 
@@ -125,6 +126,17 @@ Find tokens by what humans remember: matches the query against target basenames,
 | `--query` | true | Substring to match (case-insensitive) against basename, tags, channel, sharer. |
 
 - forward → `resolve`: resolve the candidate you meant
+
+## `coverage` — CLI + MCP tool
+
+For a lineage root (a folder or bundle): which descendants were actually consumed? Three honest levels per file — unread (never touched), read (bytes served: a resolve, read, or search reached it), run (the consumer recorded using it). Misses are NAMED: the unread list is the proof of what a review skipped.
+
+| arg | required | doc |
+|---|---|---|
+| `--token` | true | The lineage root whose tree to audit. |
+
+- forward → `read`: close the gap: read the first unread file
+- forward → `funnel`: the root's stage counts and rollup
 
 ## `map` — CLI + MCP tool
 

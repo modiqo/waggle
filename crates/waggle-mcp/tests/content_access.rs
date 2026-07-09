@@ -686,3 +686,103 @@ fn tags_and_find_discovery() {
         );
     });
 }
+
+/// The folder-review proof: coverage on a tree names exactly which
+/// files a review MISSED — and a root deep-search honestly counts as
+/// reading every file it scanned.
+#[test]
+fn coverage_proves_the_folder_was_read_or_names_the_gaps() {
+    pollster::block_on(async {
+        let dir = tempfile::tempdir().unwrap();
+        let docs = dir.path().join("review_me");
+        std::fs::create_dir_all(&docs).unwrap();
+        for name in ["a.md", "b.md", "c.md"] {
+            std::fs::write(docs.join(name), format!("content of {name}\n")).unwrap();
+        }
+        let handler = handler_with_blobs(dir.path());
+        let mut e = entropy();
+        let minted = handler
+            .dispatch(
+                "mint",
+                &serde_json::json!({ "target": format!("file://{}", docs.display()), "tree": true }),
+                waggle_core::Timestamp::from_unix_ms(1),
+                &mut e,
+            )
+            .await;
+        let root = minted.result["token"].as_str().unwrap().to_owned();
+        let children = minted.result["children"].as_array().unwrap().clone();
+
+        // A lazy review: reads a.md and b.md, never opens c.md.
+        for child in children.iter().take(2) {
+            let token = child["token"].as_str().unwrap();
+            handler
+                .dispatch(
+                    "read",
+                    &serde_json::json!({ "token": token }),
+                    waggle_core::Timestamp::from_unix_ms(2),
+                    &mut e,
+                )
+                .await;
+        }
+        let audit = handler
+            .dispatch(
+                "coverage",
+                &serde_json::json!({ "token": root }),
+                waggle_core::Timestamp::from_unix_ms(3),
+                &mut e,
+            )
+            .await;
+        assert!(audit.hint.is_none(), "{audit:?}");
+        assert_eq!(audit.result["read"], "2/3", "{audit:?}");
+        assert_eq!(audit.result["complete"], false);
+        assert!(
+            audit.result["unread"][0]["target"]
+                .as_str()
+                .unwrap()
+                .ends_with("c.md"),
+            "the miss is NAMED: {audit:?}"
+        );
+        assert_eq!(audit.next[0].tool, "read", "next closes the gap");
+
+        // A root deep-search touches every file — honest per-child reads.
+        handler
+            .dispatch(
+                "search",
+                &serde_json::json!({ "token": root, "pattern": "content" }),
+                waggle_core::Timestamp::from_unix_ms(4),
+                &mut e,
+            )
+            .await;
+        let after = handler
+            .dispatch(
+                "coverage",
+                &serde_json::json!({ "token": root }),
+                waggle_core::Timestamp::from_unix_ms(5),
+                &mut e,
+            )
+            .await;
+        assert_eq!(after.result["read"], "3/3", "{after:?}");
+        assert_eq!(after.result["complete"], true);
+
+        // The STRONG bar: run stays honest — nothing recorded use yet.
+        assert_eq!(after.result["run"], "0/3");
+        let child0 = children[0]["token"].as_str().unwrap();
+        handler
+            .dispatch(
+                "record",
+                &serde_json::json!({ "token": child0, "stage": "run" }),
+                waggle_core::Timestamp::from_unix_ms(6),
+                &mut e,
+            )
+            .await;
+        let strong = handler
+            .dispatch(
+                "coverage",
+                &serde_json::json!({ "token": root }),
+                waggle_core::Timestamp::from_unix_ms(7),
+                &mut e,
+            )
+            .await;
+        assert_eq!(strong.result["run"], "1/3");
+    });
+}

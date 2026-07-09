@@ -328,6 +328,9 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 continue;
             };
             searched += 1;
+            // Honest telemetry: the deep search DID read this file's
+            // bytes — the child's funnel says so (coverage's 'read' bar).
+            self.record_read(child, now).await;
             let Ok(found) =
                 crate::content::search(&text, pattern, context, per_file, max_bytes / 4)
             else {
