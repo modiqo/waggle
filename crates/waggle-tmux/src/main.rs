@@ -59,7 +59,16 @@ enum Cmd {
         /// One scan instead of the loop (scripting, tests).
         #[arg(long)]
         once: bool,
+        /// Render the board only — no deliveries (safe to run one per
+        /// window; delivery stays a single process).
+        #[arg(long)]
+        board_only: bool,
+        /// Deliver without rendering (the hidden watcher window).
+        #[arg(long)]
+        headless: bool,
     },
+    /// Toggle the current window's board strip between tall and short.
+    BoardToggle,
     /// Register an existing pane (external — never injected).
     Register {
         /// Local session id.
@@ -115,7 +124,21 @@ fn main() -> std::process::ExitCode {
             no_inject,
         ),
         Cmd::Next => actions::next(&tmux, &waggle, &workspace),
-        Cmd::Watch { once } => watch::run(&tmux, &waggle, &workspace, once),
+        Cmd::Watch {
+            once,
+            board_only,
+            headless,
+        } => watch::run(
+            &tmux,
+            &waggle,
+            &workspace,
+            once,
+            watch::Mode {
+                deliver: !board_only,
+                board: !headless,
+            },
+        ),
+        Cmd::BoardToggle => actions::board_toggle(&tmux),
         Cmd::Status => {
             actions::status(&waggle, &workspace);
             Ok(())

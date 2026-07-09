@@ -68,6 +68,17 @@ pub fn tick<T: TmuxBackend, W: WaggleClient>(
     Ok(delivered)
 }
 
+/// What a watch process does: deliver, render, or both. Delivery MUST
+/// be a single process per workspace (duplicates would double-deliver);
+/// boards are pure readers and replicate freely — one strip per window.
+#[derive(Clone, Copy)]
+pub struct Mode {
+    /// Perform deliveries (the single watcher).
+    pub deliver: bool,
+    /// Render the board each tick.
+    pub board: bool,
+}
+
 /// The loop (or one pass with `once`). Priming marks everything already
 /// in the store as seen — the watcher delivers the FUTURE, not history.
 pub fn run<T: TmuxBackend, W: WaggleClient>(
@@ -75,24 +86,29 @@ pub fn run<T: TmuxBackend, W: WaggleClient>(
     waggle: &W,
     workspace: &Path,
     once: bool,
+    mode: Mode,
 ) -> Result<()> {
     let mut seen = BTreeSet::new();
-    if !once {
+    if mode.deliver && !once {
         prime(&mut seen)?;
     }
     loop {
-        tick(tmux, waggle, workspace, &mut seen)?;
+        if mode.deliver {
+            tick(tmux, waggle, workspace, &mut seen)?;
+        }
         if once {
             return Ok(());
         }
-        draw_board(workspace);
+        if mode.board {
+            draw_board(tmux, workspace);
+        }
         std::thread::sleep(std::time::Duration::from_secs(2));
     }
 }
 
 /// Redraw the pane as the live board (best effort — a broken store
 /// read leaves the last frame standing rather than crashing the loop).
-fn draw_board(workspace: &Path) {
+fn draw_board<T: TmuxBackend>(tmux: &T, workspace: &Path) {
     let Ok(store) = waggle_store_sqlite::SqliteStore::open(Path::new(&store_path())) else {
         return;
     };
@@ -105,9 +121,14 @@ fn draw_board(workspace: &Path) {
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(0));
     let rows = crate::board::build_rows(&world, &st, now_ms);
-    let height = std::env::var("LINES")
+    // Live pane height — the board adapts the moment you resize it.
+    let height = std::env::var("TMUX_PANE")
         .ok()
-        .and_then(|l| l.parse().ok())
+        .and_then(|pane| {
+            tmux.run(&["display-message", "-p", "-t", &pane, "#{pane_height}"])
+                .ok()
+        })
+        .and_then(|h| h.trim().parse().ok())
         .unwrap_or(10);
     // Clear + home, then the frame.
     print!("\x1b[2J\x1b[H{}", crate::board::render(&rows, &st, height));

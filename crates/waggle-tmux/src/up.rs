@@ -26,7 +26,10 @@ pub fn run<T: TmuxBackend>(tmux: &T, workspace: &Path, chosen: &[String]) -> Res
     ensure_workspace_stub(workspace);
     ensure_daemon();
 
-    let window = task_window();
+    // Focus layout: ONE WINDOW PER HARNESS (its name lives in the tmux
+    // status bar — the other harnesses "appear in the bar"), each with a
+    // titled harness pane on top and a slim board strip below. Switching
+    // swaps windows; prefix+z zooms the active pane to full screen.
     let cwd = workspace.to_string_lossy();
     let live: std::collections::BTreeSet<String> = if tmux::has_session(tmux, SESSION) {
         tmux::list_panes(tmux)?
@@ -37,14 +40,32 @@ pub fn run<T: TmuxBackend>(tmux: &T, workspace: &Path, chosen: &[String]) -> Res
     } else {
         std::collections::BTreeSet::new()
     };
-    let mut first_pane_free = false;
+    let mut session_is_new = false;
     if live.is_empty() {
-        // The harness runs AS the first pane's process — no shell init
-        // to race, no update prompt to swallow the launch.
-        let first_cmd = picked.first().and_then(|p| p.launch_command.clone());
-        tmux::new_session(tmux, SESSION, &window, &cwd, first_cmd.as_deref())?;
-        first_pane_free = true;
+        // The harness runs AS the first window's pane process — no shell
+        // init to race, no update prompt to swallow the launch.
+        let first = picked.first().ok_or_else(|| {
+            Error::NotFound("no harnesses picked — waggle-tmux up claude-code codex".into())
+        })?;
+        tmux::new_session(
+            tmux,
+            SESSION,
+            &first.id,
+            &cwd,
+            first.launch_command.as_deref(),
+        )?;
+        session_is_new = true;
     }
+    // Pane titles come from the profiles; show them on the borders.
+    let _ = tmux.run(&["set", "-t", SESSION, "pane-border-status", "top"]);
+    let _ = tmux.run(&[
+        "set",
+        "-t",
+        SESSION,
+        "pane-border-format",
+        " #{pane_title} ",
+    ]);
+
     for (i, p) in picked.iter().enumerate() {
         let st = state::load(workspace);
         if let Some(existing) = st.sessions.get(&p.id) {
@@ -52,15 +73,17 @@ pub fn run<T: TmuxBackend>(tmux: &T, workspace: &Path, chosen: &[String]) -> Res
                 continue; // convergent: registered AND alive
             }
         }
-        let pane = if i == 0 && first_pane_free {
+        let pane = if i == 0 && session_is_new {
             tmux::list_panes(tmux)?
                 .into_iter()
                 .find(|info| info.session == SESSION)
                 .map(|info| info.pane_id)
                 .ok_or_else(|| Error::Tmux("first pane vanished".into()))?
         } else {
-            tmux::split(tmux, SESSION, &cwd, p.launch_command.as_deref())?
+            tmux::new_window(tmux, SESSION, &p.id, &cwd, p.launch_command.as_deref())?
         };
+        let _ = tmux.run(&["select-pane", "-t", &pane, "-T", &p.display_name]);
+        ensure_board_strip(tmux, workspace, &p.id, &pane)?;
         state::append(
             workspace,
             &Event::SessionRegistered {
@@ -71,8 +94,8 @@ pub fn run<T: TmuxBackend>(tmux: &T, workspace: &Path, chosen: &[String]) -> Res
             },
         )?;
         println!(
-            "session `{}` in pane {pane} (owned — seamless delivery on)",
-            p.id
+            "window `{}` up: {} + board strip (owned — seamless delivery on)",
+            p.id, p.display_name
         );
     }
     ensure_watch_pane(tmux, workspace)?;
@@ -223,19 +246,32 @@ fn ensure_daemon() {
         .output();
 }
 
-/// A slim always-on pane running the watcher — the automation is on by
-/// default; killing the pane turns it off.
-fn ensure_watch_pane<T: TmuxBackend>(tmux: &T, workspace: &Path) -> Result<()> {
-    if state::load(workspace).sessions.contains_key("_watch") {
-        return Ok(());
+/// Each harness window gets a slim BOARD strip below it (pure reader —
+/// safe to replicate). `waggle-tmux board-toggle` (or the menu) flips it
+/// between strip and half-screen.
+fn ensure_board_strip<T: TmuxBackend>(
+    tmux: &T,
+    workspace: &Path,
+    window_id: &str,
+    harness_pane: &str,
+) -> Result<()> {
+    let key = format!("_board-{window_id}");
+    let st = state::load(workspace);
+    if let Some(existing) = st.sessions.get(&key) {
+        if tmux::list_panes(tmux)?
+            .iter()
+            .any(|p| p.pane_id == existing.pane)
+        {
+            return Ok(());
+        }
     }
     let pane = tmux.run(&[
         "split-window",
         "-v",
         "-l",
-        "10",
+        "6",
         "-t",
-        SESSION,
+        harness_pane,
         "-c",
         &workspace.to_string_lossy(),
         "-P",
@@ -243,6 +279,52 @@ fn ensure_watch_pane<T: TmuxBackend>(tmux: &T, workspace: &Path) -> Result<()> {
         "#{pane_id}",
         "waggle-tmux",
         "watch",
+        "--board-only",
+    ])?;
+    let pane = pane.trim().to_owned();
+    let _ = tmux.run(&["select-pane", "-t", &pane, "-T", "waggle"]);
+    // Focus back on the harness — the strip is furniture, not a seat.
+    let _ = tmux.run(&["select-pane", "-t", harness_pane]);
+    state::append(
+        workspace,
+        &Event::SessionRegistered {
+            id: key,
+            profile: "generic".into(),
+            pane,
+            owned: false,
+        },
+    )?;
+    Ok(())
+}
+
+/// The single DELIVERER: one headless watcher in a background window
+/// (visible in the bar as `wgd`; kill it to go manual). Exactly one —
+/// duplicated deliverers would double-deliver.
+fn ensure_watch_pane<T: TmuxBackend>(tmux: &T, workspace: &Path) -> Result<()> {
+    let st = state::load(workspace);
+    if let Some(existing) = st.sessions.get("_watch") {
+        if tmux::list_panes(tmux)?
+            .iter()
+            .any(|p| p.pane_id == existing.pane)
+        {
+            return Ok(());
+        }
+    }
+    let pane = tmux.run(&[
+        "new-window",
+        "-d",
+        "-t",
+        SESSION,
+        "-n",
+        "wgd",
+        "-c",
+        &workspace.to_string_lossy(),
+        "-P",
+        "-F",
+        "#{pane_id}",
+        "waggle-tmux",
+        "watch",
+        "--headless",
     ])?;
     let pane = pane.trim().to_owned();
     state::append(
@@ -254,7 +336,7 @@ fn ensure_watch_pane<T: TmuxBackend>(tmux: &T, workspace: &Path) -> Result<()> {
             owned: false,
         },
     )?;
-    println!("watcher live (bottom pane) — agents mint to tmux/<session>, the switchboard jumps");
+    println!("deliverer live (window `wgd`) — agents mint to tmux/<session>, windows swap");
     Ok(())
 }
 
@@ -291,12 +373,6 @@ fn write_agent_block(workspace: &Path, picked: &[HarnessProfile]) {
         };
         let _ = std::fs::write(&path, updated);
     }
-}
-
-fn task_window() -> String {
-    // No wall clock needed for uniqueness — the pid is enough for a
-    // window name, and state carries the real identity.
-    format!("wg-{}", std::process::id())
 }
 
 #[cfg(test)]

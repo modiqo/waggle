@@ -88,19 +88,21 @@ pub fn new_session<T: TmuxBackend>(
     Ok(())
 }
 
-/// Split the target, returning the NEW pane's id via -P; same
-/// command-as-pane-process rule as [`new_session`].
-pub fn split<T: TmuxBackend>(
+/// New named window in the session; the pane runs `cmd` as its process
+/// (same no-shell-race rule). Returns the new pane's id.
+pub fn new_window<T: TmuxBackend>(
     tmux: &T,
-    target: &str,
+    session: &str,
+    name: &str,
     cwd: &str,
     cmd: Option<&str>,
 ) -> Result<String> {
     let mut args = vec![
-        "split-window",
-        "-h",
+        "new-window",
         "-t",
-        target,
+        session,
+        "-n",
+        name,
         "-c",
         cwd,
         "-P",

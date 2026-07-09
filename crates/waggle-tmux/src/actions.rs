@@ -296,3 +296,27 @@ pub fn register<T: TmuxBackend>(
     println!("registered `{id}` → {pane} (external — delivery prints the resolve line)");
     Ok(())
 }
+
+/// Toggle the current window's board strip: short strip <-> half screen.
+pub fn board_toggle<T: TmuxBackend>(tmux_backend: &T) -> Result<()> {
+    let panes = tmux_backend.run(&[
+        "list-panes",
+        "-F",
+        "#{pane_id}\t#{pane_title}\t#{pane_height}",
+    ])?;
+    for line in panes.lines() {
+        let mut f = line.split('\t');
+        let (Some(id), Some(title), Some(height)) = (f.next(), f.next(), f.next()) else {
+            continue;
+        };
+        if title == "waggle" {
+            let tall = height.parse::<u32>().unwrap_or(0) > 12;
+            let target = if tall { "6" } else { "50%" };
+            tmux_backend.run(&["resize-pane", "-t", id, "-y", target])?;
+            return Ok(());
+        }
+    }
+    Err(Error::NotFound(
+        "no board strip in this window — waggle-tmux up creates one per harness window".into(),
+    ))
+}
