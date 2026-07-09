@@ -182,8 +182,18 @@ pub fn bind_keys<T: TmuxBackend>(tmux: &T, workspace: &std::path::Path, sessions
     args.push(format!(
         "display-popup -E 'cd {ws} && waggle-tmux status; echo; echo [any key]; read -n 1'"
     ));
+    args.push("board big/small".into());
+    args.push("b".into());
+    args.push(format!("run-shell 'cd {ws} && waggle-tmux board-toggle'"));
     let refs: Vec<&str> = args.iter().map(String::as_str).collect();
     let _ = tmux.run(&refs);
+    // The board toggle also gets its own key — no shell needed anywhere.
+    let _ = tmux.run(&[
+        "bind-key",
+        "B",
+        "run-shell",
+        &format!("cd {ws} && waggle-tmux board-toggle"),
+    ]);
 }
 
 #[cfg(test)]
