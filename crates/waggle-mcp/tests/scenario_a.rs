@@ -479,3 +479,37 @@ fn capability_url_private_tokens() {
         );
     });
 }
+
+/// The switchboard's contract: a context passed as a JSON STRING (how
+/// CLIs deliver --context) with NAMED modalities resolves — the matcher
+/// serves the projection for THAT consumer.
+#[test]
+fn string_context_with_named_modalities_resolves() {
+    pollster::block_on(async {
+        let handler = Handler::new(
+            SqliteStore::open_in_memory().unwrap(),
+            Sharer::new("switchboard").unwrap(),
+        );
+        let mut e = entropy();
+        let minted = handler
+            .dispatch(
+                "mint",
+                &json!({ "target": "ws://ctx/x" }),
+                Timestamp::from_unix_ms(1),
+                &mut e,
+            )
+            .await;
+        let token = minted.result["token"].as_str().unwrap().to_owned();
+        let ctx = r#"{"kind":"agent","model_family":"gpt","harness":"codex","modalities":["text","shell"],"posture":"attended"}"#;
+        let resolved = handler
+            .dispatch(
+                "resolve",
+                &json!({ "token": token, "context": ctx }),
+                Timestamp::from_unix_ms(2),
+                &mut e,
+            )
+            .await;
+        assert!(resolved.hint.is_none(), "{resolved:?}");
+        assert_eq!(resolved.result["disposition"], "active");
+    });
+}
