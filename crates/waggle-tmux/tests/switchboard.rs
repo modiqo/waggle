@@ -159,7 +159,7 @@ fn tree_outcomes_mint_directories() {
 
     // Deep search through the ROOT proves children snapshot-minted.
     let (ok, out) = run(
-        "waggle",
+        &waggle_bin(),
         ws,
         &envs,
         &["search", "--token", &token, "--pattern", "bespoke"],
