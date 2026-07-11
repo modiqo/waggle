@@ -31,7 +31,7 @@ pub fn store_path_display() -> String {
     store_path().display().to_string()
 }
 
-fn store_path() -> PathBuf {
+pub(crate) fn store_path() -> PathBuf {
     if let Ok(p) = std::env::var("WAGGLE_STORE") {
         return PathBuf::from(p);
     }

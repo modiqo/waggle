@@ -176,7 +176,7 @@ Run the waggle daemon (waggled): the single owner of the local store, serving ev
 
 ## `daemon` — CLI only
 
-Manage waggled: status (pid, store, uptime, connections), start (idempotent), stop (graceful over the socket; terminates orphans by pidfile), restart. Pidfile + idle exit make lingering orphans structurally unlikely.
+Manage waggled: status (pid, store, uptime, connections, live resource subscriptions, disk weight of the store and blob CAS), start (idempotent), stop (graceful over the socket; terminates orphans by pidfile), restart. Pidfile + idle exit make lingering orphans structurally unlikely.
 
 | arg | required | doc |
 |---|---|---|
