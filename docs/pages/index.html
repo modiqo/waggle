@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="waggle gives agent handoffs a first-class reference: a ~30-byte attributed token that each subagent resolves into its own projection, interrogates under byte budgets where the bytes live, and leaves payload-free receipts. Share names, not payloads.">
+    <meta property="og:title" content="waggle — tracked file paths for agents">
+    <meta property="og:description" content="Share names, not payloads. A ~30-byte attributed token replaces context-forwarding between agents and subagents.">
+    <meta property="og:type" content="website">
+    <title>waggle — tracked file paths for agents</title>
+    <link rel="icon" href="./assets/logo.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./assets/styles.css?v=1">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="./index.html" aria-label="waggle home">
+        <img src="./assets/logo.svg" alt=""> waggle
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="#unlock">The unlock</a>
+        <a href="#how">How it works</a>
+        <a href="#files">By file type</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/modiqo/waggle/tree/main/paper">Paper</a>
+        <a class="ghost" href="https://github.com/modiqo/waggle">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <!-- ================= HERO ================= -->
+      <section class="hero plain wrap">
+        <div class="kicker">share names, not payloads</div>
+        <h1>Tracked file paths for agents.</h1>
+        <p class="lede">
+          You already hand subagents <code>/tmp/result.md</code>. waggle makes that
+          reference <strong>attributed</strong>, <strong>resolvable</strong> from any
+          harness, <strong>revocable</strong>, and <strong>counted</strong> — a ~30-byte
+          token instead of a re-pasted payload.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#install">Install</a>
+          <a class="btn btn-ghost" href="https://github.com/modiqo/waggle/tree/main/paper">Read the paper</a>
+          <a class="btn btn-ghost" href="https://github.com/modiqo/waggle">GitHub &#8599;</a>
+        </div>
+        <div class="hero-visual">
+          <img src="./assets/hero.svg" alt="One name travels; each consumer resolves its own truthful rendering, where the bytes live">
+        </div>
+      </section>
+
+      <!-- ================= THE UNLOCK ================= -->
+      <section id="unlock">
+        <div class="wrap">
+          <div class="eyebrow">the unlock</div>
+          <h2>Each handoff loses context. That's a copy problem.</h2>
+          <div class="prose">
+            <p>
+              LLM APIs are <strong>stateless</strong> — every turn re-sends the whole
+              conversation. Paste a 40&nbsp;KB report into a subagent and you pay for it on
+              <em>every</em> subsequent turn of that agent's life. Add a second subagent and
+              the report lives in two context windows; add a fact-checker, three. Multi-agent
+              systems run at ~15&times; the tokens of a chat, and roughly <strong>37%</strong>
+              of their failures trace to agents acting on divergent copies of what should have
+              been the same information.
+            </p>
+            <p>
+              A raw file path is the right instinct — 30 bytes is the right size for a handoff.
+              But a path has no attribution, no adaptation, no lifecycle, no telemetry, and no
+              reach. waggle keeps the reference small and makes it <em>answer back</em>.
+            </p>
+          </div>
+          <figure class="figure">
+            <img src="./assets/context.svg" alt="Three context windows: a copy fills the window and re-bills; a raw path is cheap but silent; a waggle token stays small and returns budgeted, counted slices">
+          </figure>
+
+          <div class="cards">
+            <div class="card">
+              <h3>Copy</h3>
+              <div class="tag">message passing</div>
+              <p>Send the bytes. Simple &mdash; and every pathology follows: n copies, no identity, corrections that never propagate. Today's default.</p>
+            </div>
+            <div class="card">
+              <h3>Place</h3>
+              <div class="tag">shared memory</div>
+              <p>Both parties touch one location. Fixes duplication, but needs shared infrastructure and says nothing about who may see what.</p>
+            </div>
+            <div class="card accent">
+              <h3>Name</h3>
+              <div class="tag">references &mdash; waggle</div>
+              <p>Send a small, immutable, attributed claim. Resolution is computed per consumer, at the data, on demand. The bee's discipline, made durable.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= HOW IT WORKS ================= -->
+      <section id="how">
+        <div class="wrap">
+          <div class="eyebrow">how it works</div>
+          <h2>Mint once. Hand off one line. The rest is receipts.</h2>
+          <p class="section-lede">
+            A <strong>token</strong> is a ~30-byte attributed name. Behind it, a signed
+            manifest with <em>variants</em> &mdash; different projections for different
+            consumers. Every step lands as a payload-free event; the log is the truth,
+            the funnel is a fold.
+          </p>
+          <figure class="figure">
+            <img src="./assets/loop.svg" alt="The author's loop: mint, hand off, resolve, interrogate, funnel — each landing as an event in the append-only log, with corrections traveling to every holder">
+          </figure>
+
+          <div class="step">
+            <div class="n">1</div>
+            <div class="body">
+              <h3>Mint &mdash; an identity in one call</h3>
+              <p>Pin the artifact's bytes with <code>--snapshot</code>; the response hands you the exact line to give a subagent.</p>
+<pre><span class="k">waggle</span> mint <span class="k">--target</span> <span class="s">"file://$PWD/q3-report.md"</span> <span class="k">--snapshot</span>
+<span class="c">#  &#8594; { "token": "b2uQyZUC",</span>
+<span class="c">#      "handoff": "resolve b2uQyZUC via waggle for your working context" }</span></pre>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">2</div>
+            <div class="body">
+              <h3>Hand off that one line</h3>
+              <p>To a Codex session, a Cursor agent, a teammate &mdash; instead of the file's contents. Only the 30-byte string enters their context.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">3</div>
+            <div class="body">
+              <h3>The other side works, surgically</h3>
+              <p>No re-paste, no re-upload. The snapshot pinned the bytes, so this works even after the file changes &mdash; or from a machine that never had it.</p>
+<pre><span class="k">waggle</span> resolve <span class="k">--token</span> b2uQyZUC          <span class="c"># its own projection</span>
+<span class="k">waggle</span> search  <span class="k">--token</span> b2uQyZUC <span class="k">--pattern</span> <span class="s">"pricing"</span>  <span class="c"># grep THROUGH the token</span>
+<span class="k">waggle</span> read    <span class="k">--token</span> b2uQyZUC <span class="k">--lines</span> 40-80    <span class="c"># a window, never the whole artifact</span></pre>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">4</div>
+            <div class="body">
+              <h3>You stay in control &mdash; and you can <em>see</em> it</h3>
+              <p>A correction reaches every holder, including caches, which answer <span class="mono">410</span>. And the funnel shows the handoff was actually consumed.</p>
+<pre><span class="k">waggle</span> mutate <span class="k">--token</span> b2uQyZUC <span class="k">--change</span> revoke <span class="k">--expected-version</span> 1
+<span class="k">waggle</span> funnel <span class="k">--token</span> b2uQyZUC
+<span class="c">#  { "resolve": 1, "read": 2, "run": 1 }   &#8592; it resolved, searched, ran</span></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= BY FILE TYPE ================= -->
+      <section id="files">
+        <div class="wrap">
+          <div class="eyebrow">by file type</div>
+          <h2>The right lens for each artifact</h2>
+          <p class="section-lede">
+            The lens engine is text-first, not markdown-first &mdash; structure is discovered
+            from the content type, so the loop you learn on a report works on a lockfile.
+          </p>
+          <figure class="figure">
+            <img src="./assets/lenses.svg" alt="Prose affords outline/section/lines/search; source code affords symbol/lines/search plus symbol contracts, its outline extracted at mint; binaries become text via --content or ride as media via --attach">
+          </figure>
+
+          <div class="prose">
+            <p><strong>Source code</strong> is where the lens shines. <code>--snapshot</code>
+            runs tree-sitter at mint and stores a <em>symbol outline</em> beside the bytes.
+            The consumer orients before it greps, reads a definition by name, and you can
+            declare &mdash; and <em>prove</em> &mdash; what a reviewer had to reach:</p>
+<pre><span class="k">waggle</span> mint  <span class="k">--target</span> <span class="s">"file://$PWD/src/contract.rs"</span> <span class="k">--snapshot</span> \
+      <span class="k">--require</span> symbol:evaluate           <span class="c"># a consumption contract, signed at mint</span>
+<span class="k">waggle</span> read     <span class="k">--token</span> 9u6KEr6F <span class="k">--symbol</span> evaluate   <span class="c"># exact definition, no window guessing</span>
+<span class="k">waggle</span> coverage <span class="k">--token</span> 9u6KEr6F              <span class="c"># { met: true } &#8592; the region was reached</span></pre>
+          </div>
+          <div class="callout green">
+            <p><strong>Verification without trust.</strong> A subagent that claims to have
+            followed the plan with <code>met: false</code> gets caught before its answer is
+            trusted &mdash; check the receipt, then record <code>accepted</code> or
+            <code>rejected</code>. This is the question no orchestrator could ask before:
+            <em>did it actually read what I gave it?</em></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= INSTALL ================= -->
+      <section id="install">
+        <div class="wrap">
+          <div class="eyebrow">install</div>
+          <h2>One binary. One config line. No account.</h2>
+          <p class="section-lede">Pick one &mdash; all install the same <code>waggle</code> binary. It's an MCP server: one line in Claude Code, Codex, Cursor, or anything MCP-speaking.</p>
+          <div class="install-grid">
+            <div class="card">
+              <h3>cargo</h3>
+<pre><span class="k">cargo</span> install waggle-cli</pre>
+            </div>
+            <div class="card">
+              <h3>curl &mdash; no toolchain</h3>
+<pre><span class="k">curl</span> <span class="k">--proto</span> <span class="s">'=https'</span> <span class="k">--tlsv1.2</span> <span class="k">-LsSf</span> \
+  <span class="s">https://github.com/modiqo/waggle/releases/latest/download/waggle-cli-installer.sh</span> | sh</pre>
+            </div>
+            <div class="card">
+              <h3>homebrew</h3>
+<pre><span class="k">brew</span> install modiqo/homebrew-tap/waggle-cli</pre>
+            </div>
+          </div>
+
+          <div class="prose" style="margin-top: 34px;">
+            <p>Then wire it into your harness and repo &mdash; all three harnesses land on the
+            <strong>same daemon and the same tokens</strong>. What a Claude Code session mints,
+            a Codex session resolves.</p>
+<pre><span class="k">claude</span> mcp add waggle -- waggle serve --stdio     <span class="c"># ...and the same line in Codex/Cursor</span>
+<span class="k">waggle</span> init                                       <span class="c"># the agent stub, into CLAUDE.md/AGENTS.md</span></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= REACH ================= -->
+      <section id="reach">
+        <div class="wrap">
+          <div class="eyebrow">reach</div>
+          <h2>The same loop, at three radii</h2>
+          <p class="section-lede">
+            Every harness on a machine shares one daemon; daemons federate across machines;
+            and the same tokens graduate to Cloudflare's edge by <strong>replaying the log</strong>.
+            <code>search</code> greps <em>at the edge</em> against content whose source file
+            never left your laptop.
+          </p>
+          <figure class="figure">
+            <img src="./assets/reach.svg" alt="One token at three radii: harnesses through one daemon on a machine, daemon-to-daemon federation across machines, and a Cloudflare edge where grep runs while the source files never leave">
+          </figure>
+          <div class="prose">
+<pre><span class="k">npx</span> wrangler deploy               <span class="c"># a Durable Object per tenant, same certified engine</span>
+<span class="k">waggle</span> edge push                  <span class="c"># records + snapshots replicate; the FILES never leave</span>
+<span class="k">waggle</span> edge status                <span class="c"># { "health": "ok", "tools": 9 }</span></pre>
+            <p>An agent's loop &mdash; mint, hand off, resolve, interrogate, report &mdash; is
+            byte-for-byte the same whether the other end is in this process, on another machine,
+            or on another continent.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= INSPIRATION ================= -->
+      <section id="dance">
+        <div class="wrap">
+          <div class="eyebrow">what inspired it</div>
+          <h2>She carries a reference, not the field.</h2>
+          <p class="section-lede">
+            A honeybee returns from a find and <em>dances</em> &mdash; angle encodes direction,
+            duration distance, vigor quality. Each follower resolves the reference herself, flies
+            her own flight. Twenty million years before context windows, evolution solved the
+            handoff problem, and it did not solve it by pasting the meadow into the prompt.
+          </p>
+          <figure class="figure">
+            <img src="./assets/dance.svg" alt="The waggle dance: a bee tracing a golden figure-eight, the sun's angle encoding direction, followers who each fly the reference themselves">
+          </figure>
+          <div class="prose">
+            <p>This is <strong>stigmergy</strong> &mdash; coordination through durable marks
+            rather than direct messages &mdash; and it is the same discipline distributed systems
+            spent forty years converging on: tuple spaces, named-data networking, capabilities,
+            leases, content addressing, the log-as-truth. The
+            <a href="https://github.com/modiqo/waggle/blob/main/docs/design/essay.md">essay</a>
+            traces the whole lineage.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= GO DEEPER ================= -->
+      <section id="deeper">
+        <div class="wrap">
+          <div class="eyebrow">go deeper</div>
+          <h2>Read the rigor</h2>
+          <div class="links">
+            <a class="link-card" href="https://github.com/modiqo/waggle/tree/main/paper">
+              <h3>The paper <span class="arrow">&#8599;</span></h3>
+              <p>The systems-paper treatment: the four-boundary analysis, the sealed matcher and coverage-fold algorithms, the measurements, the distributed-systems lineage.</p>
+            </a>
+            <a class="link-card" href="https://github.com/modiqo/waggle/blob/main/docs/design/essay.md">
+              <h3>The essay <span class="arrow">&#8599;</span></h3>
+              <p>Why it's shaped this way: the dance, stigmergy, and the primitives &mdash; tuple spaces, NDN, capabilities, leases, the log.</p>
+            </a>
+            <a class="link-card" href="https://github.com/modiqo/waggle/tree/main/docs/guide">
+              <h3>The guides <span class="arrow">&#8599;</span></h3>
+              <p>Eleven guides in reading order &mdash; the five-minute loop, harness wiring, surgical content, federation, the edge, the tmux switchboard.</p>
+            </a>
+            <a class="link-card" href="https://github.com/modiqo/waggle/blob/main/spec/waggle-spec.md">
+              <h3>The spec <span class="arrow">&#8599;</span></h3>
+              <p>Normative (RFC-2119): the token, the three-zone manifest, the sealed matcher, the log guarantees &mdash; plus conformance vectors generated from the implementation.</p>
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <p class="quote">She never carries the field home. She dances, and the hive knows.</p>
+        <p class="meta">
+          <a href="https://github.com/modiqo/waggle">GitHub</a> &nbsp;&#183;&nbsp;
+          <a href="https://crates.io/crates/waggle">crates.io</a> &nbsp;&#183;&nbsp;
+          <a href="https://github.com/modiqo/waggle/tree/main/paper">Paper</a> &nbsp;&#183;&nbsp;
+          MIT OR Apache-2.0 &nbsp;&#183;&nbsp; by <a href="https://modiqo.ai">Modiqo</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
