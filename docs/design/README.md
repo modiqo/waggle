@@ -16,7 +16,7 @@ Read in this order if you're new:
 
 | Doc | What it settles |
 |---|---|
-| [essay](essay.md) | The long-form front door (formerly the repository README): the dance, the problem, the sixty-second demo, the architecture at all three radii |
+| [essay](essay.md) | The inspiration essay: the waggle dance, stigmergy, and the distributed-systems lineage (tuple spaces, named-data networking, capabilities, leases, content addressing, the log) — why the design is shaped this way |
 | [02 — domain model](02-domain-model.md) | Tokens, the three-zone attribution manifest, variants, channels, lineage: the nouns and their invariants |
 | [03 — core architecture](03-core-architecture.md) | The sans-I/O discipline: time as a value, entropy as a parameter, effects at the edges |
 | [04 — event sourcing](04-event-sourcing.md) | The append-only log as truth; payload-free events; the reconstruct guarantees R-1..R-4 |

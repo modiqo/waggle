@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+  <defs>
+    <marker id="ln" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6472"/>
+    </marker>
+  </defs>
+  <rect width="1100" height="400" fill="#fffdf8"/>
+
+  <text x="550" y="40" text-anchor="middle" font-size="18" font-weight="bold" fill="#1f2430">one token — the right lens for each artifact</text>
+  <text x="550" y="62" text-anchor="middle" font-size="12.5" fill="#667085">structure is discovered from the content type; the loop you learn on a report works on a lockfile</text>
+
+  <!-- ============ Panel 1: prose ============ -->
+  <g font-size="13" fill="#1f2430">
+    <text x="185" y="104" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#5a6472">prose  ·  .md .txt</text>
+    <!-- doc glyph -->
+    <rect x="120" y="120" width="130" height="86" rx="6" fill="#ffffff" stroke="#9aa1ad"/>
+    <rect x="136" y="136" width="70" height="7" rx="3" fill="#c9860a"/>
+    <rect x="136" y="152" width="98" height="5" rx="2.5" fill="#d9dce1"/>
+    <rect x="136" y="164" width="86" height="5" rx="2.5" fill="#d9dce1"/>
+    <rect x="136" y="180" width="54" height="7" rx="3" fill="#c9860a"/>
+    <rect x="136" y="194" width="92" height="5" rx="2.5" fill="#d9dce1"/>
+    <!-- token -->
+    <rect x="130" y="232" width="110" height="34" rx="8" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.5"/>
+    <text x="185" y="254" text-anchor="middle" font-size="13">mint --snapshot</text>
+    <line x1="185" y1="206" x2="185" y2="230" stroke="#5a6472" marker-end="url(#ln)"/>
+    <!-- lenses -->
+    <text x="185" y="300" text-anchor="middle" font-size="11.5" fill="#667085">the lenses it affords</text>
+    <text x="185" y="322" text-anchor="middle" font-size="12.5" fill="#2c5134">outline · section · lines</text>
+    <text x="185" y="342" text-anchor="middle" font-size="12.5" fill="#2c5134">search</text>
+    <line x1="185" y1="266" x2="185" y2="286" stroke="#5a6472" marker-end="url(#ln)"/>
+  </g>
+
+  <!-- ============ Panel 2: code ============ -->
+  <g font-size="13" fill="#1f2430">
+    <text x="550" y="104" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#5a6472">code  ·  .rs .py .ts .go</text>
+    <!-- code glyph -->
+    <rect x="485" y="120" width="130" height="86" rx="6" fill="#ffffff" stroke="#9aa1ad"/>
+    <text x="499" y="140" font-size="11" fill="#3a7d44">fn</text><rect x="519" y="132" width="52" height="6" rx="3" fill="#d9dce1"/>
+    <text x="509" y="158" font-size="11" fill="#667085">·</text><rect x="519" y="150" width="74" height="5" rx="2.5" fill="#eceef1"/>
+    <text x="499" y="178" font-size="11" fill="#3a7d44">impl</text><rect x="533" y="170" width="44" height="6" rx="3" fill="#d9dce1"/>
+    <text x="509" y="196" font-size="11" fill="#667085">·</text><rect x="519" y="188" width="66" height="5" rx="2.5" fill="#eceef1"/>
+    <!-- token -->
+    <rect x="490" y="232" width="120" height="34" rx="8" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.5"/>
+    <text x="550" y="254" text-anchor="middle" font-size="12.5">mint --snapshot</text>
+    <line x1="550" y1="206" x2="550" y2="230" stroke="#5a6472" marker-end="url(#ln)"/>
+    <text x="550" y="224" text-anchor="middle" font-size="10.5" fill="#667085">tree-sitter extracts a symbol outline at mint</text>
+    <!-- lenses -->
+    <text x="550" y="300" text-anchor="middle" font-size="11.5" fill="#667085">the lenses it affords</text>
+    <text x="550" y="322" text-anchor="middle" font-size="12.5" fill="#2c5134">symbol · lines · search</text>
+    <text x="550" y="342" text-anchor="middle" font-size="12.5" fill="#2c5134">--require symbol:NAME</text>
+    <line x1="550" y1="266" x2="550" y2="286" stroke="#5a6472" marker-end="url(#ln)"/>
+  </g>
+
+  <!-- ============ Panel 3: binary ============ -->
+  <g font-size="13" fill="#1f2430">
+    <text x="915" y="104" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#5a6472">binary  ·  pdf image voice</text>
+    <!-- pdf + wave glyph -->
+    <rect x="850" y="120" width="130" height="86" rx="6" fill="#ffffff" stroke="#9aa1ad"/>
+    <path d="M 866 178 q 10 -30 20 0 t 20 0 t 20 0 t 20 0 t 20 0" fill="none" stroke="#b3423a" stroke-width="2"/>
+    <text x="915" y="152" text-anchor="middle" font-size="11" fill="#667085">opaque bytes</text>
+    <!-- two routes -->
+    <rect x="850" y="232" width="130" height="34" rx="8" fill="#fbeeec" stroke="#b3423a" stroke-width="1.3"/>
+    <text x="915" y="250" text-anchor="middle" font-size="10.5" fill="#7a2d27">extract text → content</text>
+    <text x="915" y="262" text-anchor="middle" font-size="10.5" fill="#7a2d27">or --attach (media)</text>
+    <line x1="915" y1="206" x2="915" y2="230" stroke="#5a6472" marker-end="url(#ln)"/>
+    <!-- lenses -->
+    <text x="915" y="300" text-anchor="middle" font-size="11.5" fill="#667085">then it reads like text</text>
+    <text x="915" y="322" text-anchor="middle" font-size="12.5" fill="#2c5134">lines · search</text>
+    <text x="915" y="342" text-anchor="middle" font-size="12.5" fill="#2c5134">media → vision/voice consumers</text>
+    <line x1="915" y1="266" x2="915" y2="286" stroke="#5a6472" marker-end="url(#ln)"/>
+  </g>
+
+  <text x="550" y="384" text-anchor="middle" font-size="12" fill="#5a6472">every response fits a byte budget and names the bytes it spared you</text>
+</svg>

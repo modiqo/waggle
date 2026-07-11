@@ -8,7 +8,7 @@ where your question is.
 | | |
 |---|---|
 | [**WHY.md**](WHY.md) | The cornerstone essay: how resources actually pass between agents today (the four-boundary matrix), what it costs, why provider optimizations don't transfer, the bee that inspired the design — and how the substrate works at every radius. |
-| [**The essay**](design/essay.md) | The long-form front door (formerly the repository README): the dance, the problem, the demo, the architecture at all three radii. |
+| [**The essay**](design/essay.md) | The inspiration essay: the waggle dance, stigmergy, and the distributed-systems lineage (tuple spaces, named-data networking, capabilities, leases, the log) — why the design is shaped this way. |
 
 ## How do I use it? *(the guides — in reading order)*
 
