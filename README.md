@@ -36,10 +36,24 @@ release).
 
 ## Install & first handoff
 
+Pick one — all install the same `waggle` binary:
+
 ```bash
-cargo install waggle-cli                          # on crates.io
+cargo install waggle-cli                          # from crates.io
+
+# ...or a prebuilt binary, no Rust toolchain needed:
+curl --proto '=https' --tlsv1.2 -LsSf \
+  https://github.com/modiqo/waggle/releases/latest/download/waggle-cli-installer.sh | sh
+
+# ...or Homebrew:
+brew install modiqo/homebrew-tap/waggle-cli
+```
+
+Then wire it into your harness and repo:
+
+```bash
 claude mcp add waggle -- waggle serve --stdio     # ...and the same line in Codex/Cursor
-waggle init                                       # the 5-line agent stub, into CLAUDE.md/AGENTS.md
+waggle init                                       # the agent stub, into CLAUDE.md/AGENTS.md
 ```
 
 ```bash
