@@ -128,6 +128,9 @@ enum Cmd {
         /// Markdown heading whose section to read (text/markdown lens).
         #[arg(long)]
         section: Option<String>,
+        /// Code symbol whose definition to read (symbol lens — tokens minted with a snapshot of source code); the overview's `symbols` lists what exists.
+        #[arg(long)]
+        symbol: Option<String>,
         /// JSON pointer into parsed content (application/json lens), e.g. /dependencies/react.
         #[arg(long)]
         path: Option<String>,
@@ -293,6 +296,7 @@ fn main() {
             token,
             lines,
             section,
+            symbol,
             path,
             max_bytes,
         } => run::tool_call(
@@ -301,6 +305,7 @@ fn main() {
                 "token": token,
                 "lines": lines,
                 "section": section,
+                "symbol": symbol,
                 "path": path,
                 "max-bytes": max_bytes,
             })),

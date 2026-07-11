@@ -172,24 +172,40 @@ pub(crate) fn mint_next(token: &str, target: &str) -> Vec<NextCall> {
     next
 }
 
+/// Directories no source-tree handoff means to include (doc `20 §5.7`):
+/// generated and vendored trees that would blow the file cap or snapshot
+/// junk. Full `.gitignore` fidelity is a planned follow-up; the deny-list
+/// covers the trees that actually bite.
+const DENIED_DIRS: &[&str] = &[
+    "node_modules",
+    "target",
+    "dist",
+    "build",
+    "out",
+    "vendor",
+    "__pycache__",
+    ".venv",
+    "venv",
+];
+
 /// Recursive file collection for `mint --tree`: dotfiles and dot-dirs
-/// skipped, symlinks not followed (walk what IS the folder).
+/// skipped, generated/vendored dirs denied, symlinks not followed (walk
+/// what IS the folder).
 fn collect_files(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        let hidden = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .is_some_and(|n| n.starts_with('.'));
-        if hidden {
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if name.starts_with('.') {
             continue;
         }
         let Ok(meta) = entry.metadata() else { continue };
         if meta.is_dir() {
-            collect_files(&path, out);
+            if !DENIED_DIRS.contains(&name) {
+                collect_files(&path, out);
+            }
         } else if meta.is_file() {
             out.push(path);
         }

@@ -278,8 +278,14 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             ));
         }
         if snapshot {
-            let media = self.snapshot_target(spec.target_str()).await?;
+            let (media, bytes) = self.snapshot_target(spec.target_str()).await?;
             spec = spec.content(media);
+            // The symbol lens (20 §5.4): structure computed here, where
+            // the artifact is at hand, stored beside the snapshot.
+            let target = spec.target_str().to_owned();
+            if let Some(outline) = self.outline_for(&target, &bytes).await {
+                spec = spec.outline(outline);
+            }
         }
         if let Some(path) = extracted {
             // The format boundary (doc 18 §7): the harness extracted this
@@ -668,8 +674,27 @@ fn parse_context(args: &Map<String, Value>) -> Result<ResolverContext, Envelope>
     })
 }
 
-/// Extension → content type, for the common media cases.
+/// Extension → content type, for the common media cases. Extension-less
+/// code carriers are matched by basename (doc `20 §1` gap 1) — a
+/// Makefile is text, whatever its name says.
 pub(crate) fn infer_content_type(path: &str) -> &'static str {
+    let basename = path.rsplit(['/', '\\']).next().unwrap_or(path);
+    if matches!(
+        basename,
+        "Makefile"
+            | "makefile"
+            | "GNUmakefile"
+            | "Dockerfile"
+            | "Containerfile"
+            | "justfile"
+            | "Justfile"
+            | "Rakefile"
+            | "Gemfile"
+            | "Procfile"
+            | "Vagrantfile"
+    ) {
+        return "text/plain";
+    }
     match path
         .rsplit('.')
         .next()

@@ -37,6 +37,9 @@ struct ImmutableCore<'m> {
     /// exact canonical bytes — existing signatures stay valid (19 §4.2).
     #[serde(skip_serializing_if = "Option::is_none")]
     contract: &'m Option<crate::Contract>,
+    /// Same absence rule as `contract` (20 §3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    outline: &'m Option<MediaRef>,
 }
 
 /// The bytes a signature covers.
@@ -59,6 +62,7 @@ pub fn canonical_core_bytes(m: &AttributionManifest) -> Vec<u8> {
         variants: &m.variants,
         private: m.private,
         contract: &m.contract,
+        outline: &m.outline,
     };
     serde_json::to_vec(&core).expect("core fields always serialize")
 }
@@ -209,16 +213,51 @@ mod tests {
 
     #[test]
     fn contract_free_canonical_bytes_never_mention_the_field() {
-        // The 19 §4.2 compatibility rule, checked at the byte level: a
-        // manifest without a contract serializes exactly as it did before
-        // the field existed (the pinned vector in
-        // `signature_round_trip_vector` proves the same end to end).
+        // The 19 §4.2 / 20 §3 compatibility rule, checked at the byte
+        // level: a manifest without a contract or outline serializes
+        // exactly as it did before the fields existed (the pinned vector
+        // in `signature_round_trip_vector` proves the same end to end).
         let m = minted();
-        let bytes = canonical_core_bytes(&m);
+        let bytes = String::from_utf8(canonical_core_bytes(&m)).unwrap();
         assert!(
-            !String::from_utf8(bytes).unwrap().contains("contract"),
+            !bytes.contains("contract"),
             "absent contract must leave canonical bytes untouched"
         );
+        assert!(
+            !bytes.contains("outline"),
+            "absent outline must leave canonical bytes untouched"
+        );
+    }
+
+    #[test]
+    fn outline_pointer_is_signed_with_the_core() {
+        let mut entropy = |b: &mut [u8]| {
+            b.fill(42);
+            Ok(())
+        };
+        let media = MediaRef {
+            uri: CanonicalUrl::new("cas://ab").unwrap(),
+            content_type: "application/waggle-outline+json".into(),
+            size: 512,
+            sha256: crate::Sha256Hex::new(&"ab".repeat(32)).unwrap(),
+        };
+        let mut m = crate::mint(
+            MintSpec::new(
+                CanonicalUrl::new("ws://trust/outlined").unwrap(),
+                Sharer::new("lead").unwrap(),
+                Channel::subagent_general(),
+            )
+            .outline(media),
+            &MintOptions::default(),
+            &mut entropy,
+            Timestamp::from_unix_ms(1),
+        )
+        .unwrap();
+        m.signature = Some(sign_manifest(&m, &key()));
+        assert!(matches!(verify_manifest(&m), SignatureStatus::Valid { .. }));
+        // The pointer is signed: swapping the outline invalidates.
+        m.outline = None;
+        assert_eq!(verify_manifest(&m), SignatureStatus::Invalid);
     }
 
     #[test]
