@@ -1,74 +1,75 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 480" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
-  <defs>
-    <radialGradient id="cwarm" cx="50%" cy="34%" r="82%">
-      <stop offset="0%" stop-color="#fffefb"/><stop offset="70%" stop-color="#fdf7ea"/><stop offset="100%" stop-color="#f3e8cf"/>
-    </radialGradient>
-    <linearGradient id="cgold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f4cf78"/><stop offset="100%" stop-color="#c9860a"/>
-    </linearGradient>
-    <filter id="cdrop" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="4" stdDeviation="7" flood-color="#6b4e15" flood-opacity="0.14"/>
-    </filter>
-    <pattern id="ccomb" width="52" height="45" patternUnits="userSpaceOnUse">
-      <path d="M13 0 L39 0 L52 22.5 L39 45 L13 45 L0 22.5 Z" fill="none" stroke="#e8d9b4" stroke-width="1" opacity="0.4"/>
-    </pattern>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 610" width="1120" height="610" font-family="'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace">
+  <style>
+    text { font-family: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; }
+    .ink{fill:#141414} .muted{fill:#6a6b70} .faint{fill:#9b9ca1}
+    .red{fill:#b23b30} .honey{fill:#b8791a} .green{fill:#1f7a3f}
+    .b{font-weight:600}
+  </style>
 
-  <rect width="1000" height="480" fill="url(#cwarm)"/>
-  <rect width="1000" height="480" fill="url(#ccomb)" opacity="0.5"/>
+  <rect x="0" y="0" width="1120" height="610" fill="#ffffff"/>
 
-  <text x="500" y="52" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="26" font-weight="600" fill="#241d12">What enters the consumer's context window</text>
-  <text x="500" y="76" text-anchor="middle" font-size="12.5" fill="#8a7a58">only the reference travels; the artifact never auto-expands</text>
+  <text x="560" y="56" text-anchor="middle" font-size="30" class="ink b" letter-spacing="-0.5">What enters the consumer's context window</text>
+  <text x="560" y="90" text-anchor="middle" font-size="16" class="muted">only the reference travels — the artifact never auto-expands</text>
 
-  <!-- ===== 1. full handoff (copy) ===== -->
-  <g filter="url(#cdrop)"><rect x="70" y="108" width="270" height="250" rx="12" fill="#ffffff" stroke="#e2c1bb"/></g>
-  <rect x="70" y="108" width="270" height="30" rx="12" fill="#fbeeec"/><rect x="70" y="126" width="270" height="12" fill="#fbeeec"/>
-  <text x="88" y="128" font-size="12" fill="#a3463e" font-weight="600">copy &#183; paste the artifact</text>
-  <g fill="#e7cfca">
-    <rect x="88" y="152" width="234" height="7" rx="3.5"/><rect x="88" y="166" width="220" height="7" rx="3.5"/>
-    <rect x="88" y="180" width="234" height="7" rx="3.5"/><rect x="88" y="194" width="210" height="7" rx="3.5"/>
-    <rect x="88" y="208" width="234" height="7" rx="3.5"/><rect x="88" y="222" width="226" height="7" rx="3.5"/>
-    <rect x="88" y="236" width="234" height="7" rx="3.5"/><rect x="88" y="250" width="214" height="7" rx="3.5"/>
-    <rect x="88" y="264" width="234" height="7" rx="3.5"/><rect x="88" y="278" width="200" height="7" rx="3.5"/>
-    <rect x="88" y="292" width="234" height="7" rx="3.5"/><rect x="88" y="306" width="222" height="7" rx="3.5"/>
-    <rect x="88" y="320" width="180" height="7" rx="3.5"/>
+  <!-- ============ CARD 1 : copy ============ -->
+  <rect x="40" y="128" width="328" height="348" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <text x="62" y="163" font-size="14.5" class="red b">copy · paste the artifact</text>
+  <line x1="40" y1="180" x2="368" y2="180" stroke="#f0d9d6" stroke-width="1.5"/>
+  <g fill="#e8e3dd">
+    <rect x="62" y="202" width="284" height="9" rx="2"/>
+    <rect x="62" y="224" width="238" height="9" rx="2"/>
+    <rect x="62" y="246" width="272" height="9" rx="2"/>
+    <rect x="62" y="268" width="216" height="9" rx="2"/>
+    <rect x="62" y="290" width="284" height="9" rx="2"/>
+    <rect x="62" y="312" width="198" height="9" rx="2"/>
+    <rect x="62" y="334" width="258" height="9" rx="2"/>
+    <rect x="62" y="356" width="176" height="9" rx="2"/>
+    <rect x="62" y="378" width="248" height="9" rx="2"/>
+    <rect x="62" y="400" width="150" height="9" rx="2"/>
+    <rect x="62" y="422" width="210" height="9" rx="2"/>
   </g>
-  <text x="205" y="384" text-anchor="middle" font-size="12" fill="#a3463e">re-billed every turn</text>
+  <text x="204" y="510" text-anchor="middle" font-size="14.5" class="red">re-billed every turn</text>
 
-  <!-- ===== 2. raw path (blind) ===== -->
-  <g filter="url(#cdrop)"><rect x="365" y="108" width="270" height="250" rx="12" fill="#ffffff" stroke="#dfe1e6"/></g>
-  <rect x="365" y="108" width="270" height="30" rx="12" fill="#f1f3f6"/><rect x="365" y="126" width="270" height="12" fill="#f1f3f6"/>
-  <text x="383" y="128" font-size="12" fill="#6b7280" font-weight="600">raw path &#183; cheap but blind</text>
-  <rect x="383" y="160" width="200" height="26" rx="6" fill="#f7f8fa" stroke="#e2e5ea"/>
-  <text x="393" y="177" font-size="11" fill="#8a92a0">/tmp/analysis.md</text>
-  <g fill="#c9ced6" font-size="12">
-    <text x="383" y="222">no attribution</text>
-    <text x="383" y="244">no adaptation</text>
-    <text x="383" y="266">no lifecycle</text>
-    <text x="383" y="288">no telemetry</text>
-    <text x="383" y="310">no reach</text>
+  <!-- ============ CARD 2 : raw path ============ -->
+  <rect x="396" y="128" width="328" height="348" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <text x="418" y="163" font-size="14.5" class="muted b">raw path · cheap but blind</text>
+  <line x1="396" y1="180" x2="724" y2="180" stroke="#e6e6e2" stroke-width="1.5"/>
+  <rect x="418" y="200" width="284" height="40" rx="4" fill="#f6f6f4" stroke="#d3d3ce" stroke-width="1.5"/>
+  <text x="434" y="225" font-size="15" class="ink">/tmp/analysis.md</text>
+  <text x="648" y="392" text-anchor="middle" font-size="88" fill="#eeeee9" class="b">?</text>
+  <g font-size="15" class="faint">
+    <text x="418" y="292">no attribution</text>
+    <text x="418" y="322">no adaptation</text>
+    <text x="418" y="352">no lifecycle</text>
+    <text x="418" y="382">no telemetry</text>
+    <text x="418" y="412">no reach</text>
   </g>
-  <text x="573" y="234" font-size="40" fill="#e6e9ee" font-weight="700" text-anchor="middle">?</text>
-  <text x="500" y="384" text-anchor="middle" font-size="12" fill="#6b7280">30 bytes, but silent</text>
+  <text x="560" y="510" text-anchor="middle" font-size="14.5" class="muted">30 bytes, but silent</text>
 
-  <!-- ===== 3. waggle token (answers back) ===== -->
-  <g filter="url(#cdrop)"><rect x="660" y="108" width="270" height="250" rx="12" fill="#ffffff" stroke="#e6cf9a"/></g>
-  <rect x="660" y="108" width="270" height="30" rx="12" fill="#fdf3dd"/><rect x="660" y="126" width="270" height="12" fill="#fdf3dd"/>
-  <text x="678" y="128" font-size="12" fill="#8a6a1e" font-weight="600">waggle &#183; the reference answers back</text>
-  <rect x="678" y="158" width="150" height="30" rx="15" fill="url(#cgold)" stroke="#8a5a08" stroke-width="1.1"/>
-  <text x="753" y="178" text-anchor="middle" font-size="13" fill="#2e1e04" font-weight="600">b2uQyZUC</text>
-  <!-- surgical slices pulled back -->
-  <g>
-    <rect x="678" y="204" width="234" height="26" rx="6" fill="#fbf6ea" stroke="#ecd9a8"/>
-    <text x="688" y="221" font-size="10.5" fill="#8a6a1e">resolve</text><text x="905" y="221" text-anchor="end" font-size="10.5" fill="#3a7d44">its projection</text>
-    <rect x="678" y="236" width="234" height="26" rx="6" fill="#fbf6ea" stroke="#ecd9a8"/>
-    <text x="688" y="253" font-size="10.5" fill="#8a6a1e">search "pricing"</text><text x="905" y="253" text-anchor="end" font-size="10.5" fill="#3a7d44">4 matches</text>
-    <rect x="678" y="268" width="234" height="26" rx="6" fill="#fbf6ea" stroke="#ecd9a8"/>
-    <text x="688" y="285" font-size="10.5" fill="#8a6a1e">read --lines 40-80</text><text x="905" y="285" text-anchor="end" font-size="10.5" fill="#3a7d44">a window</text>
-    <rect x="678" y="300" width="234" height="26" rx="6" fill="#eef4ee" stroke="#bcd2bc"/>
-    <text x="688" y="317" font-size="10.5" fill="#2c5134">funnel</text><text x="905" y="317" text-anchor="end" font-size="10.5" fill="#2c5134">resolve 1 &#183; read 2 &#183; run 1</text>
+  <!-- ============ CARD 3 : waggle ============ -->
+  <rect x="752" y="128" width="328" height="348" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <text x="774" y="163" font-size="14.5" class="honey b">waggle · answers back</text>
+  <line x1="752" y1="180" x2="1080" y2="180" stroke="#ecdcc0" stroke-width="1.5"/>
+  <rect x="774" y="198" width="152" height="42" rx="5" fill="#b8791a"/>
+  <text x="850" y="225" text-anchor="middle" font-size="16" fill="#ffffff" class="b">b2uQyZUC</text>
+  <g font-size="14">
+    <rect x="774" y="256" width="284" height="34" rx="4" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+    <text x="790" y="278" class="ink">resolve</text>
+    <text x="1042" y="278" text-anchor="end" class="muted">its projection</text>
+
+    <rect x="774" y="298" width="284" height="34" rx="4" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+    <text x="790" y="320" class="ink">search "pricing"</text>
+    <text x="1042" y="320" text-anchor="end" class="muted">4 matches</text>
+
+    <rect x="774" y="340" width="284" height="34" rx="4" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+    <text x="790" y="362" class="ink">read --lines 40–80</text>
+    <text x="1042" y="362" text-anchor="end" class="muted">a window</text>
+
+    <rect x="774" y="382" width="284" height="34" rx="4" fill="#eef6f0" stroke="#cfe3d6" stroke-width="1.5"/>
+    <text x="790" y="404" font-size="13" class="green b">funnel</text>
+    <text x="1042" y="404" text-anchor="end" font-size="13" class="green">resolve 1 · read 2 · run 1</text>
   </g>
-  <text x="795" y="384" text-anchor="middle" font-size="12" fill="#8a6a1e">30 bytes, budgeted slices, counted</text>
+  <text x="916" y="510" text-anchor="middle" font-size="14" class="ink">30 bytes · budgeted slices · counted</text>
 
-  <text x="500" y="446" text-anchor="middle" font-size="13" fill="#7a6a48">cheap like a path &#8212; <tspan font-style="italic" fill="#6b4a12">but the reference answers back</tspan></text>
+  <text x="560" y="576" text-anchor="middle" font-size="16" class="muted">cheap like a path — <tspan class="honey">but the reference answers back</tspan></text>
 </svg>

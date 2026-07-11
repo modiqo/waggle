@@ -3,9 +3,15 @@
 </h1>
 
 <p align="center">
-  <em>Tracked file paths for agents.</em><br>
-  You already hand subagents <code>/tmp/result.md</code> — waggle makes that
-  reference attributed, resolvable from any harness, revocable, and counted.
+  <strong>Not a path. Not a URL. A handoff that answers back.</strong>
+</p>
+
+<p align="center">
+  Locations are dumb — no per-agent shaping, no receipts, no way to fix them
+  once sent. waggle's 30-byte <strong>token</strong> resolves into each
+  agent's own view, <strong>counts every read</strong>, and propagates a
+  correction to every holder. A path can't do that; a URL needs a server;
+  this needs neither.
 </p>
 
 <p align="center">

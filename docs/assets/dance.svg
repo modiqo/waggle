@@ -1,113 +1,81 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600" font-family="'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace">
+  <style>
+    text { font-family: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; }
+    .ink{fill:#141414} .muted{fill:#6a6b70} .faint{fill:#9b9ca1}
+    .honey{fill:#b8791a} .b{font-weight:600}
+  </style>
   <defs>
-    <radialGradient id="warm" cx="50%" cy="42%" r="72%">
-      <stop offset="0%" stop-color="#fffefb"/>
-      <stop offset="62%" stop-color="#fdf7ea"/>
-      <stop offset="100%" stop-color="#f4ead3"/>
-    </radialGradient>
-    <linearGradient id="gold" x1="0" y1="1" x2="0.35" y2="0">
-      <stop offset="0%" stop-color="#e8a83a"/>
-      <stop offset="52%" stop-color="#d18f14"/>
-      <stop offset="100%" stop-color="#b0740c"/>
-    </linearGradient>
-    <linearGradient id="ribbon" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f3cf7e" stop-opacity="0.9"/>
-      <stop offset="100%" stop-color="#e0a63f" stop-opacity="0.5"/>
-    </linearGradient>
-    <linearGradient id="abd" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f0bd52"/>
-      <stop offset="100%" stop-color="#c9860a"/>
-    </linearGradient>
-    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
-      <feGaussianBlur stdDeviation="7" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <filter id="drop" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#7a5a12" flood-opacity="0.28"/>
-    </filter>
-    <pattern id="comb" width="56" height="48.5" patternUnits="userSpaceOnUse">
-      <path d="M14 0 L42 0 L56 24.25 L42 48.5 L14 48.5 L0 24.25 Z" fill="none" stroke="#e6d6ae" stroke-width="1.1" opacity="0.55"/>
-    </pattern>
+    <marker id="run" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 1 L9 5 L0 9 Z" fill="#b8791a"/>
+    </marker>
   </defs>
 
-  <rect width="900" height="600" fill="url(#warm)"/>
-  <rect width="900" height="600" fill="url(#comb)" opacity="0.6"/>
+  <rect x="0" y="0" width="900" height="600" fill="#ffffff"/>
 
-  <!-- sun, upper right: the reference direction -->
-  <g transform="translate(748 104)">
-    <circle r="66" fill="#ffe9ad" opacity="0.3"/>
-    <circle r="25" fill="#f7cf62"/>
-    <circle r="25" fill="none" stroke="#e0a63f" stroke-width="1.5"/>
-    <g stroke="#e6b452" stroke-width="2.4" stroke-linecap="round">
+  <!-- title -->
+  <text x="52" y="66" font-size="27" class="ink b" letter-spacing="-0.5">She carries a reference,</text>
+  <text x="52" y="100" font-size="27" class="ink b" letter-spacing="-0.5">not the field.</text>
+  <text x="52" y="132" font-size="14" class="muted">the waggle dance — an attributed, resolvable claim that the nectar exists</text>
+
+  <!-- sun: the reference direction -->
+  <g transform="translate(752 168)">
+    <circle r="24" fill="#faf3e6" stroke="#b8791a" stroke-width="1.5"/>
+    <g stroke="#b8791a" stroke-width="2" stroke-linecap="round">
       <line x1="0" y1="-38" x2="0" y2="-30"/><line x1="27" y1="-27" x2="21" y2="-21"/>
       <line x1="38" y1="0" x2="30" y2="0"/><line x1="27" y1="27" x2="21" y2="21"/>
-      <line x1="-27" y1="27" x2="-21" y2="21"/><line x1="-38" y1="0" x2="-30" y2="0"/>
-      <line x1="-27" y1="-27" x2="-21" y2="-21"/><line x1="0" y1="38" x2="0" y2="30"/>
+      <line x1="0" y1="38" x2="0" y2="30"/><line x1="-27" y1="27" x2="-21" y2="21"/>
+      <line x1="-38" y1="0" x2="-30" y2="0"/><line x1="-27" y1="-27" x2="-21" y2="-21"/>
     </g>
-    <text y="56" text-anchor="middle" font-size="12.5" fill="#8a6a1e">the sun</text>
+    <text y="56" text-anchor="middle" font-size="12.5" class="honey">the sun</text>
   </g>
 
-  <!-- the figure-eight dance path -->
-  <g fill="none" stroke="url(#ribbon)" stroke-width="16" stroke-linecap="round">
+  <!-- figure-eight dance path -->
+  <g fill="none" stroke="#e2c78e" stroke-width="2.5" stroke-linecap="round">
     <path d="M470 210 C 330 150, 250 300, 330 380 C 400 448, 452 400, 452 400"/>
     <path d="M470 210 C 610 150, 690 300, 610 380 C 540 448, 452 400, 452 400"/>
   </g>
-  <path d="M470 210 C 330 150, 250 300, 330 380" fill="none" stroke="#c9860a" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round" opacity="0.45"/>
-  <path d="M470 210 C 610 150, 690 300, 610 380" fill="none" stroke="#c9860a" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round" opacity="0.45"/>
-
-  <!-- the waggle run: the straight middle, angled to vertical = direction -->
-  <g filter="url(#soft)">
-    <line x1="452" y1="402" x2="470" y2="214" stroke="url(#gold)" stroke-width="9" stroke-linecap="round"/>
-  </g>
-  <path d="M470 208 l -11 17 l 22 0 z" fill="#b0740c"/>
 
   <!-- vertical reference + angle -->
-  <line x1="461" y1="402" x2="461" y2="214" stroke="#b9a67e" stroke-width="1.6" stroke-dasharray="4 5"/>
-  <path d="M461 252 A 42 42 0 0 1 475 234" fill="none" stroke="#a88a3e" stroke-width="1.6"/>
-  <text x="486" y="250" font-size="13" fill="#8a6a1e">&#952;</text>
+  <line x1="461" y1="402" x2="461" y2="216" stroke="#c9c9c4" stroke-width="1.5" stroke-dasharray="4 5"/>
+  <path d="M461 250 A 40 40 0 0 1 474 232" fill="none" stroke="#9b9ca1" stroke-width="1.5"/>
+  <text x="486" y="248" font-size="14" class="muted">θ</text>
+
+  <!-- the waggle run: straight middle, angled to vertical = direction -->
+  <line x1="452" y1="402" x2="470" y2="214" stroke="#b8791a" stroke-width="5" stroke-linecap="round" marker-end="url(#run)"/>
 
   <!-- the dancing bee, riding the run -->
-  <g transform="translate(461 305) rotate(-6)" filter="url(#drop)">
-    <ellipse cx="-4" cy="-20" rx="15" ry="30" fill="#ffffff" opacity="0.6" transform="rotate(-28 -4 -20)" stroke="#e6d8b4" stroke-width="1"/>
-    <ellipse cx="12" cy="-20" rx="15" ry="30" fill="#ffffff" opacity="0.6" transform="rotate(28 12 -20)" stroke="#e6d8b4" stroke-width="1"/>
-    <ellipse cx="4" cy="18" rx="16" ry="30" fill="url(#abd)" stroke="#8a5a08" stroke-width="1.4"/>
-    <path d="M-11 10 q 15 7 30 0" fill="none" stroke="#2a2117" stroke-width="4.5" stroke-linecap="round"/>
-    <path d="M-12 22 q 16 7 32 0" fill="none" stroke="#2a2117" stroke-width="4.5" stroke-linecap="round"/>
-    <path d="M-10 34 q 14 6 28 0" fill="none" stroke="#2a2117" stroke-width="4" stroke-linecap="round"/>
-    <ellipse cx="3" cy="-8" rx="12" ry="13" fill="#6b4a12" stroke="#3a2a0e" stroke-width="1.2"/>
-    <circle cx="2" cy="-24" r="8" fill="#2a2117"/>
-    <path d="M-1 -30 q -8 -8 -12 -6" fill="none" stroke="#2a2117" stroke-width="1.6" stroke-linecap="round"/>
-    <path d="M5 -30 q 8 -8 12 -6" fill="none" stroke="#2a2117" stroke-width="1.6" stroke-linecap="round"/>
-    <g stroke="#c9860a" stroke-width="2" stroke-linecap="round" opacity="0.8">
-      <line x1="-22" y1="12" x2="-30" y2="10"/><line x1="26" y1="12" x2="34" y2="14"/>
-      <line x1="-22" y1="24" x2="-31" y2="26"/><line x1="26" y1="24" x2="35" y2="22"/>
-    </g>
+  <g transform="translate(461 306) rotate(-6)">
+    <ellipse cx="-8" cy="-16" rx="10" ry="21" fill="#ffffff" stroke="#d3d3ce" stroke-width="1.2" transform="rotate(-28 -8 -16)"/>
+    <ellipse cx="8"  cy="-16" rx="10" ry="21" fill="#ffffff" stroke="#d3d3ce" stroke-width="1.2" transform="rotate(28 8 -16)"/>
+    <ellipse cx="0" cy="14" rx="14" ry="26" fill="#b8791a" stroke="#8a5a12" stroke-width="1.4"/>
+    <path d="M-12 6  q 12 6 24 0" fill="none" stroke="#141414" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M-13 18 q 13 6 26 0" fill="none" stroke="#141414" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M-11 30 q 11 5 22 0" fill="none" stroke="#141414" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="0" cy="-8" rx="11" ry="12" fill="#3a2a0e"/>
+    <circle cx="0" cy="-24" r="7.5" fill="#141414"/>
+    <path d="M-3 -30 q -7 -8 -11 -6" fill="none" stroke="#141414" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M3 -30 q 7 -8 11 -6" fill="none" stroke="#141414" stroke-width="1.5" stroke-linecap="round"/>
   </g>
 
-  <!-- follower bees: each will fly the reference herself -->
+  <!-- follower bees: each flies the reference herself -->
   <g>
-    <g transform="translate(250 470) rotate(20)"><ellipse rx="6" ry="10" fill="url(#abd)" stroke="#8a5a08" stroke-width="0.8"/><circle cy="-11" r="3.5" fill="#2a2117"/><path d="M-6 -1 q6 3 12 0 M-6 4 q6 3 12 0" fill="none" stroke="#2a2117" stroke-width="1.6"/></g>
-    <g transform="translate(660 480) rotate(-24)"><ellipse rx="6" ry="10" fill="url(#abd)" stroke="#8a5a08" stroke-width="0.8"/><circle cy="-11" r="3.5" fill="#2a2117"/><path d="M-6 -1 q6 3 12 0 M-6 4 q6 3 12 0" fill="none" stroke="#2a2117" stroke-width="1.6"/></g>
-    <g transform="translate(360 522) rotate(6)"><ellipse rx="5" ry="8.5" fill="url(#abd)" stroke="#8a5a08" stroke-width="0.8"/><circle cy="-9.5" r="3" fill="#2a2117"/></g>
+    <g transform="translate(250 472) rotate(20)"><ellipse rx="6" ry="10" fill="#b8791a" stroke="#8a5a12" stroke-width="0.9"/><circle cy="-11" r="3.5" fill="#141414"/><path d="M-6 -1 q6 3 12 0 M-6 4 q6 3 12 0" fill="none" stroke="#141414" stroke-width="1.6"/></g>
+    <g transform="translate(662 482) rotate(-24)"><ellipse rx="6" ry="10" fill="#b8791a" stroke="#8a5a12" stroke-width="0.9"/><circle cy="-11" r="3.5" fill="#141414"/><path d="M-6 -1 q6 3 12 0 M-6 4 q6 3 12 0" fill="none" stroke="#141414" stroke-width="1.6"/></g>
+    <g transform="translate(360 524) rotate(6)"><ellipse rx="5" ry="8.5" fill="#b8791a" stroke="#8a5a12" stroke-width="0.9"/><circle cy="-9.5" r="3" fill="#141414"/></g>
   </g>
-  <path d="M300 452 C 360 420, 420 400, 452 388" fill="none" stroke="#c9860a" stroke-width="1.5" stroke-dasharray="1.5 8" stroke-linecap="round" opacity="0.55"/>
-  <path d="M612 462 C 552 424, 492 400, 458 388" fill="none" stroke="#c9860a" stroke-width="1.5" stroke-dasharray="1.5 8" stroke-linecap="round" opacity="0.55"/>
+  <path d="M300 454 C 360 422, 420 402, 452 390" fill="none" stroke="#d9be82" stroke-width="1.5" stroke-dasharray="1.5 8" stroke-linecap="round"/>
+  <path d="M612 464 C 552 426, 492 402, 458 390" fill="none" stroke="#d9be82" stroke-width="1.5" stroke-dasharray="1.5 8" stroke-linecap="round"/>
 
-  <!-- elegant sparse labels -->
-  <g font-size="13.5" fill="#6b4a12">
-    <text x="298" y="214" text-anchor="end">angle</text>
-    <text x="298" y="232" text-anchor="end" font-size="11.5" fill="#9a8250">&#8594; direction</text>
-    <line x1="306" y1="220" x2="356" y2="244" stroke="#cdb885" stroke-width="1.2"/>
+  <!-- labels -->
+  <g font-size="13.5">
+    <text x="300" y="214" text-anchor="end" class="ink">angle</text>
+    <text x="300" y="232" text-anchor="end" font-size="11.5" class="muted">→ direction</text>
+    <line x1="306" y1="220" x2="356" y2="244" stroke="#d3d3ce" stroke-width="1.2"/>
 
-    <text x="616" y="214">duration</text>
-    <text x="616" y="232" font-size="11.5" fill="#9a8250">&#8594; distance</text>
-    <line x1="610" y1="220" x2="562" y2="244" stroke="#cdb885" stroke-width="1.2"/>
+    <text x="616" y="214" class="ink">duration</text>
+    <text x="616" y="232" font-size="11.5" class="muted">→ distance</text>
+    <line x1="610" y1="220" x2="562" y2="244" stroke="#d3d3ce" stroke-width="1.2"/>
 
-    <text x="452" y="474" text-anchor="middle">vigor &#8594; quality</text>
+    <text x="452" y="476" text-anchor="middle" class="ink">vigor <tspan class="muted">→ quality</tspan></text>
   </g>
-
-  <!-- title -->
-  <text x="52" y="74" font-family="Fraunces, Georgia, serif" font-size="30" font-weight="600" fill="#241d12">She carries a reference,</text>
-  <text x="52" y="110" font-family="Fraunces, Georgia, serif" font-size="30" font-weight="600" fill="#241d12">not the field.</text>
-  <text x="54" y="142" font-size="13.5" fill="#8a7a58">the waggle dance &#8212; an attributed, resolvable claim that the nectar exists</text>
 </svg>
