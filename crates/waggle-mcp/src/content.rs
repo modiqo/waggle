@@ -20,6 +20,23 @@ pub fn is_text(content_type: &str) -> bool {
         )
 }
 
+/// The sniff fallback (doc `20 §5.1`): when the extension says nothing,
+/// the bytes decide. First 8 KiB: no NUL and valid UTF-8 up to a char
+/// boundary ⇒ text. Extension-less scripts and config files keep the
+/// full text loop instead of a binary refusal.
+#[must_use]
+pub fn sniff_is_text(bytes: &[u8]) -> bool {
+    let head = &bytes[..bytes.len().min(8 * 1024)];
+    if head.contains(&0) {
+        return false;
+    }
+    match core::str::from_utf8(head) {
+        Ok(_) => true,
+        // A multi-byte char cut at the window edge is still text.
+        Err(e) => e.valid_up_to() + 4 > head.len() && e.error_len().is_none(),
+    }
+}
+
 /// The lenses available for a content type — advertised in the overview.
 #[must_use]
 pub fn lenses_for(content_type: &str) -> Vec<&'static str> {

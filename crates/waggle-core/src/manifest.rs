@@ -281,6 +281,13 @@ pub struct AttributionManifest {
     /// pre-contract manifests keep their exact canonical bytes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub contract: Option<crate::Contract>,
+    /// The symbol outline blob (doc `20 §3`): structure extracted from
+    /// the snapshot at mint (`application/waggle-outline+json`,
+    /// content-addressed). A pointer only — the outline is content, not
+    /// manifest. Immutable core — signed; absent when no grammar
+    /// matched, so outline-free manifests keep their exact bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub outline: Option<MediaRef>,
     /// Author signature over the immutable core (CP-11); set at mint by
     /// hosts that hold an identity. NOT itself part of the signed bytes.
     #[serde(default, skip_serializing_if = "Option::is_none")]

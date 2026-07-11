@@ -11,12 +11,25 @@ use waggle_store::{AppendIntent, BlobSink, Store, StoreError};
 use crate::envelope::{Envelope, NextCall, Stats};
 use crate::handlers::{arg_str, infer_content_type, parse_token_arg, store_err, Handler};
 
+/// A token's servable content plus the manifest facts serves need:
+/// the contract (region stamping, 19 §4.2) and the outline pointer
+/// (the symbol lens, 20 §5.6).
+pub(crate) struct ContentView {
+    pub text: String,
+    pub content_type: String,
+    pub contract: Option<waggle_core::Contract>,
+    pub outline: Option<waggle_core::MediaRef>,
+}
+
 impl<S: Store, B: BlobSink> Handler<S, B> {
     /// Snapshot the target's bytes into the blob CAS (doc 18 §3).
+    /// Returns the bytes too — mint-time is the one moment the artifact
+    /// is at hand, and the symbol lens extracts from exactly these bytes
+    /// (20 §2).
     pub(crate) async fn snapshot_target(
         &self,
         target: &str,
-    ) -> Result<waggle_core::MediaRef, Envelope> {
+    ) -> Result<(waggle_core::MediaRef, Vec<u8>), Envelope> {
         let path = local_path(target).ok_or_else(|| {
             Envelope::err(
                 format!("snapshot: `{target}` is not a locally readable file path — snapshot works on file:// targets"),
@@ -24,10 +37,45 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             )
         })?;
         let bytes = read_capped(&path)?;
-        self.blobs
+        let media = self
+            .blobs
             .put(&bytes, infer_content_type(&path))
             .await
-            .map_err(|e| Envelope::err(e.to_string(), vec![]))
+            .map_err(|e| Envelope::err(e.to_string(), vec![]))?;
+        Ok((media, bytes))
+    }
+
+    /// Extract and pin the symbol outline from snapshot bytes (20 §5.4):
+    /// pure CPU at mint, absent whenever no grammar matches or nothing
+    /// parses — degradation is to the plain text loop, never an error.
+    #[cfg(feature = "code-lens")]
+    pub(crate) async fn outline_for(
+        &self,
+        target: &str,
+        bytes: &[u8],
+    ) -> Option<waggle_core::MediaRef> {
+        let lang = waggle_lens_code::detect(target)?;
+        let text = core::str::from_utf8(bytes).ok()?;
+        let outline = waggle_lens_code::extract(text, lang);
+        if outline.is_empty() {
+            return None;
+        }
+        self.blobs
+            .put(&outline.to_wire(), waggle_lens_code::OUTLINE_CONTENT_TYPE)
+            .await
+            .ok()
+    }
+
+    /// Without the `code-lens` feature (the edge's wasm build) no outline
+    /// is ever minted; serving existing outlines still works — they are
+    /// data (`outline_wire`).
+    #[cfg(not(feature = "code-lens"))]
+    pub(crate) async fn outline_for(
+        &self,
+        _target: &str,
+        _bytes: &[u8],
+    ) -> Option<waggle_core::MediaRef> {
+        None
     }
 
     /// Pin a harness-extracted text file as the token's searchable
@@ -52,13 +100,10 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
     }
 
     /// Fetch the token's content per doc 18 §3: snapshot blob first, then
-    /// the live local target. Returns `(text, content_type, contract)` —
-    /// the contract rides along so serves can stamp region touches
-    /// (19 §4.2) without a second manifest read.
-    async fn content_of(
-        &self,
-        token: Token,
-    ) -> Result<(String, String, Option<waggle_core::Contract>), Envelope> {
+    /// the live local target. The contract and outline pointer ride along
+    /// so serves can stamp region touches (19 §4.2) and offer the symbol
+    /// lens (20 §5.6) without a second manifest read.
+    async fn content_of(&self, token: Token) -> Result<ContentView, Envelope> {
         let view = match self.store.manifest(token).await {
             Ok(Some(v)) => v,
             Ok(None) => return Err(store_err(&StoreError::UnknownToken(token))),
@@ -90,20 +135,77 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 vec![],
             ));
         };
-        if !crate::content::is_text(&content_type) {
+        let content_type = if crate::content::is_text(&content_type) {
+            content_type
+        } else if crate::content::sniff_is_text(&bytes) {
+            // The extension said nothing but the bytes are text (gap 1,
+            // doc 20 §5.1): extension-less scripts keep the text loop.
+            "text/plain".to_owned()
+        } else {
             return Err(Envelope::err(
                 format!("content is {content_type} (binary) — fetch it via its MediaRef, or mint an extracted-text variant to make it searchable"),
                 vec![],
             ));
-        }
+        };
         String::from_utf8(bytes)
-            .map(|text| (text, content_type, view.manifest.contract.clone()))
+            .map(|text| ContentView {
+                text,
+                content_type,
+                contract: view.manifest.contract.clone(),
+                outline: view.manifest.outline.clone(),
+            })
             .map_err(|_| {
                 Envelope::err(
                     "content is not valid UTF-8 — treat it as binary media",
                     vec![],
                 )
             })
+    }
+
+    /// Resolve `--symbol NAME` against the token's outline blob
+    /// (20 §5.6). Every refusal names its fix: no outline, no such
+    /// symbol (candidates shown), or an ambiguous name (locations shown).
+    async fn resolve_symbol(
+        &self,
+        token: Token,
+        outline: Option<&waggle_core::MediaRef>,
+        name: &str,
+    ) -> Result<(usize, usize), Envelope> {
+        let Some(media) = outline else {
+            return Err(Envelope::err(
+                format!("{token} has no symbol outline — read the overview for the lenses it does afford"),
+                vec![NextCall {
+                    tool: "read".into(),
+                    args: json!({ "token": token.as_str() }),
+                    why: "the overview lists lenses and structure".into(),
+                }],
+            ));
+        };
+        let blob = self
+            .blobs
+            .get(media)
+            .await
+            .map_err(|e| Envelope::err(e.to_string(), vec![]))?;
+        match crate::outline_wire::find_symbol(&blob, name) {
+            crate::outline_wire::SymbolHit::Found(start, end) => Ok((
+                usize::try_from(start).unwrap_or(1),
+                usize::try_from(end).unwrap_or(usize::MAX),
+            )),
+            crate::outline_wire::SymbolHit::Ambiguous(sites) => Err(Envelope::err(
+                format!(
+                    "symbol `{name}` is ambiguous — pick a range: {}",
+                    sites.join(", ")
+                ),
+                vec![],
+            )),
+            crate::outline_wire::SymbolHit::Missing(known) => Err(Envelope::err(
+                format!(
+                    "no symbol `{name}` in the outline — it has: {}",
+                    known.join(", ")
+                ),
+                vec![],
+            )),
+        }
     }
 
     /// Record the `read` stage, stamping which contract regions the
@@ -130,17 +232,35 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             Ok(t) => t,
             Err(e) => return e,
         };
-        let (text, content_type, contract) = match self.content_of(token).await {
+        let view = match self.content_of(token).await {
             Ok(x) => x,
             Err(e) => return e,
         };
+        let (text, content_type, contract) = (view.text, view.content_type, view.contract);
         let max_bytes = args
             .get("max-bytes")
             .and_then(Value::as_u64)
             .and_then(|v| usize::try_from(v).ok())
             .unwrap_or(crate::query::DEFAULT_MAX_BYTES);
 
-        let result = if let Some(range) = arg_str(args, "lines") {
+        // The symbol lens (20 §5.6): resolve the name against the
+        // outline blob and serve the resolved window — region stamping
+        // then applies through the ordinary lines path.
+        let symbol_lines = if let Some(name) = arg_str(args, "symbol") {
+            match self
+                .resolve_symbol(token, view.outline.as_ref(), name)
+                .await
+            {
+                Ok(range) => Some(range),
+                Err(e) => return e,
+            }
+        } else {
+            None
+        };
+
+        let result = if let Some((from, to)) = symbol_lines {
+            crate::content::read_lines(&text, from, to, max_bytes)
+        } else if let Some(range) = arg_str(args, "lines") {
             let Some((from, to)) = range.split_once('-').and_then(|(a, b)| {
                 Some((
                     a.trim().parse::<usize>().ok()?,
@@ -173,7 +293,21 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 Err(hint) => return Envelope::err(hint, vec![]),
             }
         } else {
-            crate::content::overview(&text, &content_type, max_bytes)
+            let mut over = crate::content::overview(&text, &content_type, max_bytes);
+            // The symbols table of contents (20 §5.6): precomputed at
+            // mint, served as data — a CAS get and a budget fit, no
+            // parsing here or at the edge.
+            if let Some(media) = &view.outline {
+                if let Ok(blob) = self.blobs.get(media).await {
+                    if let Some(symbols) = crate::outline_wire::render(&blob, max_bytes / 2) {
+                        over["symbols"] = symbols;
+                        if let Some(lenses) = over["lenses"].as_array_mut() {
+                            lenses.push(Value::from("symbol"));
+                        }
+                    }
+                }
+            }
+            over
         };
 
         // The served window (`lines: "A-B"` on line and section lenses)
@@ -216,10 +350,11 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 }
             }
         }
-        let (text, _content_type, contract) = match self.content_of(token).await {
+        let view = match self.content_of(token).await {
             Ok(x) => x,
             Err(e) => return e,
         };
+        let (text, contract) = (view.text, view.contract);
         let context = args
             .get("context")
             .and_then(Value::as_u64)
@@ -339,10 +474,11 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             let Ok(Some(view)) = self.store.manifest(child).await else {
                 continue;
             };
-            let Ok((text, _, child_contract)) = self.content_of(child).await else {
+            let Ok(child_view) = self.content_of(child).await else {
                 skipped += 1; // no snapshot here (or binary) — named below
                 continue;
             };
+            let (text, child_contract) = (child_view.text, child_view.contract);
             searched += 1;
             let Ok(found) =
                 crate::content::search(&text, pattern, context, per_file, max_bytes / 4)

@@ -162,13 +162,23 @@ pub fn generate(root: &std::path::Path) -> std::io::Result<()> {
         900,
     )
     .expect("vector contract");
+    // The outline pointer rides the same absence rule (spec §2.2); the
+    // MediaRef here is fabricated — the vector pins the ENCODING of the
+    // signed pointer, not extraction (which is implementation-side).
+    let outline_ref = waggle_core::MediaRef {
+        uri: CanonicalUrl::new("cas://spec-vector-outline").unwrap(),
+        content_type: "application/waggle-outline+json".into(),
+        size: 512,
+        sha256: waggle_core::Sha256Hex::new(&"ab".repeat(32)).unwrap(),
+    };
     let contracted = mint(
         MintSpec::new(
             CanonicalUrl::new("ws://spec/contracted-artifact").unwrap(),
             Sharer::new("spec").unwrap(),
             Channel::subagent_general(),
         )
-        .contract(contract),
+        .contract(contract)
+        .outline(outline_ref),
         &MintOptions::default(),
         &mut entropy,
         Timestamp::from_unix_ms(1_700_000_000_000),

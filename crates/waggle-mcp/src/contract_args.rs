@@ -5,11 +5,13 @@
 //! `--require` grammar, repeatable:
 //! - `lines:START-END` — a 1-based inclusive line range;
 //! - `section:HEADING` — sugar resolved AT MINT against the target's
-//!   outline (the artifact is at hand exactly once — mint time), stored
-//!   as the resolved range with the heading as its label. Contracts are
-//!   plain line ranges in the manifest; nothing re-resolves later.
+//!   markdown outline (the artifact is at hand exactly once — mint
+//!   time), stored as the resolved range with the heading as its label;
+//! - `symbol:NAME` — the code analog (doc `20 §5.6`): resolved at mint
+//!   against the extracted symbol outline (`code-lens` feature).
 //!
-//! `--min-coverage` is a fraction in (0, 1] of required regions
+//! Contracts are plain line ranges in the manifest; nothing re-resolves
+//! later. `--min-coverage` is a fraction in (0, 1] of required regions
 //! (default 1.0 — every region).
 
 use serde_json::{Map, Value};
@@ -56,6 +58,11 @@ pub(crate) fn parse_contract(
             })?;
             let clamp = |n: usize| u32::try_from(n).unwrap_or(u32::MAX);
             Region::new(Some(heading.trim().to_owned()), clamp(start), clamp(end), i)
+        } else if let Some(name) = spec.strip_prefix("symbol:") {
+            let name = name.trim();
+            let (start, end) = resolve_symbol_requirement(args, name, &mut text)
+                .map_err(|e| Envelope::err(format!("require: {e}"), vec![]))?;
+            Region::new(Some(name.to_owned()), start, end, i)
         } else {
             return Err(Envelope::err(bad_require(spec), vec![]));
         };
@@ -106,7 +113,59 @@ fn parse_range(range: &str) -> Option<(u32, u32)> {
 }
 
 fn bad_require(spec: &str) -> String {
-    format!("require `{spec}` — expected lines:START-END (1-based inclusive) or section:HEADING")
+    format!(
+        "require `{spec}` — expected lines:START-END (1-based inclusive), section:HEADING, or symbol:NAME"
+    )
+}
+
+/// Resolve a `symbol:NAME` requirement at mint (doc `20 §5.6`): extract
+/// the outline from the target's text and pin the definition's range.
+/// Every failure names its fix, including the build that cannot.
+#[cfg(feature = "code-lens")]
+fn resolve_symbol_requirement(
+    args: &Map<String, Value>,
+    name: &str,
+    text: &mut impl FnMut() -> Result<String, Envelope>,
+) -> Result<(u32, u32), String> {
+    let target = args.get("target").and_then(Value::as_str).unwrap_or("");
+    let lang = waggle_lens_code::detect(target)
+        .ok_or("symbol: the target has no supported grammar — declare lines:START-END")?;
+    let t = text().map_err(|_| "symbol: needs a locally readable target".to_owned())?;
+    let outline = waggle_lens_code::extract(&t, lang);
+    let hits = outline.find(name);
+    match hits.as_slice() {
+        [] => {
+            let known: Vec<&str> = (0..outline.len().min(12))
+                .filter_map(|i| outline.name_at(i))
+                .collect();
+            Err(format!(
+                "no symbol `{name}` — the outline has: {}",
+                known.join(", ")
+            ))
+        }
+        [one] => {
+            let (start, end, _) = outline.lines_of(*one).ok_or("outline index")?;
+            Ok((start, end))
+        }
+        many => Err(format!(
+            "symbol `{name}` is ambiguous — declare a range instead: {}",
+            many.iter()
+                .filter_map(|&i| outline.lines_of(i))
+                .map(|(s, e, k)| format!("{k} @ {s}-{e}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )),
+    }
+}
+
+/// Without the `code-lens` feature the refusal teaches the alternative.
+#[cfg(not(feature = "code-lens"))]
+fn resolve_symbol_requirement(
+    _args: &Map<String, Value>,
+    _name: &str,
+    _text: &mut impl FnMut() -> Result<String, Envelope>,
+) -> Result<(u32, u32), String> {
+    Err("this build lacks the code-lens feature — declare lines:START-END instead".to_owned())
 }
 
 /// The `mutate` change grammar (moved verbatim from `handlers.rs`).

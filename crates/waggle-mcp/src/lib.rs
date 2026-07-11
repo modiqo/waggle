@@ -26,6 +26,7 @@ mod envelope;
 mod handlers;
 mod lineage;
 mod map;
+mod outline_wire;
 pub mod query;
 mod record;
 mod rpc;
