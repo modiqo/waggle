@@ -1,93 +1,81 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 470" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 470" width="1200" height="470" font-family="'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace">
+  <style>
+    text { font-family: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; }
+    .ink{fill:#141414} .muted{fill:#6a6b70} .faint{fill:#9b9ca1}
+    .red{fill:#b23b30} .honey{fill:#8a5a12} .green{fill:#1f7a3f}
+    .b{font-weight:600}
+  </style>
   <defs>
-    <radialGradient id="lwarm" cx="50%" cy="38%" r="80%">
-      <stop offset="0%" stop-color="#fffefb"/>
-      <stop offset="70%" stop-color="#fdf7ea"/>
-      <stop offset="100%" stop-color="#f3e8cf"/>
-    </radialGradient>
-    <linearGradient id="lgold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f4cf78"/><stop offset="100%" stop-color="#c9860a"/>
-    </linearGradient>
-    <linearGradient id="lgreen" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#7fb98a"/><stop offset="100%" stop-color="#3a7d44"/>
-    </linearGradient>
-    <linearGradient id="logbar" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#efe4cb"/><stop offset="100%" stop-color="#e7dabb"/>
-    </linearGradient>
-    <marker id="lgo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0 0 L10 5 L0 10 z" fill="#c9860a"/>
+    <marker id="ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 1 L9 5 L0 9" fill="none" stroke="#b8791a" stroke-width="1.6"/>
     </marker>
-    <marker id="lrev" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0 0 L10 5 L0 10 z" fill="#b3423a"/>
+    <marker id="arR" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 1 L9 5 L0 9" fill="none" stroke="#b23b30" stroke-width="1.6"/>
     </marker>
-    <filter id="ldrop" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#6b4e15" flood-opacity="0.16"/>
-    </filter>
-    <pattern id="lcomb" width="52" height="45" patternUnits="userSpaceOnUse">
-      <path d="M13 0 L39 0 L52 22.5 L39 45 L13 45 L0 22.5 Z" fill="none" stroke="#e8d9b4" stroke-width="1" opacity="0.45"/>
-    </pattern>
   </defs>
 
-  <rect width="1000" height="470" fill="url(#lwarm)"/>
-  <rect width="1000" height="470" fill="url(#lcomb)" opacity="0.5"/>
+  <rect x="0" y="0" width="1200" height="470" fill="#ffffff"/>
 
-  <text x="52" y="58" font-family="Fraunces, Georgia, serif" font-size="26" font-weight="600" fill="#241d12">The author's loop</text>
-  <text x="54" y="84" font-size="12.5" fill="#8a7a58">every step lands as a payload-free event; the log is the truth, the funnel is a fold</text>
+  <text x="48" y="52" font-size="28" class="ink b" letter-spacing="-0.5">The author's loop</text>
+  <text x="48" y="84" font-size="15" class="muted">every step lands as a payload-free event — the log is the truth, the funnel is a fold</text>
 
-  <!-- five stations -->
-  <g filter="url(#ldrop)">
-    <rect x="52"  y="122" width="150" height="60" rx="12" fill="url(#lgold)" stroke="#8a5a08" stroke-width="1.2"/>
-    <rect x="252" y="122" width="150" height="60" rx="12" fill="#ffffff" stroke="#e2dac9"/>
-    <rect x="452" y="122" width="150" height="60" rx="12" fill="#ffffff" stroke="#e2dac9"/>
-    <rect x="652" y="122" width="150" height="60" rx="12" fill="#ffffff" stroke="#e2dac9"/>
-    <rect x="852" y="122" width="96"  height="60" rx="12" fill="url(#lgreen)" stroke="#2c5134" stroke-width="1.2"/>
-  </g>
-  <g text-anchor="middle" font-size="14">
-    <text x="127" y="148" fill="#2e1e04" font-weight="600">mint</text>
-    <text x="127" y="167" font-size="10.5" fill="#5a3e08">an attributed name</text>
-    <text x="327" y="148" fill="#1f2430">hand off</text>
-    <text x="327" y="167" font-size="10.5" fill="#8a7a58">one 30-byte line</text>
-    <text x="527" y="148" fill="#1f2430">resolve</text>
-    <text x="527" y="167" font-size="10.5" fill="#8a7a58">its own projection</text>
-    <text x="727" y="148" fill="#1f2430">interrogate</text>
-    <text x="727" y="167" font-size="10.5" fill="#8a7a58">read · search</text>
-    <text x="900" y="148" fill="#eef6ef" font-weight="600">funnel</text>
-    <text x="900" y="167" font-size="10.5" fill="#cfe6d3">receipts</text>
-  </g>
-  <!-- flow arrows -->
-  <g stroke="#c9860a" stroke-width="2.4">
-    <line x1="202" y1="152" x2="250" y2="152" marker-end="url(#lgo)"/>
-    <line x1="402" y1="152" x2="450" y2="152" marker-end="url(#lgo)"/>
-    <line x1="602" y1="152" x2="650" y2="152" marker-end="url(#lgo)"/>
-    <line x1="802" y1="152" x2="850" y2="152" marker-end="url(#lgo)"/>
-  </g>
+  <!-- ===== five stations ===== -->
+  <!-- mint -->
+  <rect x="48" y="116" width="176" height="76" rx="5" fill="#faf3e6" stroke="#b8791a" stroke-width="1.5"/>
+  <text x="136" y="152" text-anchor="middle" font-size="15" class="honey b">mint</text>
+  <text x="136" y="172" text-anchor="middle" font-size="11" fill="#a07a2e">an attributed name</text>
+  <!-- hand off -->
+  <rect x="280" y="116" width="176" height="76" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <text x="368" y="152" text-anchor="middle" font-size="15" class="ink b">hand off</text>
+  <text x="368" y="172" text-anchor="middle" font-size="11" class="muted">one 30-byte line</text>
+  <!-- resolve -->
+  <rect x="512" y="116" width="176" height="76" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <text x="600" y="152" text-anchor="middle" font-size="15" class="ink b">resolve</text>
+  <text x="600" y="172" text-anchor="middle" font-size="11" class="muted">its own projection</text>
+  <!-- interrogate -->
+  <rect x="744" y="116" width="176" height="76" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <text x="832" y="152" text-anchor="middle" font-size="15" class="ink b">interrogate</text>
+  <text x="832" y="172" text-anchor="middle" font-size="11" class="muted">read · search</text>
+  <!-- funnel -->
+  <rect x="976" y="116" width="176" height="76" rx="5" fill="#eef6f0" stroke="#1f7a3f" stroke-width="1.5"/>
+  <text x="1064" y="152" text-anchor="middle" font-size="15" class="green b">funnel</text>
+  <text x="1064" y="172" text-anchor="middle" font-size="11" fill="#3a7d44">receipts</text>
 
-  <!-- the log ribbon beneath -->
-  <rect x="52" y="288" width="896" height="58" rx="14" fill="url(#logbar)" stroke="#d9c9a4"/>
-  <text x="70" y="278" font-size="12" fill="#8a7a58">the append-only log &#183; payload-free</text>
-  <!-- event ticks aligned under stations -->
-  <g>
-    <!-- mint event -->
-    <line x1="127" y1="182" x2="127" y2="288" stroke="#c9860a" stroke-width="1.3" stroke-dasharray="2 5"/>
-    <circle cx="127" cy="317" r="7" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.4"/>
-    <text x="127" y="336" text-anchor="middle" font-size="10" fill="#8a6a1e">minted</text>
-    <!-- resolve event -->
-    <line x1="527" y1="182" x2="527" y2="288" stroke="#c9860a" stroke-width="1.3" stroke-dasharray="2 5"/>
-    <circle cx="527" cy="317" r="7" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.4"/>
-    <text x="527" y="336" text-anchor="middle" font-size="10" fill="#8a6a1e">resolve</text>
-    <!-- read event -->
-    <line x1="727" y1="182" x2="727" y2="288" stroke="#c9860a" stroke-width="1.3" stroke-dasharray="2 5"/>
-    <circle cx="670" cy="317" r="7" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.4"/>
-    <text x="670" y="336" text-anchor="middle" font-size="10" fill="#8a6a1e">read</text>
-    <circle cx="784" cy="317" r="7" fill="#fdf3dd" stroke="#c9860a" stroke-width="1.4"/>
-    <text x="784" y="336" text-anchor="middle" font-size="10" fill="#8a6a1e">run</text>
-    <!-- funnel folds the log -->
-    <line x1="900" y1="182" x2="900" y2="288" stroke="#3a7d44" stroke-width="1.3" stroke-dasharray="2 5"/>
-    <path d="M872 317 h 56" stroke="#3a7d44" stroke-width="1.4"/>
-    <text x="900" y="336" text-anchor="middle" font-size="10" fill="#2c5134" font-weight="600">fold</text>
+  <!-- flow arrows (contained in the gaps) -->
+  <g stroke="#b8791a" stroke-width="2">
+    <line x1="232" y1="154" x2="272" y2="154" marker-end="url(#ar)"/>
+    <line x1="464" y1="154" x2="504" y2="154" marker-end="url(#ar)"/>
+    <line x1="696" y1="154" x2="736" y2="154" marker-end="url(#ar)"/>
+    <line x1="928" y1="154" x2="968" y2="154" marker-end="url(#ar)"/>
   </g>
 
-  <!-- correction travels back to every holder -->
-  <path d="M100 122 C 60 80, 40 388, 300 388" fill="none" stroke="#b3423a" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#lrev)" opacity="0.85"/>
-  <text x="150" y="410" font-size="11.5" fill="#a3463e">a correction reaches every holder &#8212; caches answer <tspan font-weight="600">410</tspan></text>
+  <!-- ===== the log ribbon ===== -->
+  <text x="48" y="286" font-size="13" class="muted">the append-only log · payload-free</text>
+  <rect x="48" y="298" width="1104" height="58" rx="5" fill="#f6f6f4" stroke="#e6e6e2" stroke-width="1.5"/>
+
+  <!-- connectors from stations down to their events -->
+  <g stroke="#d3d3ce" stroke-width="1.4" stroke-dasharray="1.5 5">
+    <line x1="136"  y1="192" x2="136"  y2="298"/>
+    <line x1="600"  y1="192" x2="600"  y2="298"/>
+    <line x1="832"  y1="192" x2="832"  y2="298"/>
+    <line x1="1064" y1="192" x2="1064" y2="298"/>
+  </g>
+
+  <!-- events -->
+  <g font-size="11" class="muted" text-anchor="middle">
+    <circle cx="136" cy="325" r="6" fill="#ffffff" stroke="#b8791a" stroke-width="1.5"/>
+    <text x="136" y="348" class="honey">minted</text>
+    <circle cx="600" cy="325" r="6" fill="#ffffff" stroke="#b8791a" stroke-width="1.5"/>
+    <text x="600" y="348" class="honey">resolve</text>
+    <circle cx="800" cy="325" r="6" fill="#ffffff" stroke="#b8791a" stroke-width="1.5"/>
+    <text x="800" y="348" class="honey">read</text>
+    <circle cx="864" cy="325" r="6" fill="#ffffff" stroke="#b8791a" stroke-width="1.5"/>
+    <text x="864" y="348" class="honey">run</text>
+    <line x1="1040" y1="325" x2="1088" y2="325" stroke="#1f7a3f" stroke-width="2"/>
+    <text x="1064" y="348" class="green b">fold</text>
+  </g>
+
+  <!-- ===== correction lane (its own row, no overlap) ===== -->
+  <line x1="136" y1="404" x2="1058" y2="404" stroke="#b23b30" stroke-width="1.8" stroke-dasharray="6 5" marker-end="url(#arR)" opacity="0.9"/>
+  <text x="597" y="440" text-anchor="middle" font-size="13" class="red">one revoke — a correction reaches every holder <tspan class="b">(caches answer 410)</tspan></text>
 </svg>

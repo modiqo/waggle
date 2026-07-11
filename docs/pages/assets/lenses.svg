@@ -1,87 +1,84 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 470" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 540" width="1120" height="540" font-family="'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace">
+  <style>
+    text { font-family: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; }
+    .ink{fill:#141414} .soft{fill:#2e2f34} .muted{fill:#6a6b70} .faint{fill:#9b9ca1}
+    .honey{fill:#b8791a} .green{fill:#1f7a3f} .red{fill:#b23b30}
+    .b{font-weight:600}
+  </style>
   <defs>
-    <radialGradient id="xwarm" cx="50%" cy="34%" r="80%">
-      <stop offset="0%" stop-color="#fffefb"/><stop offset="70%" stop-color="#fdf7ea"/><stop offset="100%" stop-color="#f3e8cf"/>
-    </radialGradient>
-    <linearGradient id="xgold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f4cf78"/><stop offset="100%" stop-color="#c9860a"/>
-    </linearGradient>
-    <linearGradient id="xred" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#e79a8f"/><stop offset="100%" stop-color="#b3423a"/>
-    </linearGradient>
-    <filter id="xdrop" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#6b4e15" flood-opacity="0.15"/>
-    </filter>
-    <marker id="xgo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
-      <path d="M0 0 L10 5 L0 10 z" fill="#b98a2e"/>
+    <marker id="d" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 1 L9 5 L0 9" fill="none" stroke="#b8791a" stroke-width="1.7"/>
     </marker>
-    <pattern id="xcomb" width="52" height="45" patternUnits="userSpaceOnUse">
-      <path d="M13 0 L39 0 L52 22.5 L39 45 L13 45 L0 22.5 Z" fill="none" stroke="#e8d9b4" stroke-width="1" opacity="0.4"/>
-    </pattern>
   </defs>
 
-  <rect width="1000" height="470" fill="url(#xwarm)"/>
-  <rect width="1000" height="470" fill="url(#xcomb)" opacity="0.5"/>
+  <rect x="0" y="0" width="1120" height="540" fill="#ffffff"/>
 
-  <text x="500" y="52" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="26" font-weight="600" fill="#241d12">One token, the right lens for each artifact</text>
-  <text x="500" y="76" text-anchor="middle" font-size="12.5" fill="#8a7a58">structure is discovered from the content type &#8212; the loop you learn on a report works on a lockfile</text>
+  <text x="560" y="54" text-anchor="middle" font-size="28" class="ink b" letter-spacing="-0.5">One token, the right lens for each artifact</text>
+  <text x="560" y="86" text-anchor="middle" font-size="15" class="muted">structure is discovered from the content type — the loop you learn on a report works on a lockfile</text>
 
-  <!-- ===== Panel 1: prose (center 170) ===== -->
-  <g>
-    <text x="170" y="120" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#5a6472">prose &#183; .md .txt</text>
-    <g filter="url(#xdrop)">
-      <rect x="105" y="134" width="130" height="90" rx="8" fill="#ffffff" stroke="#e2dac9"/>
-    </g>
-    <rect x="122" y="152" width="70" height="8" rx="4" fill="#c9860a"/>
-    <rect x="122" y="168" width="96" height="5" rx="2.5" fill="#e0e2e7"/>
-    <rect x="122" y="180" width="84" height="5" rx="2.5" fill="#e0e2e7"/>
-    <rect x="122" y="196" width="52" height="8" rx="4" fill="#c9860a"/>
-    <rect x="122" y="210" width="90" height="5" rx="2.5" fill="#e0e2e7"/>
-    <line x1="170" y1="224" x2="170" y2="246" stroke="#b98a2e" stroke-width="2" marker-end="url(#xgo)"/>
-    <rect x="92" y="248" width="156" height="38" rx="10" fill="url(#xgold)" stroke="#8a5a08" stroke-width="1.2" filter="url(#xdrop)"/>
-    <text x="170" y="272" text-anchor="middle" font-size="12.5" fill="#2e1e04" font-weight="600">mint --snapshot</text>
-    <line x1="170" y1="286" x2="170" y2="306" stroke="#b98a2e" stroke-width="2" marker-end="url(#xgo)"/>
-    <text x="170" y="324" text-anchor="middle" font-size="11" fill="#8a7a58">the lenses it affords</text>
-    <text x="170" y="346" text-anchor="middle" font-size="13" fill="#2c5134">outline &#183; section &#183; lines</text>
-    <text x="170" y="366" text-anchor="middle" font-size="13" fill="#2c5134">search</text>
+  <!-- column dividers -->
+  <g stroke="#eeeeea" stroke-width="1.5">
+    <line x1="380" y1="120" x2="380" y2="466"/>
+    <line x1="740" y1="120" x2="740" y2="466"/>
   </g>
 
-  <!-- ===== Panel 2: code (center 500) ===== -->
-  <g>
-    <text x="500" y="120" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#5a6472">code &#183; .rs .py .ts .go</text>
-    <g filter="url(#xdrop)">
-      <rect x="435" y="134" width="130" height="90" rx="8" fill="#ffffff" stroke="#e2dac9"/>
-    </g>
-    <text x="449" y="157" font-size="11" fill="#3a7d44">fn</text><rect x="471" y="149" width="50" height="6" rx="3" fill="#dfe1e6"/>
-    <text x="461" y="175" font-size="11" fill="#adb2bb">&#183;</text><rect x="471" y="167" width="72" height="5" rx="2.5" fill="#eceef1"/>
-    <text x="449" y="195" font-size="11" fill="#3a7d44">impl</text><rect x="485" y="187" width="40" height="6" rx="3" fill="#dfe1e6"/>
-    <text x="461" y="213" font-size="11" fill="#adb2bb">&#183;</text><rect x="471" y="205" width="64" height="5" rx="2.5" fill="#eceef1"/>
-    <line x1="500" y1="224" x2="500" y2="246" stroke="#b98a2e" stroke-width="2" marker-end="url(#xgo)"/>
-    <rect x="422" y="248" width="156" height="38" rx="10" fill="url(#xgold)" stroke="#8a5a08" stroke-width="1.2" filter="url(#xdrop)"/>
-    <text x="500" y="272" text-anchor="middle" font-size="12.5" fill="#2e1e04" font-weight="600">mint --snapshot</text>
-    <line x1="500" y1="286" x2="500" y2="306" stroke="#b98a2e" stroke-width="2" marker-end="url(#xgo)"/>
-    <text x="500" y="324" text-anchor="middle" font-size="11" fill="#8a7a58">a symbol outline, extracted at mint</text>
-    <text x="500" y="346" text-anchor="middle" font-size="13" fill="#2c5134">symbol &#183; lines &#183; search</text>
-    <text x="500" y="366" text-anchor="middle" font-size="13" fill="#2c5134">--require symbol:NAME</text>
+  <!-- ================= PROSE ================= -->
+  <text x="200" y="152" text-anchor="middle" font-size="14.5"><tspan class="ink b">prose</tspan><tspan class="muted"> · .md .txt</tspan></text>
+  <rect x="130" y="170" width="140" height="96" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <rect x="150" y="190" width="70" height="9" rx="2" fill="#b8791a"/>
+  <rect x="150" y="208" width="100" height="6" rx="3" fill="#e2e2de"/>
+  <rect x="150" y="222" width="86" height="6" rx="3" fill="#e2e2de"/>
+  <rect x="150" y="240" width="52" height="9" rx="2" fill="#b8791a"/>
+  <rect x="150" y="256" width="94" height="6" rx="3" fill="#e2e2de"/>
+  <line x1="200" y1="268" x2="200" y2="285" stroke="#b8791a" stroke-width="2" marker-end="url(#d)"/>
+  <rect x="110" y="288" width="180" height="44" rx="4" fill="#141414"/>
+  <text x="200" y="315" text-anchor="middle" font-size="14"><tspan fill="#ededea">mint </tspan><tspan fill="#d99a3a">--snapshot</tspan></text>
+  <line x1="200" y1="334" x2="200" y2="351" stroke="#b8791a" stroke-width="2" marker-end="url(#d)"/>
+  <text x="200" y="374" text-anchor="middle" font-size="12" class="faint">the lenses it affords</text>
+  <g font-size="12.5">
+    <rect x="55"  y="386" width="72" height="26" rx="3" fill="#faf3e6" stroke="#b8791a" stroke-width="1.3"/><text x="91"  y="403" text-anchor="middle" class="honey b">outline</text>
+    <rect x="135" y="386" width="72" height="26" rx="3" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.3"/><text x="171" y="403" text-anchor="middle" class="soft">section</text>
+    <rect x="215" y="386" width="58" height="26" rx="3" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.3"/><text x="244" y="403" text-anchor="middle" class="soft">lines</text>
+    <rect x="281" y="386" width="65" height="26" rx="3" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.3"/><text x="313" y="403" text-anchor="middle" class="soft">search</text>
   </g>
 
-  <!-- ===== Panel 3: binary (center 830) ===== -->
-  <g>
-    <text x="830" y="120" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#5a6472">binary &#183; pdf image voice</text>
-    <g filter="url(#xdrop)">
-      <rect x="765" y="134" width="130" height="90" rx="8" fill="#ffffff" stroke="#e2dac9"/>
-    </g>
-    <text x="830" y="166" text-anchor="middle" font-size="11" fill="#8a7a58">opaque bytes</text>
-    <path d="M781 194 q 10 -24 20 0 t 20 0 t 20 0 t 20 0 t 20 0" fill="none" stroke="#b3423a" stroke-width="2"/>
-    <line x1="830" y1="224" x2="830" y2="246" stroke="#b98a2e" stroke-width="2" marker-end="url(#xgo)"/>
-    <rect x="752" y="248" width="156" height="38" rx="10" fill="url(#xred)" stroke="#7a2d27" stroke-width="1.1" filter="url(#xdrop)"/>
-    <text x="830" y="266" text-anchor="middle" font-size="11.5" fill="#fbeeec">text via --content</text>
-    <text x="830" y="280" text-anchor="middle" font-size="11.5" fill="#fbeeec">media via --attach</text>
-    <line x1="830" y1="286" x2="830" y2="306" stroke="#b98a2e" stroke-width="2" marker-end="url(#xgo)"/>
-    <text x="830" y="324" text-anchor="middle" font-size="11" fill="#8a7a58">then it reads like text</text>
-    <text x="830" y="346" text-anchor="middle" font-size="13" fill="#2c5134">lines &#183; search</text>
-    <text x="830" y="366" text-anchor="middle" font-size="11.5" fill="#2c5134">media &#8594; vision/voice consumers</text>
+  <!-- ================= CODE ================= -->
+  <text x="560" y="152" text-anchor="middle" font-size="14.5"><tspan class="ink b">code</tspan><tspan class="muted"> · .rs .py .ts .go</tspan></text>
+  <rect x="490" y="170" width="140" height="96" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <text x="508" y="197" font-size="12" class="green b">fn</text><rect x="536" y="189" width="54" height="7" rx="2" fill="#e2e2de"/>
+  <text x="516" y="217" font-size="12" class="faint">·</text><rect x="536" y="210" width="74" height="6" rx="3" fill="#eceeea"/>
+  <text x="508" y="239" font-size="12" class="green b">impl</text><rect x="550" y="231" width="42" height="7" rx="2" fill="#e2e2de"/>
+  <text x="516" y="259" font-size="12" class="faint">·</text><rect x="536" y="252" width="64" height="6" rx="3" fill="#eceeea"/>
+  <line x1="560" y1="268" x2="560" y2="285" stroke="#b8791a" stroke-width="2" marker-end="url(#d)"/>
+  <rect x="470" y="288" width="180" height="44" rx="4" fill="#141414"/>
+  <text x="560" y="315" text-anchor="middle" font-size="14"><tspan fill="#ededea">mint </tspan><tspan fill="#d99a3a">--snapshot</tspan></text>
+  <line x1="560" y1="334" x2="560" y2="351" stroke="#b8791a" stroke-width="2" marker-end="url(#d)"/>
+  <text x="560" y="374" text-anchor="middle" font-size="12" class="faint">a symbol outline, extracted at mint</text>
+  <g font-size="12.5">
+    <rect x="455" y="386" width="72" height="26" rx="3" fill="#faf3e6" stroke="#b8791a" stroke-width="1.3"/><text x="491" y="403" text-anchor="middle" class="honey b">symbol</text>
+    <rect x="535" y="386" width="58" height="26" rx="3" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.3"/><text x="564" y="403" text-anchor="middle" class="soft">lines</text>
+    <rect x="601" y="386" width="65" height="26" rx="3" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.3"/><text x="633" y="403" text-anchor="middle" class="soft">search</text>
   </g>
+  <text x="560" y="434" text-anchor="middle" font-size="12.5"><tspan class="muted">pin one symbol: </tspan><tspan class="honey">--require symbol:NAME</tspan></text>
 
-  <text x="500" y="418" text-anchor="middle" font-size="12.5" fill="#7a6a48">every response fits a byte budget and names the bytes it spared you</text>
+  <!-- ================= BINARY ================= -->
+  <text x="920" y="152" text-anchor="middle" font-size="14.5"><tspan class="ink b">binary</tspan><tspan class="muted"> · pdf image voice</tspan></text>
+  <rect x="850" y="170" width="140" height="96" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <text x="920" y="202" text-anchor="middle" font-size="12" class="muted">opaque bytes</text>
+  <path d="M866 232 q 10.8 -22 21.6 0 t 21.6 0 t 21.6 0 t 21.6 0 t 21.6 0" fill="none" stroke="#b23b30" stroke-width="2"/>
+  <line x1="920" y1="268" x2="920" y2="285" stroke="#b8791a" stroke-width="2" marker-end="url(#d)"/>
+  <rect x="830" y="286" width="180" height="48" rx="4" fill="#141414"/>
+  <text x="920" y="306" text-anchor="middle" font-size="12.5"><tspan fill="#ededea">text via </tspan><tspan fill="#e5847a">--content</tspan></text>
+  <text x="920" y="324" text-anchor="middle" font-size="12.5"><tspan fill="#ededea">media via </tspan><tspan fill="#e5847a">--attach</tspan></text>
+  <line x1="920" y1="336" x2="920" y2="353" stroke="#b8791a" stroke-width="2" marker-end="url(#d)"/>
+  <text x="920" y="376" text-anchor="middle" font-size="12" class="faint">then it reads like text</text>
+  <g font-size="12.5">
+    <rect x="855" y="388" width="58" height="26" rx="3" fill="#faf3e6" stroke="#b8791a" stroke-width="1.3"/><text x="884" y="405" text-anchor="middle" class="honey b">lines</text>
+    <rect x="921" y="388" width="65" height="26" rx="3" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.3"/><text x="953" y="405" text-anchor="middle" class="soft">search</text>
+  </g>
+  <text x="920" y="436" text-anchor="middle" font-size="12.5"><tspan class="muted">media → </tspan><tspan class="soft">vision / voice consumers</tspan></text>
+
+  <!-- footer -->
+  <line x1="40" y1="474" x2="1080" y2="474" stroke="#eeeeea" stroke-width="1.5"/>
+  <text x="560" y="506" text-anchor="middle" font-size="13.5" class="muted">every response fits a byte budget and <tspan class="ink">names the bytes it spared you</tspan></text>
 </svg>
