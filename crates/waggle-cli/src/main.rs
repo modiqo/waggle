@@ -16,6 +16,8 @@ use serde_json::json;
 #[cfg(unix)]
 mod daemon;
 mod edge;
+#[cfg(unix)]
+mod health;
 mod identity;
 mod init;
 #[cfg(unix)]

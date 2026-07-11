@@ -321,7 +321,7 @@ pub const DAEMON: OperationSpec = OperationSpec {
     name: "daemon",
     surface: Surface::CliOnly,
     kind: OpKind::Read,
-    description: "Manage waggled: status (pid, store, uptime, connections), start (idempotent), stop (graceful over the socket; terminates orphans by pidfile), restart. Pidfile + idle exit make lingering orphans structurally unlikely.",
+    description: "Manage waggled: status (pid, store, uptime, connections, live resource subscriptions, disk weight of the store and blob CAS), start (idempotent), stop (graceful over the socket; terminates orphans by pidfile), restart. Pidfile + idle exit make lingering orphans structurally unlikely.",
     args: &[
         ArgSpec { name: "action", required: true, doc: "status | start | stop | restart | purge (kill EVERY waggled of yours, even zombies whose sockets/pidfiles are gone)." },
         ArgSpec { name: "idle-secs", required: false, doc: "For start/restart: exit after this many seconds with no connections (shim auto-starts default to 1800)." },

@@ -42,6 +42,13 @@ impl Session {
     pub fn contains(&self, token: Token) -> bool {
         self.subs.contains(&token)
     }
+
+    /// How many tokens this connection is subscribed to — transports
+    /// aggregate this into their health surface (`waggled/status`).
+    #[must_use]
+    pub fn subscription_count(&self) -> u64 {
+        self.subs.len() as u64
+    }
 }
 
 /// `waggle://TOKEN` → the token. The URI scheme is the token, nothing

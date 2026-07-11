@@ -33,6 +33,9 @@ struct DaemonState {
     /// fan out to every connection; each session filters to what IT
     /// subscribed. Lossy-by-design bound — mutations are rare.
     hub: tokio::sync::broadcast::Sender<waggle_core::Token>,
+    /// Live resource subscriptions across all connections — a health
+    /// gauge for `waggled/status`, maintained by each connection loop.
+    subscriptions: AtomicU64,
 }
 
 fn now_secs() -> u64 {
@@ -93,6 +96,7 @@ pub fn run_daemon() -> i32 {
             last_activity_secs: AtomicU64::new(now_secs()),
             resolutions: std::sync::Mutex::new(std::collections::HashMap::new()),
             hub: tokio::sync::broadcast::channel(64).0,
+            subscriptions: AtomicU64::new(0),
         });
         spawn_idle_monitor(&state, &sock);
         spawn_tcp_listener(&handler, &state, &sock);
@@ -256,9 +260,22 @@ async fn serve_client<R, W>(
             }
             Vec::new()
         } else {
+            let before = session.subscription_count();
             let out =
                 waggle_mcp::handle_session(handler, &mut session, &line, now(), &mut os_entropy)
                     .await;
+            // The status gauge follows this connection's subscription
+            // delta; the disconnect path below settles the remainder.
+            let after = session.subscription_count();
+            if after > before {
+                state
+                    .subscriptions
+                    .fetch_add(after - before, Ordering::SeqCst);
+            } else {
+                state
+                    .subscriptions
+                    .fetch_sub(before - after, Ordering::SeqCst);
+            }
             // Fan a committed lifecycle mutation out through the hub —
             // which includes THIS connection's own receiver, so the
             // direct `out.notifications` are dropped here to avoid a
@@ -279,6 +296,10 @@ async fn serve_client<R, W>(
             break; // client hung up
         }
     }
+    // Subscriptions die with the connection (21 §3) — settle the gauge.
+    state
+        .subscriptions
+        .fetch_sub(session.subscription_count(), Ordering::SeqCst);
     state.active_connections.fetch_sub(1, Ordering::SeqCst);
     state.last_activity_secs.store(now_secs(), Ordering::SeqCst);
 }
@@ -302,6 +323,8 @@ fn manage_message(line: &str, state: &DaemonState, sock: &Path) -> Option<(Strin
                 "started_unix_ms": state.started_unix_ms,
                 "uptime_secs": now_secs().saturating_sub(state.started_unix_ms / 1000),
                 "active_connections": state.active_connections.load(Ordering::SeqCst),
+                "subscriptions": state.subscriptions.load(Ordering::SeqCst),
+                "disk": crate::health::disk_stats(&crate::run::store_path()),
             });
             Some((
                 serde_json::json!({ "jsonrpc": "2.0", "id": id, "result": result }).to_string(),
