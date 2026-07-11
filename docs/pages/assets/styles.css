@@ -157,6 +157,15 @@ pre .m { color: #d98c7a; }          /* accent */
   .install-row .label { color: var(--amber); }
 }
 
+/* ---------- first-person personas ---------- */
+.persona { border-left: 3px solid var(--amber); padding: 2px 0 2px 24px; margin: 26px 0; max-width: 810px; }
+.persona.s { border-left-color: var(--green); }
+.persona.x { border-left-color: var(--ink-soft); }
+.persona .who { font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; }
+.persona.s .who { color: var(--green); }
+.persona.x .who { color: var(--muted); }
+.persona p { margin: 0; color: var(--ink-soft); font-size: 16.5px; line-height: 1.62; }
+
 /* ---------- callout ---------- */
 .callout { background: var(--paper-soft); border: 1px solid var(--line); border-left: 3px solid var(--amber); border-radius: 8px; padding: 18px 20px; margin: 26px 0; }
 .callout p { margin: 0; color: var(--ink-soft); font-size: 15.5px; }

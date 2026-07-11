@@ -77,6 +77,39 @@ ever seeing your data.
 in Claude Code, Codex, Cursor, or anything MCP-speaking — no SDK, no language
 bindings, no accounts. Locally it is one binary and a SQLite file.
 
+## Walk the handoff, in first person
+
+The value isn't abstract. Stand in each role and it's obvious.
+
+**You are the orchestrator.** You just wrote a plan and spawned three
+subagents. Today you paste the plan into each prompt — three copies,
+re-billed every turn, and afterward you have no idea which one actually
+read it. With waggle you hand each the same 30-byte line. When they
+return, the funnel shows two resolved and read it, one never opened it —
+and you catch the bluff *before* you trust its answer. Found a bug in the
+plan? One revoke, and the correction reaches all three.
+
+**You are the subagent.** You wake up with one line: `resolve b2uQyZUC`.
+You resolve it into a digest shaped for *your* model, an outline so you
+know what's inside before you read, and `next` steps pointing you where to
+look. You grep for the one fact you need and pull 200 bytes — not the
+9,000-token plan. You never ingest what you didn't need.
+
+**Now the subagent moves to another machine.** Nothing changes. The same
+line, the same resolve, the same grep — the bytes stay on the
+orchestrator's laptop, only the matches travel back. The loop you learned
+in one process is byte-for-byte the loop across the network.
+
+**And this can't live inside a harness.** Claude Code could build clever
+handoffs — but that cleverness would die at its boundary; a Codex subagent
+couldn't see it, and the orchestrator's memory of who made what, and who
+read it, would be prose in one harness's context, gone at the next
+compaction. The reference layer has to sit *outside* any single harness — a
+neutral substrate every harness speaks in one line — so what Claude Code
+mints, Codex resolves, and the receipt survives them both. Handoffs are a
+distributed-systems problem; solving them inside one vendor's harness logic
+is solving them in the one place they can't be solved.
+
 ## Install
 
 Pick one — all install the same `waggle` binary:
