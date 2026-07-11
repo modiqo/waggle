@@ -155,7 +155,7 @@ Orientation. With no arguments: the global map of operations from where you stan
 
 ## `init` — CLI only
 
-Install the five-line agent stub into this repo's harness convention files (CLAUDE.md, AGENTS.md, .cursorrules) — creating AGENTS.md and CLAUDE.md when none exist. Idempotent: re-running refreshes the managed block in place. Pair with: claude mcp add waggle -- waggle serve --stdio.
+Install the short agent stub into this repo's harness convention files (CLAUDE.md, AGENTS.md, .cursorrules) — creating AGENTS.md and CLAUDE.md when none exist. Idempotent: re-running refreshes the managed block in place. Pair with: claude mcp add waggle -- waggle serve --stdio.
 
 | arg | required | doc |
 |---|---|---|

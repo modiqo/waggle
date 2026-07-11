@@ -364,3 +364,93 @@ forecloses it; the crate boundary is already drawn.
   must pay for its binary-size cost. Files without a grammar keep the
   full text loop — the lens degrades to exactly today's behavior,
   never below it.
+
+## 10 · As built: the code handoff versus `rg`, by example
+
+*(Added after implementation; first live evidence in
+[notes/dogfood-01](notes/dogfood-01-symbol-handoff.md).)*
+
+### Language coverage
+
+| Outline + `symbol:` contracts | Extensions |
+|---|---|
+| Rust | `.rs` |
+| Python | `.py` `.pyi` |
+| TypeScript | `.ts` `.mts` `.cts` |
+| TSX | `.tsx` |
+| JavaScript | `.js` `.mjs` `.cjs` `.jsx` |
+| Go | `.go` |
+
+Everything else keeps the **full text loop** (line windows, regex
+search, `lines:` contracts) — including extension-less carriers
+(`Makefile`, `Dockerfile`, `justfile`, bare scripts), which the
+basename table and the byte sniff admit as text. No grammar is never
+an error; it is the absence of one lens.
+
+### The same task, both ways
+
+The task from the dogfood run: a subagent must read
+`Contract::evaluate` in a 300-line Rust file it has never seen.
+
+**The `rg` loop** (what agents do today):
+
+```
+rg -n "fn evaluate" contract.rs     # 2 hits: the def and a call site — pick one
+sed -n '200,240p' contract.rs       # guessed window: starts mid-doc-comment
+sed -n '207,230p' contract.rs       # second guess to capture the full extent
+```
+
+Three calls, two guesses, and nothing anywhere records that it
+happened.
+
+**Through the token:**
+
+```
+waggle read --token 9u6KEr6F --symbol evaluate
+# → lines 213-226, the exact definition extent, pinned at mint
+```
+
+One call, no guessing — and the read stamped the contract region, so
+`coverage` flipped to `met` and the orchestrator could verify the
+review without trusting the reviewer's report.
+
+### Where the token beats `rg` (positives)
+
+- **Orientation before search.** The overview carries the symbol table
+  of contents (28 symbols in the dogfood file) — `rg` can only answer
+  questions you already knew to ask.
+- **Exact extents, no window guessing.** `--symbol` serves the
+  definition's pinned range; the grep→guess→re-read loop disappears.
+- **Reach.** A remote consumer (edge, another machine) has no
+  filesystem to grep; `search`/`read` run where the bytes live and the
+  matches travel back. In the cross-machine handoff `rg` is not
+  worse — it is absent.
+- **Stability.** The outline is a pure function of the snapshot;
+  `symbol:evaluate` means the same lines tomorrow. `rg` against a live
+  tree drifts with every edit — including edits the orchestrator makes
+  while the subagent reads.
+- **Receipts.** Every read and search-hit stamps contract regions;
+  interrogation becomes evidence. Disk `rg` is invisible by nature.
+
+### Where `rg` still wins (negatives, honestly)
+
+- **The unminted workspace.** The lens exists per token; grepping a
+  whole checkout nobody minted is `rg`'s home turf, and §9 forbids the
+  persistent index that would change this. (The open experiment: does
+  a session-start `mint --tree` of the workspace move this boundary?)
+- **Lexical parity, not superiority.** `search` through a token is the
+  same regex class as `rg` — the wins are the structural layer around
+  it, not the matcher.
+- **No structural queries yet.** "every `.unwrap()` outside tests" is
+  Tier 2 (§8), still gated on H1/H2 evidence.
+- **Scope caps.** Trees cap at 200 files (post-deny-list) and four
+  grammar families; `rg` has no such ceilings.
+- **A mint must happen first.** `rg` is zero-setup; the token's
+  advantages all cost one up-front `mint --snapshot` by whoever owns
+  the handoff.
+
+The summary the docs should keep repeating: **through the token beats
+around it for any code artifact that crosses a delegation boundary;
+`rg` keeps the unminted workspace.** The product's job is to make the
+first category grow — by being the easier path, not only the audited
+one.
