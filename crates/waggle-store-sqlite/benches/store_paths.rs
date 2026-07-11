@@ -59,6 +59,7 @@ fn bench_append(c: &mut Criterion) {
                 stage: waggle_core::Stage::run(),
                 actor,
                 variant: None,
+                regions: None,
                 at: waggle_core::Timestamp::from_unix_ms(2),
             }))
             .unwrap()

@@ -36,6 +36,7 @@
 //! ```
 
 mod context;
+mod contract;
 mod entropy;
 mod event;
 mod fold;
@@ -53,9 +54,14 @@ mod token;
 pub mod trust;
 
 pub use context::{negotiate, ConsumerHint, ConsumerKind, ResolverContext};
+pub use contract::{
+    Contract, ContractError, Coverage, Region, FULL_COVERAGE_PERMILLE, MAX_CONTRACT_REGIONS,
+};
 pub use entropy::{Entropy, EntropyError};
 pub use event::{ActorClass, Event, FamilyClass, HarnessClass, Seq};
-pub use fold::{replay, Fold, FunnelFold, LineageFold, ManifestFold};
+pub use fold::{
+    outcome_of, replay, Fold, FunnelFold, LineageFold, ManifestFold, Outcome, RegionTouchFold,
+};
 pub use log::{Change, LogRecord};
 pub use manifest::{
     apply_change, AttributionManifest, Constraint, Disposition, MatchExpr, ModalitySet, Posture,

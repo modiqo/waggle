@@ -52,8 +52,13 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
     }
 
     /// Fetch the token's content per doc 18 §3: snapshot blob first, then
-    /// the live local target. Returns `(text, content_type)`.
-    async fn content_of(&self, token: Token) -> Result<(String, String), Envelope> {
+    /// the live local target. Returns `(text, content_type, contract)` —
+    /// the contract rides along so serves can stamp region touches
+    /// (19 §4.2) without a second manifest read.
+    async fn content_of(
+        &self,
+        token: Token,
+    ) -> Result<(String, String, Option<waggle_core::Contract>), Envelope> {
         let view = match self.store.manifest(token).await {
             Ok(Some(v)) => v,
             Ok(None) => return Err(store_err(&StoreError::UnknownToken(token))),
@@ -92,7 +97,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             ));
         }
         String::from_utf8(bytes)
-            .map(|text| (text, content_type))
+            .map(|text| (text, content_type, view.manifest.contract.clone()))
             .map_err(|_| {
                 Envelope::err(
                     "content is not valid UTF-8 — treat it as binary media",
@@ -101,7 +106,10 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             })
     }
 
-    async fn record_read(&self, token: Token, now: Timestamp) {
+    /// Record the `read` stage, stamping which contract regions the
+    /// served bytes touched (`None` when contract-free or untouched —
+    /// the field never appears for ordinary traffic).
+    async fn record_read(&self, token: Token, now: Timestamp, regions: Option<u8>) {
         let _ = self
             .store
             .append(AppendIntent::Event {
@@ -109,6 +117,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 stage: Stage::read(),
                 actor: ActorClass::from_context(&ResolverContext::anonymous_agent()),
                 variant: None,
+                regions,
                 at: now,
             })
             .await;
@@ -121,7 +130,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             Ok(t) => t,
             Err(e) => return e,
         };
-        let (text, content_type) = match self.content_of(token).await {
+        let (text, content_type, contract) = match self.content_of(token).await {
             Ok(x) => x,
             Err(e) => return e,
         };
@@ -167,7 +176,11 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             crate::content::overview(&text, &content_type, max_bytes)
         };
 
-        self.record_read(token, now).await;
+        // The served window (`lines: "A-B"` on line and section lenses)
+        // is what touches contract regions — the overview and JSON
+        // lenses serve no ranged content, so they stamp nothing.
+        let touched = crate::contract_args::span_bits(contract.as_ref(), &result);
+        self.record_read(token, now, touched).await;
         let next = read_next(token, &result);
         #[allow(clippy::cast_possible_truncation)]
         Envelope::ok(result, next).with_stats(Stats {
@@ -203,7 +216,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 }
             }
         }
-        let (text, _content_type) = match self.content_of(token).await {
+        let (text, _content_type, contract) = match self.content_of(token).await {
             Ok(x) => x,
             Err(e) => return e,
         };
@@ -224,7 +237,10 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             Ok(v) => v,
             Err(hint) => return Envelope::err(hint, vec![]),
         };
-        self.record_read(token, now).await;
+        // A search hit inside a required region is a touch: the grep IS
+        // the evidence (19 §4.2).
+        let touched = crate::contract_args::match_bits(contract.as_ref(), &result);
+        self.record_read(token, now, touched).await;
         // The grep→open loop: chain the first match into a read window.
         let next = result["matches"]
             .as_array()
@@ -256,7 +272,7 @@ pub(crate) fn local_path(target: &str) -> Option<String> {
 }
 
 /// Read a local file under the doc-18 cap (16 MB).
-fn read_capped(path: &str) -> Result<Vec<u8>, Envelope> {
+pub(crate) fn read_capped(path: &str) -> Result<Vec<u8>, Envelope> {
     const CAP: u64 = 16 * 1024 * 1024;
     let meta = std::fs::metadata(path)
         .map_err(|e| Envelope::err(format!("content {path}: {e}"), vec![]))?;
@@ -323,19 +339,23 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             let Ok(Some(view)) = self.store.manifest(child).await else {
                 continue;
             };
-            let Ok((text, _)) = self.content_of(child).await else {
+            let Ok((text, _, child_contract)) = self.content_of(child).await else {
                 skipped += 1; // no snapshot here (or binary) — named below
                 continue;
             };
             searched += 1;
-            // Honest telemetry: the deep search DID read this file's
-            // bytes — the child's funnel says so (coverage's 'read' bar).
-            self.record_read(child, now).await;
             let Ok(found) =
                 crate::content::search(&text, pattern, context, per_file, max_bytes / 4)
             else {
-                continue; // bad regex reports once, below, via the empty case
+                // Honest telemetry: the deep search DID read this file's
+                // bytes even though the regex failed once, below.
+                self.record_read(child, now, None).await;
+                continue;
             };
+            // Honest telemetry: the deep search DID read this file's
+            // bytes — the child's funnel says so (coverage's 'read' bar).
+            let touched = crate::contract_args::match_bits(child_contract.as_ref(), &found);
+            self.record_read(child, now, touched).await;
             let file_total = found["total_matches"].as_u64().unwrap_or(0);
             if file_total > 0 {
                 total += file_total;
@@ -383,7 +403,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 "{dropped} matching file(s) beyond the {max_bytes}-byte budget — raise max-bytes or search a child directly"
             ));
         }
-        self.record_read(root, now).await;
+        self.record_read(root, now, None).await;
         let next = files_next(&result, root);
         Envelope::ok(result, next).with_stats(Stats {
             records: Some(searched),

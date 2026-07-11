@@ -164,6 +164,7 @@ fn bench_fold_1m(c: &mut Criterion) {
                 at: Timestamp::from_unix_ms(u64::from(i)),
                 seq: Seq(i),
                 variant: None,
+                regions: None,
             },
             &mut tables,
         );

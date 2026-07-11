@@ -205,13 +205,21 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             Ok(t) => t,
             Err(e) => return e,
         };
-        if let Err(e) = self.store.manifest(root).await.map_err(|e| store_err(&e)) {
-            return e;
-        }
+        let view = match self.store.manifest(root).await {
+            Ok(v) => v,
+            Err(e) => return store_err(&e),
+        };
         let mut queue: std::collections::VecDeque<_> = match self.store.children(root).await {
             Ok(c) => c.into(),
             Err(e) => return store_err(&e),
         };
+        // A childless token with a contract audits ITSELF (19 §4.2):
+        // which declared regions did the served bytes actually reach?
+        if queue.is_empty() {
+            if let Some(contract) = view.as_ref().and_then(|v| v.manifest.contract.clone()) {
+                return self.contract_coverage(root, &contract).await;
+            }
+        }
         let mut files = 0u64;
         let mut read = 0u64;
         let mut run = 0u64;
@@ -256,7 +264,8 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         if files == 0 {
             return Envelope::err(
                 format!(
-                    "{root} has no children — coverage audits lineage roots (mint --tree, bundles)"
+                    "{root} has no children and no contract — coverage audits lineage roots \
+                     (mint --tree, bundles) and contract-bearing tokens (mint --require)"
                 ),
                 vec![],
             );
@@ -289,6 +298,71 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         )
         .with_stats(Stats {
             records: Some(files),
+            seq: None,
+        })
+    }
+
+    /// Single-token contract coverage (19 §4.2): fold the region-touch
+    /// bits out of the token's own records, evaluate against the
+    /// declared contract, and NAME the misses — label and line range,
+    /// with the read that would close the first gap as the next step.
+    async fn contract_coverage(
+        &self,
+        token: waggle_core::Token,
+        contract: &waggle_core::Contract,
+    ) -> Envelope {
+        let records = match self.store.scan_token(token, waggle_core::Seq(0)).await {
+            Ok(r) => r,
+            Err(e) => return store_err(&e),
+        };
+        let record_count = records.len() as u64;
+        let touched_bits = waggle_core::replay(records, waggle_core::RegionTouchFold::default())
+            .per_token
+            .get(&token)
+            .copied()
+            .unwrap_or(0);
+        let verdict = contract.evaluate(touched_bits);
+        let describe = |i: &usize| {
+            let r = &contract.regions()[*i];
+            json!({
+                "region": i,
+                "label": r.label(),
+                "lines": format!("{}-{}", r.start(), r.end()),
+            })
+        };
+        let missed: Vec<Value> = verdict.missed.iter().map(describe).collect();
+        let funnel = self.store.funnel(token).await.unwrap_or_default();
+        let next = if let Some(first) = verdict.missed.first() {
+            let r = &contract.regions()[*first];
+            vec![NextCall {
+                tool: "read".into(),
+                args: json!({ "token": token.as_str(), "lines": format!("{}-{}", r.start(), r.end()) }),
+                why: "close the gap: the first required region nobody reached".into(),
+            }]
+        } else {
+            vec![NextCall {
+                tool: "funnel".into(),
+                args: json!({ "token": token.as_str() }),
+                why: "contract met — the funnel has the stage story".into(),
+            }]
+        };
+        Envelope::ok(
+            json!({
+                "token": token.as_str(),
+                "contract": {
+                    "required": verdict.required,
+                    "touched": verdict.touched,
+                    "permille": verdict.permille,
+                    "min_permille": contract.min_permille(),
+                },
+                "met": verdict.met,
+                "missed": missed,
+                "outcome": waggle_core::outcome_of(&funnel),
+            }),
+            next,
+        )
+        .with_stats(Stats {
+            records: Some(record_count),
             seq: None,
         })
     }

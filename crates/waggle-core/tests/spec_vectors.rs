@@ -57,4 +57,22 @@ fn signature_vector_holds() {
         waggle_core::trust::verify_manifest(&signed),
         waggle_core::trust::SignatureStatus::Valid { .. }
     ));
+
+    // The contract-free vector must never mention the contract field —
+    // spec §2's absence rule, held at the published-bytes level.
+    assert!(
+        doc["manifest"].get("contract").is_none(),
+        "the contract-free vector grew a contract field"
+    );
+
+    // The contract-bearing companion signs and verifies identically.
+    let contracted: waggle_core::AttributionManifest =
+        serde_json::from_value(doc["contract_manifest"].clone()).unwrap();
+    assert!(contracted.contract.is_some());
+    let block = waggle_core::trust::sign_manifest(&contracted, &key);
+    assert_eq!(
+        serde_json::to_value(&block).unwrap(),
+        doc["contract_signature"],
+        "contract-bearing canonical encoding drifted from the published vector"
+    );
 }

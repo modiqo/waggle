@@ -63,6 +63,7 @@ fn crash_child_workload() {
             stage: waggle_core::Stage::run(),
             actor,
             variant: None,
+            regions: None,
             at: waggle_core::Timestamp::from_unix_ms(2),
         }))
         .unwrap();
@@ -147,6 +148,7 @@ fn killed_writers_never_lose_an_acked_write() {
                 &waggle_core::ResolverContext::anonymous_agent(),
             ),
             variant: None,
+            regions: None,
             at: waggle_core::Timestamp::from_unix_ms(3),
         }))
         .unwrap();

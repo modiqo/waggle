@@ -130,6 +130,7 @@ mod tests {
                 at: Timestamp::from_unix_ms(2),
                 seq: Seq(0), // permissive producer
                 variant: None,
+                regions: None,
             }),
             LogRecord::Minted {
                 manifest: Box::new(m),

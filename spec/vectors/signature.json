@@ -1,5 +1,44 @@
 {
   "canonical_core_hex_len": 364,
+  "contract_manifest": {
+    "channel": "subagent/general",
+    "contract": {
+      "min-permille": 900,
+      "regions": [
+        {
+          "end": 920,
+          "label": "Pricing",
+          "start": 847
+        },
+        {
+          "end": 60,
+          "start": 40
+        }
+      ]
+    },
+    "minted_at": 1700000000000,
+    "schema": 1,
+    "sharer": "spec",
+    "target": "ws://spec/contracted-artifact",
+    "token": "kkkkkkkk",
+    "variants": [
+      {
+        "body": {
+          "inline": {
+            "content_type": "text/markdown",
+            "data": "Fetch the artifact at ws://spec/contracted-artifact and use it as your working context."
+          }
+        },
+        "match": {}
+      }
+    ],
+    "version": 1
+  },
+  "contract_signature": {
+    "alg": "ed25519",
+    "key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+    "sig": "4f23a0b325d12e1558f2dde5c86fb5dc9f47c14b18b2113b94009e80b6401b084fd372127ae0ca6fe64fc46348486f9e2a4df0d7094da1e4ed07174c4a64d90c"
+  },
   "manifest": {
     "channel": "subagent/general",
     "minted_at": 1700000000000,
@@ -20,7 +59,7 @@
     ],
     "version": 1
   },
-  "note": "spec §6: Ed25519 over the immutable core; a mismatch here is a canonical-encoding break",
+  "note": "spec §6: Ed25519 over the immutable core; a mismatch here is a canonical-encoding break. The contract-free manifest also pins §2's absence rule: no contract, no field, same bytes as pre-contract implementations.",
   "resolution_disposition": "active",
   "seed": "0707…07 (32 bytes of 0x07)",
   "signature": {

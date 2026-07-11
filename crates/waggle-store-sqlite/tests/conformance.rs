@@ -38,6 +38,7 @@ fn event_intent(token: waggle_core::Token, stage: Stage) -> AppendIntent {
             &waggle_core::ResolverContext::anonymous_agent(),
         ),
         variant: None,
+        regions: None,
         at: waggle_core::Timestamp::from_unix_ms(4),
     }
 }

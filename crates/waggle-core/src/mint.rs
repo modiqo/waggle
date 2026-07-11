@@ -60,6 +60,7 @@ pub struct MintSpec {
     parent: Option<Token>,
     content: Option<crate::MediaRef>,
     private: bool,
+    contract: Option<crate::Contract>,
     labels: std::collections::BTreeMap<String, String>,
     ttl_ms: Option<u64>,
 }
@@ -77,6 +78,7 @@ impl MintSpec {
             parent: None,
             content: None,
             private: false,
+            contract: None,
             labels: std::collections::BTreeMap::new(),
             ttl_ms: None,
         }
@@ -148,6 +150,15 @@ impl MintSpec {
         self
     }
 
+    /// Declare the consumption contract (doc `19 §4.2`): the regions a
+    /// consumer must reach for `coverage` to report the handoff met.
+    /// Immutable core — signed with the rest.
+    #[must_use]
+    pub fn contract(mut self, contract: crate::Contract) -> Self {
+        self.contract = Some(contract);
+        self
+    }
+
     /// Expire the token `ttl_ms` after mint.
     #[must_use]
     pub fn ttl_ms(mut self, ttl_ms: u64) -> Self {
@@ -194,6 +205,7 @@ pub fn mint(
         parent: spec.parent,
         content: spec.content,
         private: spec.private,
+        contract: spec.contract,
         signature: None, // hosts with an identity sign after mint (trust)
         variants,
         version: 1,

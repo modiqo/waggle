@@ -89,6 +89,58 @@ impl Fold for FunnelFold {
     }
 }
 
+/// A token's judged outcome, derived from the `accepted`/`rejected`
+/// stage counts (doc `19 §4.1`): the verdict IS the stage, so the log
+/// stays payload-free (I-1) and this derivation is a pure function of
+/// counts — order-free, replay-stable (R-1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Outcome {
+    /// No judge has recorded a verdict.
+    Pending,
+    /// At least one `accepted`, no `rejected`.
+    Accepted,
+    /// At least one `rejected`, no `accepted`.
+    Rejected,
+    /// Both were recorded — surfaced honestly for the orchestrator to
+    /// resolve (re-judge, or supersede and re-delegate).
+    Contested,
+}
+
+/// Derive the [`Outcome`] from a token's stage counts (the shape
+/// [`FunnelFold`] and every store's `funnel` view produce).
+#[must_use]
+pub fn outcome_of(counts: &BTreeMap<Stage, u64>) -> Outcome {
+    let n = |s: &Stage| counts.get(s).copied().unwrap_or(0);
+    match (n(&Stage::accepted()) > 0, n(&Stage::rejected()) > 0) {
+        (false, false) => Outcome::Pending,
+        (true, false) => Outcome::Accepted,
+        (false, true) => Outcome::Rejected,
+        (true, true) => Outcome::Contested,
+    }
+}
+
+/// Accumulates contract region touches per token: the OR of every
+/// event's `regions` bitmask (doc `19 §4.2`). Commutative and
+/// duplicate-tolerant by construction — OR is both — so R-1/R-3 hold
+/// without ceremony. `coverage` evaluates this against the manifest's
+/// declared [`crate::Contract`].
+#[derive(Debug, Default)]
+pub struct RegionTouchFold {
+    /// Token → OR of region-touch bits observed so far.
+    pub per_token: BTreeMap<Token, u8>,
+}
+
+impl Fold for RegionTouchFold {
+    fn apply(&mut self, record: &LogRecord) {
+        if let LogRecord::Event(e) = record {
+            if let Some(bits) = e.regions {
+                *self.per_token.entry(e.token).or_insert(0) |= bits;
+            }
+        }
+    }
+}
+
 /// The delegation forest: parent → children, from `Minted` records
 /// (doc `06 §4` — coordination trace, attribution roll-up, cascade path).
 #[derive(Debug, Default)]
@@ -147,6 +199,7 @@ mod tests {
             at: Timestamp::from_unix_ms(2),
             seq: Seq(seq),
             variant: None,
+            regions: None,
         })
     }
 
@@ -218,6 +271,57 @@ mod tests {
         let out = &folded.manifests[&m.token];
         assert_eq!(out.version, 1);
         assert_eq!(out.labels["campaign"], "q3");
+    }
+
+    #[test]
+    fn outcome_derivation_is_a_pure_function_of_counts() {
+        let m = minted(7, None);
+        let judged = |stages: &[Stage]| {
+            let records: Vec<LogRecord> = stages
+                .iter()
+                .enumerate()
+                .map(|(i, s)| event(m.token, s.clone(), u32::try_from(i).unwrap() + 1))
+                .collect();
+            let funnel = replay(records, FunnelFold::default());
+            outcome_of(funnel.per_token.get(&m.token).unwrap_or(&BTreeMap::new()))
+        };
+        assert_eq!(judged(&[]), Outcome::Pending);
+        assert_eq!(judged(&[Stage::resolve(), Stage::run()]), Outcome::Pending);
+        assert_eq!(judged(&[Stage::accepted()]), Outcome::Accepted);
+        assert_eq!(judged(&[Stage::rejected()]), Outcome::Rejected);
+        assert_eq!(
+            judged(&[Stage::accepted(), Stage::rejected()]),
+            Outcome::Contested,
+            "both verdicts surface honestly, never a silent overwrite"
+        );
+    }
+
+    #[test]
+    fn region_touches_or_together_shuffle_and_duplicate_immune() {
+        let m = minted(8, None);
+        let touch = |bits: u8, seq: u32| {
+            LogRecord::Event(Event {
+                token: m.token,
+                stage: Stage::read(),
+                actor: ActorClass::from_context(&ResolverContext::anonymous_agent()),
+                at: Timestamp::from_unix_ms(2),
+                seq: Seq(seq),
+                variant: None,
+                regions: Some(bits),
+            })
+        };
+        let records = vec![
+            touch(0b001, 1),
+            event(m.token, Stage::read(), 2), // no regions: contract-free access
+            touch(0b100, 3),
+            touch(0b001, 1), // duplicate record — OR absorbs it (R-3)
+        ];
+        let mut shuffled = records.clone();
+        shuffled.reverse();
+        let a = replay(records, RegionTouchFold::default());
+        let b = replay(shuffled, RegionTouchFold::default());
+        assert_eq!(a.per_token[&m.token], 0b101);
+        assert_eq!(a.per_token, b.per_token, "OR is commutative — R-1");
     }
 
     #[test]

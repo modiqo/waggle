@@ -69,15 +69,18 @@ impl InternTables {
 /// Sentinel for "no variant recorded" in the packed column.
 const NO_VARIANT: u8 = u8::MAX;
 
-/// The six-column `SoA` log. Fixed-width rows — a consequence of I-1 (events
-/// carry no payload), and the load-bearing fact behind lock-free tail reads
-/// in stores (doc `15 §2`).
+/// The seven-column `SoA` log. Fixed-width rows — a consequence of I-1
+/// (events carry no payload), and the load-bearing fact behind lock-free
+/// tail reads in stores (doc `15 §2`). The `regions` column packs the
+/// contract touch bitmask; `0` doubles as "none" because an empty mask
+/// carries no information (unlike `variant`, where index 0 is real).
 #[derive(Debug, Default)]
 pub struct EventLog {
     token_ids: Vec<TokenId>,
     stage_ids: Vec<StageId>,
     actors: Vec<u8>,
     variants: Vec<u8>,
+    regions: Vec<u8>,
     at_ms: Vec<u64>,
     seqs: Vec<u32>,
 }
@@ -89,6 +92,7 @@ impl EventLog {
         self.stage_ids.push(tables.stage(&event.stage));
         self.actors.push(event.actor.code());
         self.variants.push(event.variant.unwrap_or(NO_VARIANT));
+        self.regions.push(event.regions.unwrap_or(0));
         self.at_ms.push(event.at.as_unix_ms());
         self.seqs.push(event.seq.0);
     }
@@ -141,6 +145,7 @@ mod tests {
             at: Timestamp::from_unix_ms(u64::from(seq)),
             seq: Seq(seq),
             variant: if seq % 2 == 0 { Some(1) } else { None },
+            regions: None,
         }
     }
 

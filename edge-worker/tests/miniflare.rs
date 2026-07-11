@@ -620,6 +620,7 @@ fn seed_local_store() -> (Vec<waggle_core::LogRecord>, String) {
                         &waggle_core::ResolverContext::anonymous_agent(),
                     ),
                     variant: None,
+                    regions: None,
                     at: waggle_core::Timestamp::from_unix_ms(2),
                 })
                 .await

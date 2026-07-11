@@ -33,6 +33,10 @@ struct ImmutableCore<'m> {
     content: &'m Option<MediaRef>,
     variants: &'m [Variant],
     private: bool,
+    /// Skipped when absent so every pre-contract manifest keeps its
+    /// exact canonical bytes — existing signatures stay valid (19 §4.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    contract: &'m Option<crate::Contract>,
 }
 
 /// The bytes a signature covers.
@@ -54,6 +58,7 @@ pub fn canonical_core_bytes(m: &AttributionManifest) -> Vec<u8> {
         content: &m.content,
         variants: &m.variants,
         private: m.private,
+        contract: &m.contract,
     };
     serde_json::to_vec(&core).expect("core fields always serialize")
 }
@@ -200,6 +205,50 @@ mod tests {
             matches!(verify_manifest(&m), SignatureStatus::Valid { .. }),
             "the three-zone design: mutations don't touch what was signed"
         );
+    }
+
+    #[test]
+    fn contract_free_canonical_bytes_never_mention_the_field() {
+        // The 19 §4.2 compatibility rule, checked at the byte level: a
+        // manifest without a contract serializes exactly as it did before
+        // the field existed (the pinned vector in
+        // `signature_round_trip_vector` proves the same end to end).
+        let m = minted();
+        let bytes = canonical_core_bytes(&m);
+        assert!(
+            !String::from_utf8(bytes).unwrap().contains("contract"),
+            "absent contract must leave canonical bytes untouched"
+        );
+    }
+
+    #[test]
+    fn contract_bearing_manifests_sign_and_tamper_detect() {
+        let mut entropy = |b: &mut [u8]| {
+            b.fill(42);
+            Ok(())
+        };
+        let contract = crate::Contract::new(
+            vec![crate::Region::new(Some("Pricing".into()), 10, 40, 0).unwrap()],
+            1000,
+        )
+        .unwrap();
+        let mut m = crate::mint(
+            MintSpec::new(
+                CanonicalUrl::new("ws://trust/contracted").unwrap(),
+                Sharer::new("lead").unwrap(),
+                Channel::subagent_general(),
+            )
+            .contract(contract),
+            &MintOptions::default(),
+            &mut entropy,
+            Timestamp::from_unix_ms(1),
+        )
+        .unwrap();
+        m.signature = Some(sign_manifest(&m, &key()));
+        assert!(matches!(verify_manifest(&m), SignatureStatus::Valid { .. }));
+        // The contract is signed: tampering with it invalidates.
+        m.contract = None;
+        assert_eq!(verify_manifest(&m), SignatureStatus::Invalid);
     }
 
     #[test]

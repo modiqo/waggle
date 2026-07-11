@@ -275,6 +275,12 @@ pub struct AttributionManifest {
     /// public surfaces (unfurls, social renderers). Immutable + signed.
     #[serde(default, skip_serializing_if = "core::ops::Not::not")]
     pub private: bool,
+    /// The consumption contract, if the author declared one at mint
+    /// (doc `19 §4.2`): which regions a consumer must reach. Immutable
+    /// core — signed; absent for the (default) contract-free mint, so
+    /// pre-contract manifests keep their exact canonical bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contract: Option<crate::Contract>,
     /// Author signature over the immutable core (CP-11); set at mint by
     /// hosts that hold an identity. NOT itself part of the signed bytes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
