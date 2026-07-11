@@ -32,13 +32,15 @@
     <main>
       <!-- ================= HERO ================= -->
       <section class="hero plain wrap">
-        <div class="kicker">share names, not payloads</div>
-        <h1>Tracked file paths for agents.</h1>
+        <div class="kicker">the handoff layer for multi-agent systems</div>
+        <h1>Pass a reference, not a copy.</h1>
         <p class="lede">
-          You already hand subagents <code>/tmp/result.md</code>. waggle makes that
-          reference <strong>attributed</strong>, <strong>resolvable</strong> from any
-          harness, <strong>revocable</strong>, and <strong>counted</strong> — a ~30-byte
-          token instead of a re-pasted payload.
+          When one agent delegates to another, it copies whole files and reports into the
+          next agent's context &mdash; <strong>paid for on every turn</strong>, with no record
+          of what was actually read and no way to fix it once sent. waggle hands off a small,
+          attributed <strong>token</strong> instead: each agent pulls just the slice it needs,
+          and every handoff is <strong>counted</strong>, <strong>correctable</strong>, and
+          <strong>revocable</strong>.
         </p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="#install">Install</a>
@@ -46,7 +48,7 @@
           <a class="btn btn-ghost" href="https://github.com/modiqo/waggle">GitHub &#8599;</a>
         </div>
         <div class="hero-visual">
-          <img src="./assets/hero.svg" alt="One name travels; each consumer resolves its own truthful rendering, where the bytes live">
+          <img src="./assets/hero.svg" alt="One token travels; each consumer resolves its own projection — a digest, an image, a transcript, fail-closed CI — where the bytes live">
         </div>
       </section>
 
@@ -171,10 +173,10 @@
             runs tree-sitter at mint and stores a <em>symbol outline</em> beside the bytes.
             The consumer orients before it greps, reads a definition by name, and you can
             declare &mdash; and <em>prove</em> &mdash; what a reviewer had to reach:</p>
-<pre><span class="k">waggle</span> mint  <span class="k">--target</span> <span class="s">"file://$PWD/src/contract.rs"</span> <span class="k">--snapshot</span> \
-      <span class="k">--require</span> symbol:evaluate           <span class="c"># a consumption contract, signed at mint</span>
-<span class="k">waggle</span> read     <span class="k">--token</span> 9u6KEr6F <span class="k">--symbol</span> evaluate   <span class="c"># exact definition, no window guessing</span>
-<span class="k">waggle</span> coverage <span class="k">--token</span> 9u6KEr6F              <span class="c"># { met: true } &#8592; the region was reached</span></pre>
+<pre><span class="k">waggle</span> mint  <span class="k">--target</span> <span class="s">"file://…/contract.rs"</span> <span class="k">--snapshot</span> \
+      <span class="k">--require</span> symbol:evaluate     <span class="c"># a signed consumption contract</span>
+<span class="k">waggle</span> read     <span class="k">--token</span> 9u6KEr6F <span class="k">--symbol</span> evaluate   <span class="c"># the exact definition</span>
+<span class="k">waggle</span> coverage <span class="k">--token</span> 9u6KEr6F              <span class="c"># { met: true } &#8592; it was reached</span></pre>
           </div>
           <div class="callout green">
             <p><strong>Verification without trust.</strong> A subagent that claims to have
@@ -192,28 +194,27 @@
           <div class="eyebrow">install</div>
           <h2>One binary. One config line. No account.</h2>
           <p class="section-lede">Pick one &mdash; all install the same <code>waggle</code> binary. It's an MCP server: one line in Claude Code, Codex, Cursor, or anything MCP-speaking.</p>
-          <div class="install-grid">
-            <div class="card">
-              <h3>cargo</h3>
+          <div class="install-list">
+            <div class="install-row">
+              <span class="label">cargo</span>
 <pre><span class="k">cargo</span> install waggle-cli</pre>
             </div>
-            <div class="card">
-              <h3>curl &mdash; no toolchain</h3>
-<pre><span class="k">curl</span> <span class="k">--proto</span> <span class="s">'=https'</span> <span class="k">--tlsv1.2</span> <span class="k">-LsSf</span> \
-  <span class="s">https://github.com/modiqo/waggle/releases/latest/download/waggle-cli-installer.sh</span> | sh</pre>
+            <div class="install-row">
+              <span class="label">curl</span>
+<pre><span class="k">curl</span> <span class="k">-LsSf</span> <span class="s">https://github.com/modiqo/waggle/releases/latest/download/waggle-cli-installer.sh</span> | sh</pre>
             </div>
-            <div class="card">
-              <h3>homebrew</h3>
+            <div class="install-row">
+              <span class="label">homebrew</span>
 <pre><span class="k">brew</span> install modiqo/homebrew-tap/waggle-cli</pre>
             </div>
           </div>
 
           <div class="prose" style="margin-top: 34px;">
-            <p>Then wire it into your harness and repo &mdash; all three harnesses land on the
+            <p>Then wire it into your harness &mdash; all three harnesses land on the
             <strong>same daemon and the same tokens</strong>. What a Claude Code session mints,
             a Codex session resolves.</p>
-<pre><span class="k">claude</span> mcp add waggle -- waggle serve --stdio     <span class="c"># ...and the same line in Codex/Cursor</span>
-<span class="k">waggle</span> init                                       <span class="c"># the agent stub, into CLAUDE.md/AGENTS.md</span></pre>
+<pre><span class="k">claude</span> mcp add waggle -- waggle serve --stdio   <span class="c"># same line in Codex &amp; Cursor</span>
+<span class="k">waggle</span> init                                     <span class="c"># installs the agent stub</span></pre>
           </div>
         </div>
       </section>
@@ -233,9 +234,9 @@
             <img src="./assets/reach.svg" alt="One token at three radii: harnesses through one daemon on a machine, daemon-to-daemon federation across machines, and a Cloudflare edge where grep runs while the source files never leave">
           </figure>
           <div class="prose">
-<pre><span class="k">npx</span> wrangler deploy               <span class="c"># a Durable Object per tenant, same certified engine</span>
-<span class="k">waggle</span> edge push                  <span class="c"># records + snapshots replicate; the FILES never leave</span>
-<span class="k">waggle</span> edge status                <span class="c"># { "health": "ok", "tools": 9 }</span></pre>
+<pre><span class="k">npx</span> wrangler deploy      <span class="c"># a Durable Object per tenant</span>
+<span class="k">waggle</span> edge push         <span class="c"># records + snapshots replicate; the FILES never leave</span>
+<span class="k">waggle</span> edge status       <span class="c"># { "health": "ok", "tools": 9 }</span></pre>
             <p>An agent's loop &mdash; mint, hand off, resolve, interrogate, report &mdash; is
             byte-for-byte the same whether the other end is in this process, on another machine,
             or on another continent.</p>
@@ -247,7 +248,7 @@
       <section id="dance">
         <div class="wrap">
           <div class="eyebrow">what inspired it</div>
-          <h2>She carries a reference, not the field.</h2>
+          <h2>The bees solved this first.</h2>
           <p class="section-lede">
             A honeybee returns from a find and <em>dances</em> &mdash; angle encodes direction,
             duration distance, vigor quality. Each follower resolves the reference herself, flies
