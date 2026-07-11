@@ -649,7 +649,7 @@ to validity are in the accompanying design note.
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-  width=\columnwidth, height=5.1cm,
+  width=0.86\columnwidth, height=5cm,
   xlabel={artifact size (KiB)}, ylabel={cost (tokens)},
   xmode=log, ymode=log, log ticks with fixed point,
   xtick={4,16,40,160,640}, xticklabels={4,16,40,160,640},
@@ -665,10 +665,10 @@ to validity are in the accompanying design note.
 \legend{copy (no cache), copy (cached), waggle}
 \end{axis}
 \end{tikzpicture}
-\caption{Handoff cost versus artifact size at $H{=}5$, $T{=}5$, $R{=}1$
-(tokenizer \texttt{char-ratio/4.0}; the ratio is tokenizer-invariant).
+\caption{Handoff cost versus artifact size at $H{=}5$, $T{=}5$, $R{=}1$.
 waggle is flat---it never sends the artifact---while the copy grows
-linearly. Regenerated from source by \texttt{just bench-paper}.}
+linearly; the ratio is tokenizer-invariant. Regenerated from source by
+the benchmark harness.}
 \label{fig:cost}
 \end{figure}
 
