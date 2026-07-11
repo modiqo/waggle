@@ -1,356 +1,185 @@
 <h1 align="center">
-  <img src="../assets/logo.svg" width="52" alt="the waggle mark: a figure-eight dance with the waggle run as an arrow" align="center"> waggle
+  <img src="../assets/logo.svg" width="52" alt="the waggle mark: a figure-eight dance with the waggle run as an arrow" align="center"> waggle — the essay
 </h1>
 
 <p align="center">
-  <em>Tracked file paths for agents.</em><br>
-  You already hand subagents <code>/tmp/result.md</code> — waggle makes that
-  reference attributed, resolvable from any harness, revocable, and counted.
+  <em>What inspired the design.</em><br>
+  A honeybee twenty million years ago, a termite mound, and forty years of
+  distributed systems all arrived at the same answer: share names, not
+  payloads.
 </p>
 
 <p align="center">
-  <a href="#the-dance">Why "waggle"</a> ·
-  <a href="#the-problem">The problem</a> ·
-  <a href="#how-it-works">How it works</a> ·
-  <a href="#the-sixty-second-demo">The demo</a> ·
-  <a href="#wiring-it-into-claude-code-codex--cursor">Harness setup</a> ·
-  <a href="#status">Status</a> ·
-  <a href="../README.md">All docs</a>
+  <a href="#the-dance">The dance</a> ·
+  <a href="#stigmergy">Stigmergy</a> ·
+  <a href="#what-the-systems-world-already-knew">The systems lineage</a> ·
+  <a href="#the-paradigm-stated-plainly">The paradigm</a> ·
+  <a href="../../README.md">How to use it →</a> ·
+  <a href="../../paper/">The paper →</a>
 </p>
 
 <p align="center">
   <img src="../assets/hero.svg" alt="The handoff, before and after: pasting the whole artifact to every subagent, versus handing off a 30-byte token that each consumer resolves into its own projection" width="940">
 </p>
 
+> This essay is the *why*. For installation, the harness wiring, and
+> step-by-step usage by file type, see the
+> **[README](../../README.md)**. For the systems-paper treatment — the
+> four-boundary analysis, the algorithms, and the measurements — see
+> **[the paper](../../paper/)**.
+
 ## The dance
 
 A honeybee returns from a find. On the vertical comb, in the dark, she
-performs a figure-eight dance — the **waggle dance** — whose angle encodes
-direction, whose duration encodes distance, whose vigor encodes quality.
-She does not carry the field to the hive. She carries a **reference**.
-
-And here is the part that matters: every bee that reads the dance decodes it
-**according to its own role and state**, then flies to the target itself.
-One shared marker. Adaptive interpretation per consumer. Recruitment success
-observable at the hive.
+performs a figure-eight dance — the **waggle dance** — whose angle to
+vertical encodes direction relative to the sun, whose duration encodes
+distance, whose vigor encodes quality. She does not carry the field to the
+hive. She does not bring back enough nectar for the colony to evaluate. She
+carries a **reference**.
 
 <p align="center">
   <img src="../assets/dance.svg" alt="The waggle dance: a figure-eight around a waggle run whose angle to vertical encodes direction to the find, duration encodes distance, vigor encodes quality" width="640">
 </p>
 
+And here is the part that matters — the part every distributed-systems
+engineer should study. Each follower **resolves the reference herself**:
+she flies her own flight, with her own senses, from her own position. The
+dance is not the nectar; it is an *attributed, resolvable claim* that the
+nectar exists. Recruitment is **measurable** — you can count who followed,
+who arrived, and who came back to dance the same field in turn, a
+recruitment tree growing from one dance. And the information **expires
+honestly**: bees dance only while the source still pays. When the nectar
+dries up, the dancing stops, and no bee has to chase down stale copies of
+yesterday's directions — there were never any copies to chase.
+
 Twenty million years before context windows, evolution solved the handoff
 problem — and it did not solve it by pasting the meadow into the prompt.
 
-## The problem
+## Stigmergy
 
-We are entering the world of agent harnesses: Claude Code orchestrators
-fanning out hundreds of subagents, Codex sessions delegating in parallel,
-cross-vendor agents discovering each other over open protocols. And every
-one of these handoffs, today, works the same way: **forward the context and
-hope**.
+The dance is one instance of a deeper principle. In 1959, studying how
+termites coordinate the construction of a mound with no blueprint and no
+foreman, Pierre-Paul Grassé named it **stigmergy**: coordination through
+durable marks left in a shared medium, rather than direct messages between
+individuals. A termite deposits a pheromone-laced pellet; the *mark itself*
+is the message, and the next termite reads it and responds. No termite
+holds the plan; the plan is in the marks. Theraulaz and Bonabeau traced the
+same mechanism across social insects half a century later.
 
-The costs are measured, not hypothetical. Multi-agent systems consume ~15x
-the tokens of a chat session — with the overhead attributed by the vendor
-itself to *"duplicating context across agents, coordination messages between
-agents, and summarizing results for handoffs."* Their words: **"Each handoff
-loses context."** Roughly 37% of multi-agent failures trace to exactly this
-seam.
+Stigmergy is the escape from the tyranny of the shared context window. A
+message-passing swarm must copy state into every participant — n actors, n
+copies, and no copy knows about the others. A stigmergic swarm writes marks
+to a common surface that every actor reads *according to its own state*. The
+mapping to a handoff substrate is structural, not decorative:
 
-Waggle's competitor is not another protocol. It is
-`"Here's /tmp/analysis.md. Use it."` — and that instinct is *correct*: a
-path is a 30-byte reference, which is exactly the right size for a
-handoff. But a path has **no attribution** (who made this,
-from what), **no adaptation** (the 4k-context model gets the same 9,000
-tokens as the frontier model), **no lifecycle** (a stale path silently
-serves wrong data forever), **no telemetry** (which subagent actually read
-its input? which stalled?), and **no reach** (it dies at the machine
-boundary).
-
-> The long-form grounding — the handoff matrix across all four agent
-> boundaries, the why-provider-caching-doesn't-transfer argument, and
-> the full dance-to-design mapping — is **[WHY.md](../WHY.md)**.
-
-## What enters the context window
-
-When a parent hands a subagent `/tmp/result.md` — or a waggle token —
-only that *string* enters the subagent's context. The artifact behind it
-does not travel unless something fetches it. Every harness answers
-"fetch when?" differently: Claude Code subagents start fresh and gather
-context themselves; OpenAI SDK handoffs forward conversation history
-unless filtered; MCP resources enter only when the host reads them.
-Three patterns, one gap:
-
-<p align="center">
-  <img src="../assets/context.svg" alt="Three context windows compared: a full handoff fills the window with the artifact again; a raw path is cheap but blind; a waggle token stays small and pulls back only budgeted slices through resolve, search, and read" width="940">
-</p>
-
-Waggle standardizes the third pattern, and enforces its one hard rule
-**by type**: the token travels in context; the artifact never
-auto-expands; `resolve`, `read`, and `search` return only the projection
-or slice the consumer asked for, under byte budgets. Cheap like a path —
-but the reference answers back.
-
-## How it works
-
-Waggle is the reference, made first-class. A **token** is a ~30-byte
-attributed name for an artifact, minted in one call. Behind it, an
-**attribution manifest**: who minted it (Ed25519-signed when the host
-holds an identity), for which channel, from which parent (delegation
-forms a lineage tree), with **variants** — different projections for
-different consumers. When an agent resolves the token it presents its
-context, and a **sealed, deterministic matcher** returns *its*
-projection. Everything that happens afterward is an event in an
-append-only log — payload-free by construction, so funnels count without
-ever seeing your data.
-
-<p align="center">
-  <img src="../assets/loop.svg" alt="The author's loop: mint, hand off one 30-byte line, consumers resolve their own projections, work is recorded as payload-free counts, the funnel reports, and a revocation travels to every replica" width="940">
-</p>
-
-The reference doesn't stop at the process boundary. Every harness on a
-machine shares one daemon; daemons federate across machines; and the
-same tokens graduate to Cloudflare's edge by **replaying the log** —
-migration is a stream, because the log is the truth. Pinned snapshots
-replicate with the records, so `search` greps *at the edge* against
-content whose source file never left your laptop.
-
-<p align="center">
-  <img src="../assets/reach.svg" alt="One token at three radii: every harness on one machine through waggled; across machines through federation; and on Cloudflare's edge where grep runs remotely while the source files never leave" width="940">
-</p>
-
-**Consumption is protocol-shaped**: waggle is an MCP server. One config line
-in Claude Code, Codex, Cursor, or anything MCP-speaking — no SDK, no
-language bindings, no accounts. Locally it is one binary and a SQLite
-file.
-
-## The sixty-second demo
-
-Install once (every harness on the machine shares the same daemon and
-the same tokens):
-
-```bash
-cargo install waggle-cli                          # on crates.io
-claude mcp add waggle -- waggle serve --stdio     # ...and the same line in Codex/Cursor
-waggle init                                       # the 5-line stub, into CLAUDE.md/AGENTS.md
-```
-
-**1 — mint.** In your Claude Code session (or by hand):
-
-```bash
-waggle mint --target "file://$PWD/q3-report.md" --snapshot
-#  → { "token": "b2uQyZUC",
-#      "handoff": "resolve b2uQyZUC via waggle for your working context" }
-```
-
-**2 — hand off that one line.** To a Codex session, a Cursor agent, a
-teammate — instead of the file's contents.
-
-**3 — the other side works, surgically.** No re-paste, no re-upload;
-`--snapshot` pinned the bytes, so this works even after the file changes
-or from a machine that never had it:
-
-```bash
-waggle resolve --token b2uQyZUC                    # its own projection, signed-by reported
-waggle search  --token b2uQyZUC --pattern "pricing"  # grep THROUGH the token — matches travel, the file stays
-waggle read    --token b2uQyZUC --lines 40-80      # a window, never the whole artifact
-```
-
-**4 — you stay in control.** Found an error in the report? The
-correction reaches every holder of the token — including caches and
-public pages, which answer 410:
-
-```bash
-waggle mutate --token b2uQyZUC --change revoke --expected-version 1
-```
-
-**5 — and you can *see* the handoff working:**
-
-```bash
-waggle funnel --token b2uQyZUC
-#  { "resolve": 1, "read": 2, "run": 1 }   ← it resolved, searched twice, ran with it
-```
-
-That's the product. Counts only — the funnel never sees content.
-`just demo` runs the whole arc live against a throwaway store.
-
-When the handoff must outlive your laptop, one deploy
-([guide 09](../guide/09-the-edge.md)) and one command:
-
-```bash
-waggle edge push     # records + snapshots replicate; the FILES never leave
-waggle edge status   # {"health":"ok","tools":9}
-```
-
-Every response carries executable `next` steps; `waggle map` answers
-"where am I?" live; `waggle find <name>` looks tokens up by tag or
-basename; and `waggle coverage` proves which files of a folder handoff
-were actually read — misses named. The
-**[documentation map](../README.md)** holds the eleven guides in
-reading order — from the five-minute loop to the tmux switchboard.
-
-### The tmux switchboard
-
-For the full multi-harness experience, `waggle-tmux` turns handoffs
-into the interface itself ([guide 11](../guide/11-tmux-switchboard.md)):
-
-```bash
-cargo install --path ../../crates/waggle-tmux   # ships with the repo
-waggle-tmux up claude-code codex          # choose once — everything wires itself
-```
-
-One window per harness (the tmux bar is your harness switcher), a live
-lineage board under each, and when an agent finishes it mints its
-outcome to `tmux/<destination>` — your screen SWAPS to that harness
-with the resolve instruction typing itself. Receipts on the board,
-`/exit` handled gracefully, `--seal` when the review must be provable.
-
-## Wiring it into Claude Code, Codex & Cursor
-
-Two things make a harness waggle-fluent: the **MCP server** (the tools)
-and the **convention-file stub** (the one standing instruction). Both
-are one command each.
-
-**Claude Code**
-
-```bash
-claude mcp add waggle -- waggle serve --stdio
-waggle init        # in each repo where agents work
-```
-
-**Codex** — add to `~/.codex/config.toml` (AGENTS.md is covered by the
-same `waggle init`):
-
-```toml
-[mcp_servers.waggle]
-command = "waggle"
-args = ["serve", "--stdio"]
-```
-
-**Cursor** — add to `.cursor/mcp.json` (`.cursorrules` is covered by
-`waggle init`):
-
-```json
-{ "mcpServers": { "waggle": { "command": "waggle", "args": ["serve", "--stdio"] } } }
-```
-
-All three land on the **same daemon and the same tokens** — what a
-Claude Code session mints, a Codex session resolves.
-
-### How the agents get instructed
-
-`waggle init` writes this stub into `CLAUDE.md`, `AGENTS.md`, and
-`.cursorrules` (idempotent — it manages its own marked block):
-
-```markdown
-## Artifact handoffs (waggle)
-When passing work products between agents or subagents, do not paste file
-contents. Call waggle's `mint` with the artifact's path and hand over the
-`handoff` line from the result. Consumers call `resolve` with the token.
-For SOURCE CODE, mint with `snapshot` (structure is extracted: consumers
-get a symbol outline and `read --symbol NAME`), and declare what a
-consumer must reach — `--require symbol:NAME` — so `coverage` can prove
-the review; judge returned work with `record --stage accepted|rejected`.
-When minting a binary artifact (PDF, image, audio), extract its text with
-your own abilities first and pass it via `content`.
-If unsure what to do with a token, call `map`.
-```
-
-That is the **entire** standing instruction — deliberately. Everything
-else is taught in-band, at the moment it's needed: every tool response
-carries up to three executable `next` steps, and `map` answers "where am
-I, what are my paths?" computed live from actual state. Instructions in
-convention files rot; envelopes can't.
-
-**The orchestrator pattern**, in practice: when you (or your top-level
-agent) delegate, the subagent's prompt contains the handoff line and
-nothing else about the artifact —
-
-> Your working context: **resolve b2uQyZUC via waggle**. Use waggle's
-> `search`/`read` to pull only the slices you need; call
-> `record --stage run` when you've used it.
-
-The subagent finds the tools already mounted, pulls its own projection,
-and the funnel shows you it happened. (This exact flow — orchestrator
-mints, a fresh subagent answers a research question through the token
-alone, funnel reads `{resolve: 1, read: 5, run: 1}` — is how this repo
-dogfoods itself.)
-
-| Crate | Role |
+| The colony | The substrate |
 |---|---|
-| `waggle-core` | sans-I/O domain: tokens, manifests, matcher, log, trust |
-| `waggle-ops` | the operations catalog — one source, four projections |
-| `waggle-agent` | resolver-context extraction (harness metadata, A2A cards) |
-| `waggle-social` | the human face: unfurls, share packages, QR |
-| `waggle-store*` | the storage contract + SQLite/JSONL/Cloudflare backends |
-| `waggle-mcp` | the MCP projection: tool schemas, envelope, transports |
-| `waggle-cli` | `waggle` verbs + `waggled`, the local daemon |
+| the figure-eight encodes a vector in seconds | a ~30-byte token names an artifact plus its attribution |
+| each follower flies her own flight | each consumer resolves *its* projection (the sealed matcher) |
+| the follower's senses at the field | `read`/`search`: interrogate the content on arrival |
+| countable recruitment | the funnel: resolve → read → run, as receipts |
+| dancers who recruit dancers | lineage: children minted under their parents |
+| dancing stops when the nectar stops | leases, supersession, revocation |
+| the dance floor | the append-only log every mark lands on |
 
-```bash
-just dev-install   # build & install the CLI from this checkout
-just preflight     # fmt-check · clippy -D warnings · file-size lint · tests · wasm
-```
+The colony ran a swarm with **zero shared context windows**: share names,
+not payloads; let each consumer resolve per its own capability; make
+consumption observable; let stale claims die at the source. Waggle is that
+choreography, made durable and queryable.
 
-## What makes it credible
+## What the systems world already knew
 
-This repository is design-first and unusually explicit about its own
-discipline — the [design docs](./) are the contract, and the
-[**specification**](../../spec/waggle-spec.md) with its
-[conformance vectors](../../spec/vectors/) is the portable half (the vectors
-are generated FROM the implementation and drift-checked in CI — an
-independent implementation that matches them is a waggle
-implementation):
+The biology is not a lucky analogy. It is the same set of decisions the
+distributed-systems field spent forty years converging on — under other
+names, in other rooms, but the same decisions. There are only three ways to
+move information between computational actors:
 
-- **Sans-I/O core** — no clock, no entropy, no storage in the domain crates;
-  every effect is a parameter. The same code runs in the native daemon and
-  in Workers wasm, and every function is deterministic under test.
-- **Deterministic adaptivity** — same context, same projection, always;
-  the variant matcher is sealed so the trust claim survives.
-- **Event-sourced with a reconstruct guarantee** — counters are cache; the
-  log is truth; replay-equivalence is a CI property, not a slogan.
-- **One operations catalog** — the MCP tools, the clap CLI, the `map`
-  navigation, and `COMMANDS.md` are four projections of one table, with
-  parity tests that fail the build on drift. The tools teach the agent
-  themselves (`map`: *"I am here — what are my forward and reverse paths?"*)
-  so instruction cannot rot the way skills do.
-- **Verified against real infrastructure** — the edge tier shipped against
-  a published completeness matrix; a differential oracle holds the edge
-  byte-identical to SQLite over the same operations; and the end-to-end
-  walkthrough on a real Cloudflare account caught (and fixed, and
-  regression-locked) a cache-invalidation bug no local tier could see.
+1. **Copy semantics** (message passing) — send the bytes. Simple, and every
+   pathology of the agent handoff follows: n copies, no identity,
+   corrections that never propagate. This is today's default.
+2. **Place semantics** (shared memory) — both parties touch one location.
+   Fixes duplication, but needs shared infrastructure and trust, and a raw
+   location says nothing about *who may see what*.
+3. **Name semantics** (references) — send a small, immutable, attributed
+   *claim*, and let the resolution be computed per consumer, at the data, on
+   demand.
 
-## Status
+Waggle is a commitment to the third — and each of its design decisions has a
+lineage the agent literature has largely overlooked:
 
-**v0.1.0 on [crates.io](https://crates.io/crates/waggle-cli)**; the 0.3
-feature set is complete on `main` and every claim is a passing test in CI
-(three-OS matrix + wasm + the live Miniflare edge matrix; ~170 tests):
+- **Tuple spaces.** In 1985, David Gelernter's *Linda* made coordination a
+  property of a shared, content-addressable medium — *generative
+  communication*, where a process posts a tuple to the space and any other
+  process reads it by pattern, decoupled in time and identity. Waggle's log
+  is a persistent, attributed descendant of the tuple space: the dance floor
+  as a data structure.
+- **Named-data networking.** In 2009, Van Jacobson and colleagues argued the
+  network should route by the *name of the content*, not the address of a
+  host — fetch "this article," not "bytes from that server." Waggle is that
+  idea applied to the artifact a swarm of agents passes around: the consumer
+  asks the reference, and resolution happens wherever the bytes live.
+- **Capabilities.** Dennis and Van Horn (1966), and later Mark Miller's
+  object-capability model, made *possession of an unforgeable reference* the
+  unit of authority. Waggle's private tokens are capability URLs — 16
+  characters of entropy where holding the token *is* the credential, refused
+  by every public surface.
+- **Leases.** Gray and Cheriton (1989) made cache freshness a *bounded
+  promise* rather than a hopeful guess: a lease is valid until it expires,
+  and then you revalidate. Waggle's `revalidate_after` is a lease; the dance
+  that stops when the nectar dries is a lease that lapsed.
+- **Content addressing.** Merkle's hash trees, and later IPFS, named data by
+  the hash of its bytes, so identity is intrinsic and any replica's answer is
+  verifiable. Waggle's snapshots are content-addressed — pinned at mint,
+  immutable, and hash-provable wherever they replicate.
+- **The log is the truth.** Event sourcing, and Jay Kreps' framing of the log
+  as the unifying abstraction of real-time systems, made the append-only
+  record primary and every view a fold over it. Waggle's manifest tables,
+  funnel counts, and lineage are all folds over one payload-free log, and
+  migration is a *replay* — because the destination reconstructs, byte for
+  byte, from the same stream.
+- **The end-to-end argument.** Saltzer, Reed, and Clark (1984) taught that
+  function belongs at the ends, near the data, not in the pipe. Waggle's
+  `read` and `search` move the *question* to the bytes and return budgeted
+  slices — the follower's senses at the field, not the field carried home.
 
-- **the full loop** — mint / resolve / record / mutate / funnel / read /
-  search / query / map over MCP and CLI, one shared daemon per machine;
-- **surgical content** — snapshots pinned content-addressed at mint;
-  grep and windowed reads through the token under byte budgets;
-- **federation** — daemon-to-daemon over TCP or HTTPS, strict vs
-  eventual freshness, the CLI transparent through all tiers;
-- **the edge** — a Durable Object per tenant running the same certified
-  engine; `waggle edge push` replicates records and snapshots;
-  resolve p50 1.2 ms through the full HTTP-worker-DO path;
-- **trust** — Ed25519 signatures over the immutable core (mutations
-  never invalidate, by construction); capability-URL private tokens;
-- **the spec** — normative document plus conformance vectors generated
-  from the implementation, drift-checked in CI;
-- **the switchboard** — `waggle-tmux`: window-per-harness workspaces
-  where agent-minted outcomes swap the screen and resolve on arrival;
-  discovery (`--tag`/`find`), review proof (`coverage`), sealed
-  handoffs;
-- **measured, not promised** ([benches/PERF.md](../../benches/PERF.md)) —
-  39 ns cache-hit resolves, 39 us durable appends (real fsync), a
-  million-event funnel fold in 334 us.
+None of these is waggle's invention. Waggle's contribution is to notice that
+the agent handoff is a distributed-systems problem in disguise, and to
+assemble these well-worn primitives — with the bee's discipline of
+per-consumer resolution and honest expiry — into a substrate an agent can
+use in one line.
 
-## License
+## The paradigm, stated plainly
 
-MIT OR Apache-2.0, at your option.
+Committing to name semantics has four consequences, and they are what make
+waggle more than a shortener of file paths:
+
+- **Information exchange becomes projection, not transmission.** A resolve
+  answers with the variant matched to *this* consumer — the model-tuned
+  digest, the image for the vision agent, the transcript for the one without
+  ears, the fail-closed instructions for CI. One name, many truthful
+  renderings; the sealed matcher guarantees the same context always gets the
+  same projection.
+- **Retrieval becomes interrogation.** `read` and `search` move the question
+  to the bytes and return slices that *name the payload they spared you*. The
+  consumer that needs three facts from a sixty-page report ingests a few
+  hundred bytes, ever.
+- **Lineage becomes data, not discipline.** `parent` at mint writes the
+  delegation tree into the log itself — who handed what to whom is a query,
+  not an archaeology project. Revoking a parent tombstones the branch.
+- **History becomes reconstructable.** Every mint, resolve, read, and
+  correction is an event in an append-only, payload-free log. Shuffle it,
+  duplicate it, ship it to another machine: `reconstruct` rebuilds identical
+  state, and the log stays dark about content — so the receipts never become
+  the leak.
+
+The bee never carries the field home. She dances, and the hive knows — who
+danced, who flew, who found nectar, and when the field went dry. Our swarms
+should be built the same way.
 
 ---
 
 <p align="center">
-  <em>She never carries the field home. She dances, and the hive knows.</em>
+  <em>Ready to use it? The <a href="../../README.md">README</a> is the
+  five-minute path. Want the rigor — the boundary analysis, the algorithms,
+  the numbers? Read <a href="../../paper/">the paper</a>.</em>
 </p>
