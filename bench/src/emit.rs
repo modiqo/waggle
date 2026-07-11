@@ -14,14 +14,12 @@ use crate::determinism::Report;
 const INFALLIBLE: &str = "writing to an in-memory String cannot fail";
 
 /// Write the cost-vs-size sweep as a pgfplots-ready `.dat` file.
-pub(crate) fn write_cost_dat(path: &Path, rows: &[SweepRow], tokenizer: &str) -> io::Result<()> {
+pub(crate) fn write_cost_dat(path: &Path, rows: &[SweepRow]) -> io::Result<()> {
     let mut s = String::new();
-    writeln!(s, "# cost sweep in tokens · tokenizer={tokenizer}").expect(INFALLIBLE);
-    writeln!(
-        s,
-        "# columns: s_kib copy_naive copy_cached waggle ratio_vs_cached"
-    )
-    .expect(INFALLIBLE);
+    // A named header row (no comment lines) so pgfplots can read columns by
+    // name: `\addplot table[x=s_kib, y=copy_cached]`. The tokenizer is
+    // recorded in the figure/table captions, not here.
+    writeln!(s, "s_kib copy_naive copy_cached waggle ratio").expect(INFALLIBLE);
     for r in rows {
         writeln!(
             s,

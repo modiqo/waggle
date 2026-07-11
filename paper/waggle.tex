@@ -15,6 +15,8 @@
 \usepackage{amsmath,amssymb}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric,decorations.pathreplacing}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
 \usepackage[ruled,vlined]{algorithm2e}
 \usepackage{caption}
 \usepackage{enumitem}
@@ -617,18 +619,58 @@ Edge resolve, full HTTP--worker path (p50) & 1.2\,ms\\
 \end{tabular}
 \end{table}
 
-\paragraph{The arithmetic, honestly.} One 40\,KB report, five consumers,
-five turns each. Under copy semantics the report is placed five times
-(200\,KB) and re-sent on every turn ($\approx 1$\,MB re-read), discountable
-only within one vendor and one cache TTL. Under name semantics, five
-handoffs place 150 bytes total; each consumer pulls its projection once
-($\approx$2\,KB) or interrogates surgically at ${\sim}1$\,KB per question;
-re-turns re-send the 30-byte line, not the report. The ratio is large, but
-the deeper point is in the other columns: under name semantics the author
-\emph{knows} the report was resolved five times and read fourteen, the
-correction reached the writer that resolved early, and the exchange
-replays on any machine. Under copy semantics that knowledge is not
-expensive---it is nonexistent.
+\paragraph{The cost, measured.} Table~\ref{tab:cost} prices the same
+delegation three ways against a deliberately strong baseline---a copy that
+enjoys within-vendor prompt caching---and Figure~\ref{fig:cost} sweeps
+artifact size at the five-consumer, five-turn operating point. Two
+properties keep the account honest. The baseline is \emph{cached}, not the
+straw-man of naïve re-sending; and the reported ratio is
+\emph{tokenizer-invariant}---the tokenizer cancels in a ratio---so the
+headline does not turn on a choice of BPE. The figure carries one central
+fact: waggle's cost is \emph{flat in artifact size}, because the 30-byte
+line and the bounded projection do not grow with the report, while the copy
+grows linearly; the ratio therefore widens without bound, from
+$2\times$ on a single-shot 4\,KB hand-off, through $44\times$ at the
+40\,KB/five-consumer/five-turn cell, to $329\times$ under deep delegation.
+We are equally plain about the floor: at $H{=}T{=}1$ the advantage is only
+$2\times$, and the substrate earns its keep when an artifact is
+\emph{shared or revisited}, not on one blind read. The deeper point is in
+the columns a copy does not have. Under name semantics the author
+\emph{knows} the report was resolved and read, the correction reached the
+holder that resolved early, and the exchange replays on any machine; under
+copy semantics that knowledge is not expensive---it is nonexistent. Every
+number here is regenerated from source by the benchmark harness
+(\texttt{just bench-paper}); the pre-registered cost model and its threats
+to validity are in the accompanying design note.
+
+\input{generated/cost_table.tex}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=\columnwidth, height=5.1cm,
+  xlabel={artifact size (KiB)}, ylabel={cost (tokens)},
+  xmode=log, ymode=log, log ticks with fixed point,
+  xtick={4,16,40,160,640}, xticklabels={4,16,40,160,640},
+  legend pos=north west, legend cell align=left,
+  legend style={font=\scriptsize, draw=none, fill=none},
+  grid=both, major grid style={black!12}, minor grid style={black!5},
+  tick label style={font=\footnotesize}, label style={font=\small},
+  every axis plot/.append style={very thick},
+]
+\addplot table[x=s_kib, y=copy_naive]  {generated/cost_sweep.dat};
+\addplot table[x=s_kib, y=copy_cached] {generated/cost_sweep.dat};
+\addplot table[x=s_kib, y=waggle]      {generated/cost_sweep.dat};
+\legend{copy (no cache), copy (cached), waggle}
+\end{axis}
+\end{tikzpicture}
+\caption{Handoff cost versus artifact size at $H{=}5$, $T{=}5$, $R{=}1$
+(tokenizer \texttt{char-ratio/4.0}; the ratio is tokenizer-invariant).
+waggle is flat---it never sends the artifact---while the copy grows
+linearly. Regenerated from source by \texttt{just bench-paper}.}
+\label{fig:cost}
+\end{figure}
 
 \subsection{A live delegation}
 \label{sec:live}

@@ -79,7 +79,7 @@ fn run_cost(out: &Path) -> ExitCode {
     // The crossover figure: vary artifact size at the paper's fanout/turns.
     let rows = size_sweep(SIZES_KIB, 5, 5, 1, PROJ_BYTES, &tok, CACHE_DISCOUNT);
     let dat = out.join("cost_sweep.dat");
-    if let Err(e) = emit::write_cost_dat(&dat, &rows, tok.label()) {
+    if let Err(e) = emit::write_cost_dat(&dat, &rows) {
         eprintln!("write {}: {e}", dat.display());
         return ExitCode::FAILURE;
     }

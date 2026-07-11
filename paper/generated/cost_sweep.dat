@@ -1,5 +1,4 @@
-# cost sweep in tokens · tokenizer=char-ratio/4.0
-# columns: s_kib copy_naive copy_cached waggle ratio_vs_cached
+s_kib copy_naive copy_cached waggle ratio
 4 30720.0 12288.0 2785.0 4.41
 16 122880.0 49152.0 2785.0 17.65
 40 307200.0 122880.0 2785.0 44.12
