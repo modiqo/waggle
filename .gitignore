@@ -2,3 +2,11 @@
 **/*.rs.bk
 .DS_Store
 /.waggle
+
+# Paper build artifacts
+paper/*.pdf
+paper/*.aux
+paper/*.log
+paper/*.bbl
+paper/*.blg
+paper/*.out
