@@ -92,9 +92,11 @@ fn tree_mint_denies_generated_and_vendored_dirs() {
         assert!(minted.hint.is_none(), "{minted:?}");
         let children = minted.result["children"].as_array().unwrap();
         assert_eq!(children.len(), 1, "only src/lib.rs survives: {children:?}");
+        // Separator-agnostic: Windows targets carry backslashes.
         assert!(children[0]["target"]
             .as_str()
             .unwrap()
+            .replace('\\', "/")
             .ends_with("src/lib.rs"));
     });
 }
