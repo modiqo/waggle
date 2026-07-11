@@ -12,6 +12,7 @@
   <a href="docs/design/essay.md">The essay</a> ·
   <a href="docs/WHY.md">Why it exists</a> ·
   <a href="docs/README.md">All docs</a> ·
+  <a href="paper/">The paper</a> ·
   <a href="docs/design/19-interrogation-telemetry.md">What's next</a>
 </p>
 
@@ -26,7 +27,12 @@ holder.
 The full case — the handoff problem, the bee that solved it, the
 architecture at all three radii — lives in
 **[the essay](docs/design/essay.md)** and
-**[WHY.md](docs/WHY.md)**.
+**[WHY.md](docs/WHY.md)**. The systems-paper treatment, *The Dance and
+the Field: Name Semantics for Handoffs Between Distributed Agents*, is in
+[**`paper/`**](paper/) (build with `tectonic waggle.tex`; the latest CI
+build is attached to the
+[`paper-latest`](https://github.com/modiqo/waggle/releases/tag/paper-latest)
+release).
 
 ## Install & first handoff
 
