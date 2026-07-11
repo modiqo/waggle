@@ -695,6 +695,59 @@ favorable conditions (a capable model, explicit instructions); we present
 it as an existence proof of the mechanism, not as a controlled study, and
 we say so plainly.
 
+\subsection{Receipt reliability: a controlled measurement}
+\label{sec:tier2}
+\input{generated/tier2.tex}
+The live trial shows the mechanism \emph{fires}; it does not say how
+\emph{reliably}. To characterise the detector we run a pre-registered
+controlled experiment (design note~\S3): $\benchTwoTrials$ trials per
+condition against a $\benchTwoRegions$-region consumption contract, a
+quarter of the subagents \emph{bluffers}---modelled to report completion
+without reading. Every trial's interrogation routes through the real
+coverage machinery---region-touch events, folded and judged against the
+contract, exactly as in the live run; only the agent's read pattern is a
+model, and it lives behind a driver seam so a live model substitutes for the
+script without changing the measurement. The parameters are fixed in
+advance: a genuine reader touches each required region with probability
+$0.98$, a bluffer only incidentally ($0.04$), and through the side door a
+genuine reader bypasses the substrate with probability $0.35$.
+
+Table~\ref{tab:tier2} reports the outcome and Figure~\ref{fig:roc} the
+coverage ROC. Two findings matter. Precision is essentially perfect in both
+conditions---the coverage signal almost never mistakes a bluffer for a
+genuine consumer, so a \emph{passing} receipt is trustworthy---and the
+graded signal separates the two populations cleanly (ROC AUC
+$\benchTwoAuc$). The second finding is the one the mechanism lives or dies
+on: under seal the receipts miss only $\benchTwoSealedFnr$ of genuine
+consumers, but through the side door that false-negative rate rises to
+$\benchTwoSideFnr$. The seal is not cosmetic; it is what converts a
+suggestive signal into a dependable one. Substituting live agents for the
+scripted read pattern is the pre-registered next step, and the detector
+properties measured here are precisely what that step would put to the test.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.86\columnwidth, height=5cm,
+  xlabel={false positive rate}, ylabel={true positive rate},
+  xmin=0, xmax=1, ymin=0, ymax=1.02,
+  legend pos=south east, legend cell align=left,
+  legend style={font=\scriptsize, draw=none, fill=none},
+  grid=both, major grid style={black!12}, minor grid style={black!5},
+  tick label style={font=\footnotesize}, label style={font=\small},
+]
+\addplot[very thick] table[x=fpr, y=tpr] {generated/tier2_roc.dat};
+\addplot[dashed, black!45] coordinates {(0,0) (1,1)};
+\legend{coverage signal, chance}
+\end{axis}
+\end{tikzpicture}
+\caption{Coverage ROC over all trials: the signal a passing receipt gives
+against ground-truth consumption. Regenerated from source by the benchmark
+harness.}
+\label{fig:roc}
+\end{figure}
+
 \subsection{Interrogation versus lexical search}
 For a code artifact crossing a delegation boundary, the token's structural
 layer changes the interaction. Locating and reading a function with a
