@@ -1,6 +1,6 @@
 //! `waggle init` — the moment a repo becomes waggle-fluent (doc 17).
 //!
-//! Installs the five-line agent stub into every harness convention file
+//! Installs the agent stub into every harness convention file
 //! present (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`), creating the two
 //! dominant ones when none exist. Idempotent: the stub lives between
 //! markers and re-running replaces the block in place, so `init` is also
@@ -19,6 +19,10 @@ const STUB: &str = "\
 When passing work products between agents or subagents, do not paste file
 contents. Call waggle's `mint` with the artifact's path and hand over the
 `handoff` line from the result. Consumers call `resolve` with the token.
+For SOURCE CODE, mint with `snapshot` (structure is extracted: consumers
+get a symbol outline and `read --symbol NAME`), and declare what a
+consumer must reach — `--require symbol:NAME` — so `coverage` can prove
+the review; judge returned work with `record --stage accepted|rejected`.
 When minting a binary artifact (PDF, image, audio), extract its text with
 your own abilities first and pass it via `content`.
 If unsure what to do with a token, call `map`.";

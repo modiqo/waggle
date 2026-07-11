@@ -336,7 +336,7 @@ pub const INIT: OperationSpec = OperationSpec {
     name: "init",
     surface: Surface::CliOnly,
     kind: OpKind::RelaxedWrite,
-    description: "Install the five-line agent stub into this repo's harness convention files (CLAUDE.md, AGENTS.md, .cursorrules) — creating AGENTS.md and CLAUDE.md when none exist. Idempotent: re-running refreshes the managed block in place. Pair with: claude mcp add waggle -- waggle serve --stdio.",
+    description: "Install the short agent stub into this repo's harness convention files (CLAUDE.md, AGENTS.md, .cursorrules) — creating AGENTS.md and CLAUDE.md when none exist. Idempotent: re-running refreshes the managed block in place. Pair with: claude mcp add waggle -- waggle serve --stdio.",
     args: &[
         ArgSpec { name: "file", required: false, doc: "Target exactly this file instead of auto-detecting convention files." },
     ],
