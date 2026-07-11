@@ -19,6 +19,13 @@ Or any TeX Live with `latexmk`:
 latexmk -pdf waggle.tex
 ```
 
+CI (`.github/workflows/paper.yml`) builds on every change under `paper/`,
+gates on undefined references and citations, reports typographic
+warnings in the job summary, uploads the PDF as a workflow artifact, and
+keeps the current build downloadable from the
+[`paper-latest`](https://github.com/modiqo/waggle/releases/tag/paper-latest)
+release — the source stays the single truth; the PDF is never committed.
+
 ## Files
 
 | File | Contents |
