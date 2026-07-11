@@ -30,3 +30,4 @@ Read in this order if you're new:
 | [05 — social minting](05-social-minting.md) | The human face: unfurls, mint-time snapshots (I-3), QR, share packages |
 | [19 — interrogation telemetry](19-interrogation-telemetry.md) | *(plan)* Convergence classification of consumer traces, receipt-driven routing, scaffold distillation — the research grounding and the complete scoping |
 | [20 — the symbol lens](20-symbol-lens.md) | *(design)* Source-code handoffs: mint-time symbol outlines via tree-sitter tags, `symbol:` contracts, zero serve-time cost — hypothesis, performance budget, reference pseudo-code |
+| [21 — the resource projection](21-resource-projection.md) | Why the verbs are MCP tools (the control-hierarchy ruling), and the complement: resources/list+read as projections of resolve, subscriptions pushing lifecycle corrections to holders |
