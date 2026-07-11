@@ -1,0 +1,120 @@
+name: paper
+
+# The paper is source-of-truth as .tex; the PDF is a build artifact
+# (never committed). This workflow proves it compiles, gates on the
+# errors that matter (undefined references and citations are bugs),
+# surfaces typographic warnings without failing, publishes the PDF as a
+# downloadable artifact, and keeps a stable "latest" download on main.
+on:
+  push:
+    branches: [main]
+    paths: ['paper/**', '.github/workflows/paper.yml']
+  pull_request:
+    paths: ['paper/**', '.github/workflows/paper.yml']
+
+permissions:
+  contents: write        # only the release step uses this; jobs default to read
+
+concurrency:
+  group: paper-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TECTONIC_VERSION: '0.15.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: paper
+    steps:
+      - uses: actions/checkout@v5
+
+      # Tectonic caches downloaded LaTeX packages under ~/.cache/Tectonic;
+      # keying on the .tex means the first build warms it and later runs
+      # are near-instant.
+      - name: Cache Tectonic packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Tectonic
+          key: tectonic-${{ env.TECTONIC_VERSION }}-${{ hashFiles('paper/*.tex') }}
+          restore-keys: tectonic-${{ env.TECTONIC_VERSION }}-
+
+      - name: Install Tectonic (pinned, self-contained)
+        run: |
+          url="https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic@${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          curl -fsSL "$url" | tar -xz -C /usr/local/bin tectonic
+          tectonic --version
+
+      - name: Build the paper
+        run: |
+          # --keep-logs leaves waggle.log from the FINAL pass; tectonic
+          # runs to a fixed point, so that log — not the streamed
+          # multi-pass output — is the authoritative warning source
+          # (early passes always show undefined citations before the
+          # bibliography is resolved). A hard LaTeX error already fails
+          # this step (tectonic exits non-zero).
+          tectonic --chatter minimal --keep-logs waggle.tex
+          test -f waggle.pdf
+
+      - name: Gate — no undefined references or citations
+        run: |
+          # An undefined \ref or \cite is a genuine defect (a dangling
+          # cross-reference or a missing bibliography entry). Read the
+          # FINAL-pass log so a resolved-on-a-later-pass citation is not
+          # mistaken for a defect.
+          if grep -Eic 'undefined (reference|citation)|there were undefined' waggle.log | grep -qv '^0$'; then
+            echo "::error::Undefined references or citations in the final pass — fix the dangling \\ref/\\cite or add the missing bib entry:"
+            grep -E 'undefined (reference|citation)|There were undefined' waggle.log || true
+            exit 1
+          fi
+          echo "No undefined references or citations."
+
+      - name: Report — typographic warnings (non-fatal)
+        run: |
+          # Overfull boxes stick into the margin and are the quality
+          # signal worth watching; underfull boxes are usually harmless
+          # ragged spacing. Both are reported, neither fails the build.
+          over=$(grep -c 'Overfull' waggle.log || true)
+          under=$(grep -c 'Underfull' waggle.log || true)
+          {
+            echo '## Paper build'
+            echo
+            printf '- **PDF size:** %s\n' "$(du -h waggle.pdf | cut -f1)"
+            printf '- **Overfull boxes:** %s\n' "${over:-0}"
+            printf '- **Underfull boxes:** %s (typically harmless)\n' "${under:-0}"
+            if [ "${over:-0}" != '0' ]; then
+              echo
+              echo '<details><summary>overfull boxes (into the margin)</summary>'
+              echo
+              echo '```'
+              grep -A1 'Overfull' waggle.log | head -40 || true
+              echo '```'
+              echo '</details>'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: waggle-paper
+          path: paper/waggle.pdf
+          if-no-files-found: error
+          retention-days: 90
+
+      # A stable download URL for the current paper on main, without ever
+      # committing the binary: readers grab it from the "paper-latest"
+      # release; the source stays the single truth.
+      - name: Publish latest PDF (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: paper-latest
+          name: 'Paper — latest build'
+          body: |
+            The current build of *The Dance and the Field: Name Semantics
+            for Handoffs Between Distributed Agents*, compiled from
+            `paper/waggle.tex` at ${{ github.sha }}.
+          files: paper/waggle.pdf
+          make_latest: false
