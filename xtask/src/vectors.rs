@@ -148,6 +148,34 @@ pub fn generate(root: &std::path::Path) -> std::io::Result<()> {
         &ResolverContext::anonymous_agent(),
         Timestamp::from_unix_ms(1_700_000_000_500),
     );
+
+    // The contract-bearing companion (spec §2, doc 19 §4.2): same seed
+    // discipline, a two-region consumption contract in the signed core.
+    // The contract-FREE manifest above proves absence keeps the old
+    // bytes; this one pins the encoding when the field is present.
+    let mut entropy = seeded(43);
+    let contract = waggle_core::Contract::new(
+        vec![
+            waggle_core::Region::new(Some("Pricing".into()), 847, 920, 0).expect("vector region"),
+            waggle_core::Region::new(None, 40, 60, 1).expect("vector region"),
+        ],
+        900,
+    )
+    .expect("vector contract");
+    let contracted = mint(
+        MintSpec::new(
+            CanonicalUrl::new("ws://spec/contracted-artifact").unwrap(),
+            Sharer::new("spec").unwrap(),
+            Channel::subagent_general(),
+        )
+        .contract(contract),
+        &MintOptions::default(),
+        &mut entropy,
+        Timestamp::from_unix_ms(1_700_000_000_000),
+    )
+    .expect("vector mint");
+    let contracted_block = waggle_core::trust::sign_manifest(&contracted, &key);
+
     std::fs::write(
         dir.join("signature.json"),
         serde_json::to_string_pretty(&serde_json::json!({
@@ -156,7 +184,9 @@ pub fn generate(root: &std::path::Path) -> std::io::Result<()> {
             "canonical_core_hex_len": waggle_core::trust::canonical_core_bytes(&manifest).len(),
             "signature": block,
             "resolution_disposition": resolution.disposition,
-            "note": "spec §6: Ed25519 over the immutable core; a mismatch here is a canonical-encoding break",
+            "contract_manifest": contracted,
+            "contract_signature": contracted_block,
+            "note": "spec §6: Ed25519 over the immutable core; a mismatch here is a canonical-encoding break. The contract-free manifest also pins §2's absence rule: no contract, no field, same bytes as pre-contract implementations.",
         }))?,
     )?;
     Ok(())

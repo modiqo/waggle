@@ -160,6 +160,16 @@ well_known_stages![
         "repeat",
         "A repeat execution — the retention signal."
     ),
+    (
+        accepted,
+        "accepted",
+        "The judge (orchestrator or human) accepted the consumer's work."
+    ),
+    (
+        rejected,
+        "rejected",
+        "The judge rejected the consumer's work — the escalation signal."
+    ),
 ];
 
 #[cfg(test)]

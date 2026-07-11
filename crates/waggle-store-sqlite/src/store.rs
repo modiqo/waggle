@@ -169,8 +169,9 @@ impl AppendStore for SqliteStore {
                 stage,
                 actor,
                 variant,
+                regions,
                 at,
-            } => event_tx(&tx, token, &stage, actor, variant, at)?,
+            } => event_tx(&tx, token, &stage, actor, variant, regions, at)?,
         };
         tx.commit().map_err(sql)?;
         // Cache maintenance strictly after commit: never serve uncommitted.
@@ -329,6 +330,7 @@ fn event_tx(
     stage: &Stage,
     actor: waggle_core::ActorClass,
     variant: Option<u8>,
+    regions: Option<u8>,
     at: waggle_core::Timestamp,
 ) -> Result<(Appended, Touched), StoreError> {
     if load_manifest(tx, token)?.is_none() {
@@ -350,6 +352,7 @@ fn event_tx(
             at,
             seq,
             variant,
+            regions,
         }),
     )?;
     Ok((Appended::Event { seq }, Vec::new()))

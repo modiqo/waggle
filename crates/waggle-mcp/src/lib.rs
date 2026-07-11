@@ -20,12 +20,14 @@
 
 pub mod content;
 mod content_handlers;
+mod contract_args;
 mod discovery;
 mod envelope;
 mod handlers;
 mod lineage;
 mod map;
 pub mod query;
+mod record;
 mod rpc;
 
 pub use envelope::{validate_next, Envelope, NextCall, Stats};

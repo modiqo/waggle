@@ -112,10 +112,11 @@ pub fn read_lines(text: &str, from: usize, to: usize, max_bytes: usize) -> Value
     })
 }
 
-/// A markdown section by heading (case-insensitive): from the heading to
-/// the next heading of the same or higher level.
+/// A markdown section's 1-based inclusive line range: from its heading
+/// to the line before the next heading of the same or higher level.
+/// Shared by `read --section` and mint-time `section:` contract sugar.
 #[must_use]
-pub fn read_section(text: &str, heading: &str, max_bytes: usize) -> Option<Value> {
+pub fn section_range(text: &str, heading: &str) -> Option<(usize, usize)> {
     let want = heading.trim().to_lowercase();
     let Value::Array(items) = outline(text) else {
         return None;
@@ -133,6 +134,14 @@ pub fn read_section(text: &str, heading: &str, max_bytes: usize) -> Option<Value
         })
         .min()
         .map_or(text.lines().count(), |l| l - 1);
+    Some((start_line, end_line))
+}
+
+/// A markdown section by heading (case-insensitive): from the heading to
+/// the next heading of the same or higher level.
+#[must_use]
+pub fn read_section(text: &str, heading: &str, max_bytes: usize) -> Option<Value> {
+    let (start_line, end_line) = section_range(text, heading)?;
     Some(read_lines(text, start_line, end_line, max_bytes))
 }
 

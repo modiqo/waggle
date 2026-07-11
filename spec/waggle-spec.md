@@ -22,8 +22,12 @@ Three zones, and the zoning is load-bearing:
 - **Immutable core** (set at mint, never changed): `schema`, `token`,
   `target`, `sharer`, `channel`, `minted_at`, `meta` (the mint-time
   snapshot — I-3), `parent`, `content` (the snapshot `MediaRef`),
-  `variants`, `private`. Signatures cover exactly this zone
-  (§6), so mutations MUST NOT invalidate them.
+  `variants`, `private`, `contract` (the consumption contract, §2.1).
+  Signatures cover exactly this zone (§6), so mutations MUST NOT
+  invalidate them. An absent `contract` MUST NOT appear in the
+  serialized manifest or the canonical core bytes — contract-free
+  manifests keep the exact bytes (and signatures) they had before the
+  field existed.
 - **Versioned mutable** (CAS by `version` — C-9): `expires_at`,
   `revoked_at`, `superseded_by`. Lifecycle changes MUST require
   `expected_version` and MUST fail with a conflict naming both versions
@@ -32,6 +36,19 @@ Three zones, and the zoning is load-bearing:
 
 Serialized manifests MUST NOT exceed **256 KiB**; bodies over **64 KiB**
 SHOULD ride as content-addressed `MediaRef`s instead of inline.
+
+### 2.1 · The consumption contract
+
+An optional `contract` declares what a consumer must reach:
+`{ regions: [{label?, start, end}…], min-permille }` — 1 to **8**
+regions (the width of the event touch bitmask, §4), each a 1-based
+inclusive line range (`start ≥ 1`, `start ≤ end`; labels ≤ 80 chars),
+and a threshold in `1..=1000` (permille of regions; default 1000 =
+every region). Implementations MUST reject contracts outside these
+bounds at mint. The contract is satisfied when
+`touched × 1000 / required ≥ min-permille`, where a region counts as
+touched if any served read window or search hit overlapped it (§8).
+Coverage reports MUST name the untouched regions.
 
 ## 3 · Variants and the sealed matcher
 
@@ -59,9 +76,19 @@ The log is the truth; every view is a fold over it, rebuildable.
   `mutation`, `event`. Wire format: one JSON record per line (JSONL),
   serde-tagged with `record`.
 - Events are **payload-free** (I-1): exactly
-  `{token, stage, actor, at, seq, variant?}`. Actor is coarse classes
-  only (I-7): kind (bot/human/terminal/agent), model FAMILY, harness
-  class — never versions or instance identifiers.
+  `{token, stage, actor, at, seq, variant?, regions?}`. Actor is coarse
+  classes only (I-7): kind (bot/human/terminal/agent), model FAMILY,
+  harness class — never versions or instance identifiers. `regions` is
+  a bitmask indexing the manifest's declared contract regions (§2.1) —
+  manifest-referencing exactly like `variant`, so I-1 holds: positions
+  into a signed declaration, never content. It MUST be absent on
+  contract-free traffic; absent parses as no-touch, so pre-contract
+  logs replay unchanged.
+- The judged outcome rides as stages, not payload: `accepted` /
+  `rejected` are well-known stages recorded by the judge of a
+  delegation. The derived outcome is a pure function of counts —
+  neither ⇒ `pending`, one ⇒ that verdict, both ⇒ `contested`
+  (surfaced, never silently overwritten).
 - `seq` is per-token, store-assigned, dense from 0 (`minted`) — C-3.
   Record identity is `(token, seq, kind)`; replay MUST dedup on it
   (C-4).
@@ -115,7 +142,11 @@ author's declared freshness, never unbounded staleness.
 Remote callers MUST NOT trigger live filesystem reads. Every response
 MUST fit the request's byte budget (default 4096, floor 64); truncation
 MUST be explicit (`total_matches` counted in full). Reads record the
-`read` stage — counts only, never patterns or matched text.
+`read` stage — counts only, never patterns or matched text. On a
+contract-bearing token, the serve MUST stamp the event's `regions`
+bitmask with the contract regions the served window (or the search
+hits' lines) overlapped — the served *positions* are the evidence;
+patterns and text remain excluded absolutely.
 
 ## 9 · Invariants, one table
 

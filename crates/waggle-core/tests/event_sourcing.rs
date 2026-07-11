@@ -53,6 +53,7 @@ fn world(n_tokens: u32, events_per_token: u32) -> Vec<LogRecord> {
                 at: Timestamp::from_unix_ms(u64::from(i)),
                 seq: Seq(i + 1),
                 variant: Some(u8::try_from(i % 3).unwrap()),
+                regions: None,
             }));
         }
     }
@@ -156,6 +157,7 @@ fn fold_funnel_1m_shape() {
                 at: Timestamp::from_unix_ms(u64::from(i)),
                 seq: Seq(i),
                 variant: None,
+                regions: None,
             },
             &mut tables,
         );

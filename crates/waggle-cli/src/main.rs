@@ -71,6 +71,12 @@ enum Cmd {
         /// Content type of the attachment; inferred from the extension when omitted.
         #[arg(long)]
         attach_type: Option<String>,
+        /// Consumption contract region (repeatable, max 8): lines:START-END or section:HEADING (resolved against the target's outline at mint). `coverage` then reports met/unmet with untouched regions NAMED.
+        #[arg(long)]
+        require: Vec<String>,
+        /// Fraction (0-1] of required regions a consumer must touch for the contract to be met; default 1.0 (every region).
+        #[arg(long)]
+        min_coverage: Option<f64>,
     },
     #[command(about = waggle_ops::RESOLVE.description)]
     Resolve {
@@ -235,6 +241,8 @@ fn main() {
             content,
             attach,
             attach_type,
+            require,
+            min_coverage,
         } => run::tool_call(
             "mint",
             strip_nulls(json!({
@@ -249,6 +257,8 @@ fn main() {
                 "content": content,
                 "attach": attach,
                 "attach-type": attach_type,
+                "require": if require.is_empty() { None } else { Some(require) },
+                "min-coverage": min_coverage,
             })),
         ),
         Cmd::Resolve {

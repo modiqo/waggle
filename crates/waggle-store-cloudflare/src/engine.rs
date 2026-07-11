@@ -230,6 +230,7 @@ impl<S: EdgeStorage> AppendStore for EdgeStore<S> {
                 stage,
                 actor,
                 variant,
+                regions,
                 at,
             } => {
                 if self.load_manifest(token).await?.is_none() {
@@ -244,6 +245,7 @@ impl<S: EdgeStorage> AppendStore for EdgeStore<S> {
                     at,
                     seq,
                     variant,
+                    regions,
                 }))
                 .await?;
                 Ok(Appended::Event { seq })

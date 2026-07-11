@@ -112,6 +112,8 @@ pub const MINT: OperationSpec = OperationSpec {
         ArgSpec { name: "content", required: false, doc: "Path to extracted text for a BINARY target (you extracted it with your own abilities): becomes the searchable content while the target stays the original. Mutually exclusive with snapshot." },
         ArgSpec { name: "attach", required: false, doc: "Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all." },
         ArgSpec { name: "attach-type", required: false, doc: "Content type of the attachment; inferred from the extension when omitted." },
+        ArgSpec { name: "require", required: false, doc: "Consumption contract region (repeatable, max 8): lines:START-END or section:HEADING (resolved against the target's outline at mint). `coverage` then reports met/unmet with untouched regions NAMED. Signed with the core — a contract is not renegotiable." },
+        ArgSpec { name: "min-coverage", required: false, doc: "Fraction (0-1] of required regions a consumer must touch for the contract to be met; default 1.0 (every region)." },
     ],
     forward: &[
         EdgeSpec { to: "resolve", why: "self-check the projection each consumer will receive" },
@@ -147,10 +149,10 @@ pub const RECORD: OperationSpec = OperationSpec {
     name: "record",
     surface: Surface::Both,
     kind: OpKind::RelaxedWrite,
-    description: "Report a lifecycle stage (run, repeat, or a custom stage) against a token so the funnel reflects reality. Events are counts with no payload — nothing about your data leaves your machine. Append-only: there is no un-record; record a correcting stage instead.",
+    description: "Report a lifecycle stage (run, repeat, or a custom stage) against a token so the funnel reflects reality. As the judge of a delegation, record `accepted` or `rejected` — the verdict is the stage itself, and a rejection's response teaches the escalation path (re-mint, supersede). Events are counts with no payload — nothing about your data leaves your machine. Append-only: there is no un-record; record a correcting stage instead.",
     args: &[
         ArgSpec { name: "token", required: true, doc: "The waggle token the stage applies to." },
-        ArgSpec { name: "stage", required: true, doc: "Well-known stage (run, repeat, assess, ...) or a custom kebab-case slug." },
+        ArgSpec { name: "stage", required: true, doc: "Well-known stage (run, repeat, assess, accepted, rejected, ...) or a custom kebab-case slug." },
     ],
     forward: &[
         EdgeSpec { to: "funnel", why: "see the counts your report just moved" },
@@ -181,7 +183,7 @@ pub const FUNNEL: OperationSpec = OperationSpec {
     name: "funnel",
     surface: Surface::Both,
     kind: OpKind::Read,
-    description: "A token's funnel: stage counts (impression → resolve → run → repeat) plus lineage roll-up. This is the attribution answer — which handoffs were consumed, which stalled, which delivered repeat value. Counts only; no payloads exist to leak (I-1).",
+    description: "A token's funnel: stage counts (impression → resolve → run → repeat) plus the judged outcome (pending/accepted/rejected/contested) and lineage roll-up. This is the attribution answer — which handoffs were consumed, which stalled, which delivered repeat value. Counts only; no payloads exist to leak (I-1).",
     args: &[
         ArgSpec { name: "token", required: true, doc: "The waggle token whose funnel to report." },
     ],
@@ -256,9 +258,9 @@ pub const COVERAGE: OperationSpec = OperationSpec {
     name: "coverage",
     surface: Surface::Both,
     kind: OpKind::Read,
-    description: "For a lineage root (a folder or bundle): which descendants were actually consumed? Three honest levels per file — unread (never touched), read (bytes served: a resolve, read, or search reached it), run (the consumer recorded using it). Misses are NAMED: the unread list is the proof of what a review skipped.",
+    description: "For a lineage root (a folder or bundle): which descendants were actually consumed? Three honest levels per file — unread (never touched), read (bytes served: a resolve, read, or search reached it), run (the consumer recorded using it). For a single token minted with a contract (mint --require): which required regions did the served bytes reach — met/unmet against the declared threshold. Either way, misses are NAMED: the unread list is the proof of what a review skipped.",
     args: &[
-        ArgSpec { name: "token", required: true, doc: "The lineage root whose tree to audit." },
+        ArgSpec { name: "token", required: true, doc: "The lineage root (or contract-bearing token) to audit." },
     ],
     forward: &[
         EdgeSpec { to: "read", why: "close the gap: read the first unread file" },

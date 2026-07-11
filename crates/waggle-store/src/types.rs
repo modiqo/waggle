@@ -50,6 +50,12 @@ pub enum AppendIntent {
         actor: ActorClass,
         /// Which variant served a resolve, when applicable.
         variant: Option<u8>,
+        /// Which declared contract regions this access touched
+        /// (manifest-referencing bitmask — doc `19 §4.2`), when the
+        /// token carries a contract. Defaulted so pre-contract wire
+        /// frames keep parsing.
+        #[serde(default)]
+        regions: Option<u8>,
         /// When it happened.
         at: Timestamp,
     },

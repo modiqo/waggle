@@ -7,7 +7,7 @@
 
 use serde_json::{json, Map, Value};
 use waggle_core::{
-    mint, negotiate, resolve, ActorClass, CanonicalUrl, Change, Channel, ConsumerHint, MintOptions,
+    mint, negotiate, resolve, ActorClass, CanonicalUrl, Channel, ConsumerHint, MintOptions,
     MintSpec, ResolverContext, Sharer, Stage, Timestamp, Token,
 };
 use waggle_store::{AppendIntent, Appended, BlobSink, MintNonce, NoBlobs, Store, StoreError};
@@ -299,6 +299,27 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 spec = spec.with_variant(v); // full fidelity — incl. revalidate_after_ms
             }
         }
+        // The consumption contract (19 §4.2): section: sugar resolves
+        // against the target's text here — the one moment it's at hand.
+        let target = spec.target_str().to_owned();
+        let contract = crate::contract_args::parse_contract(args, || {
+            let path = crate::content_handlers::local_path(&target).ok_or_else(|| {
+                Envelope::err(
+                    format!("require section: needs a locally readable target (got `{target}`) — declare lines:START-END instead"),
+                    vec![],
+                )
+            })?;
+            let bytes = crate::content_handlers::read_capped(&path)?;
+            String::from_utf8(bytes).map_err(|_| {
+                Envelope::err(
+                    "require section: the target is not UTF-8 text — declare lines:START-END instead",
+                    vec![],
+                )
+            })
+        })?;
+        if let Some(c) = contract {
+            spec = spec.contract(c);
+        }
         Ok(spec)
     }
 
@@ -373,6 +394,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 stage: Stage::resolve(),
                 actor: ActorClass::from_context(&ctx),
                 variant: variant_index,
+                regions: None,
                 at: now,
             })
             .await;
@@ -434,49 +456,6 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         })
     }
 
-    async fn record(&self, args: &Map<String, Value>, now: Timestamp) -> Envelope {
-        let token = match parse_token_arg(args) {
-            Ok(t) => t,
-            Err(e) => return e,
-        };
-        let Some(stage_raw) = arg_str(args, "stage") else {
-            return Envelope::err(
-                "missing `stage` — run, repeat, assess, or a custom slug",
-                vec![],
-            );
-        };
-        let stage = match Stage::new(stage_raw) {
-            Ok(s) => s,
-            Err(e) => return Envelope::err(format!("stage: {e}"), vec![]),
-        };
-        let receipt = self
-            .store
-            .append(AppendIntent::Event {
-                token,
-                stage: stage.clone(),
-                actor: ActorClass::from_context(&ResolverContext::anonymous_agent()),
-                variant: None,
-                at: now,
-            })
-            .await;
-        match receipt {
-            Ok(Appended::Event { seq }) => Envelope::ok(
-                json!({ "recorded": stage.as_str(), "token": token.as_str() }),
-                vec![NextCall {
-                    tool: "funnel".into(),
-                    args: json!({ "token": token.as_str() }),
-                    why: "see the counts your report just moved".into(),
-                }],
-            )
-            .with_stats(Stats {
-                records: Some(1),
-                seq: Some(seq.0),
-            }),
-            Ok(_) => Envelope::err("store returned a non-event receipt for a record", vec![]),
-            Err(e) => store_err(&e),
-        }
-    }
-
     async fn mutate(&self, args: &Map<String, Value>, now: Timestamp) -> Envelope {
         let token = match parse_token_arg(args) {
             Ok(t) => t,
@@ -488,7 +467,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 vec![],
             );
         };
-        let change = match parse_change(change_raw) {
+        let change = match crate::contract_args::parse_change(change_raw) {
             Ok(c) => c,
             Err(e) => return Envelope::err(e, vec![]),
         };
@@ -544,6 +523,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         let mut result = json!({
             "token": token.as_str(),
             "stages": counts_json,
+            "outcome": waggle_core::outcome_of(&counts),
             "children": children.iter().map(waggle_core::Token::as_str).collect::<Vec<_>>(),
         });
         if !children.is_empty() {
@@ -713,34 +693,4 @@ pub(crate) fn infer_content_type(path: &str) -> &'static str {
         Some("m4a") => "audio/mp4",
         _ => "application/octet-stream",
     }
-}
-
-fn parse_change(raw: &str) -> Result<Change, String> {
-    if raw == "revoke" {
-        return Ok(Change::Revoked);
-    }
-    if let Some(by) = raw.strip_prefix("supersede=") {
-        let token = Token::parse(by).map_err(|e| format!("supersede target: {e}"))?;
-        return Ok(Change::Superseded { by: token });
-    }
-    if let Some(ts) = raw.strip_prefix("expire=") {
-        let ms: u64 = ts
-            .parse()
-            .map_err(|_| "expire= takes unix milliseconds".to_owned())?;
-        return Ok(Change::ExpirySet {
-            expires_at: Some(Timestamp::from_unix_ms(ms)),
-        });
-    }
-    if let Some(kv) = raw.strip_prefix("label ") {
-        let (k, v) = kv
-            .split_once('=')
-            .ok_or_else(|| "label takes key=value".to_owned())?;
-        return Ok(Change::LabelSet {
-            key: k.to_owned(),
-            value: v.to_owned(),
-        });
-    }
-    Err(format!(
-        "`{raw}` is not a change — revoke, supersede=<token>, expire=<unix-ms>, or label k=v"
-    ))
 }

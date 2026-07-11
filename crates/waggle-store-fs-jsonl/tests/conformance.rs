@@ -60,6 +60,7 @@ fn reopen_replays_the_journal() {
                         &waggle_core::ResolverContext::anonymous_agent(),
                     ),
                     variant: None,
+                    regions: None,
                     at: waggle_core::Timestamp::from_unix_ms(2),
                 })
                 .await

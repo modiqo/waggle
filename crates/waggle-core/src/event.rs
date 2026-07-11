@@ -139,6 +139,13 @@ pub struct Event {
     /// manifest-referencing, so I-1-compatible (doc `02`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub variant: Option<u8>,
+    /// Which declared contract regions this access touched, as a bitmask
+    /// indexing the manifest's [`crate::Contract`] (doc `19 §4.2`) —
+    /// manifest-referencing exactly like `variant`, so I-1-compatible:
+    /// positions into a signed declaration, never bytes. Absent on
+    /// contract-free tokens and on pre-contract logs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub regions: Option<u8>,
 }
 
 #[cfg(test)]
@@ -204,6 +211,7 @@ mod tests {
             at: Timestamp::from_unix_ms(9),
             seq: Seq(4),
             variant: Some(2),
+            regions: Some(0b101),
         };
         let json = serde_json::to_string(&e).unwrap();
         let back: Event = serde_json::from_str(&json).unwrap();

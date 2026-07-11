@@ -19,6 +19,8 @@ Create an attributed reference (a waggle token) for an artifact instead of pasti
 | `--content` | false | Path to extracted text for a BINARY target (you extracted it with your own abilities): becomes the searchable content while the target stays the original. Mutually exclusive with snapshot. |
 | `--attach` | false | Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all. |
 | `--attach-type` | false | Content type of the attachment; inferred from the extension when omitted. |
+| `--require` | false | Consumption contract region (repeatable, max 8): lines:START-END or section:HEADING (resolved against the target's outline at mint). `coverage` then reports met/unmet with untouched regions NAMED. Signed with the core — a contract is not renegotiable. |
+| `--min-coverage` | false | Fraction (0-1] of required regions a consumer must touch for the contract to be met; default 1.0 (every region). |
 
 - forward → `resolve`: self-check the projection each consumer will receive
 - forward → `map`: orient: see all paths available from this fresh token
@@ -41,12 +43,12 @@ Fetch the projection of a waggle token matched to your context (model family, ha
 
 ## `record` — CLI + MCP tool
 
-Report a lifecycle stage (run, repeat, or a custom stage) against a token so the funnel reflects reality. Events are counts with no payload — nothing about your data leaves your machine. Append-only: there is no un-record; record a correcting stage instead.
+Report a lifecycle stage (run, repeat, or a custom stage) against a token so the funnel reflects reality. As the judge of a delegation, record `accepted` or `rejected` — the verdict is the stage itself, and a rejection's response teaches the escalation path (re-mint, supersede). Events are counts with no payload — nothing about your data leaves your machine. Append-only: there is no un-record; record a correcting stage instead.
 
 | arg | required | doc |
 |---|---|---|
 | `--token` | true | The waggle token the stage applies to. |
-| `--stage` | true | Well-known stage (run, repeat, assess, ...) or a custom kebab-case slug. |
+| `--stage` | true | Well-known stage (run, repeat, assess, accepted, rejected, ...) or a custom kebab-case slug. |
 
 - forward → `funnel`: see the counts your report just moved
 - forward → `map`: orient: see what the funnel now suggests
@@ -66,7 +68,7 @@ Change a token's manifest. Lifecycle changes (revoke, supersede, expiry) require
 
 ## `funnel` — CLI + MCP tool
 
-A token's funnel: stage counts (impression → resolve → run → repeat) plus lineage roll-up. This is the attribution answer — which handoffs were consumed, which stalled, which delivered repeat value. Counts only; no payloads exist to leak (I-1).
+A token's funnel: stage counts (impression → resolve → run → repeat) plus the judged outcome (pending/accepted/rejected/contested) and lineage roll-up. This is the attribution answer — which handoffs were consumed, which stalled, which delivered repeat value. Counts only; no payloads exist to leak (I-1).
 
 | arg | required | doc |
 |---|---|---|
@@ -129,11 +131,11 @@ Find tokens by what humans remember: matches the query against target basenames,
 
 ## `coverage` — CLI + MCP tool
 
-For a lineage root (a folder or bundle): which descendants were actually consumed? Three honest levels per file — unread (never touched), read (bytes served: a resolve, read, or search reached it), run (the consumer recorded using it). Misses are NAMED: the unread list is the proof of what a review skipped.
+For a lineage root (a folder or bundle): which descendants were actually consumed? Three honest levels per file — unread (never touched), read (bytes served: a resolve, read, or search reached it), run (the consumer recorded using it). For a single token minted with a contract (mint --require): which required regions did the served bytes reach — met/unmet against the declared threshold. Either way, misses are NAMED: the unread list is the proof of what a review skipped.
 
 | arg | required | doc |
 |---|---|---|
-| `--token` | true | The lineage root whose tree to audit. |
+| `--token` | true | The lineage root (or contract-bearing token) to audit. |
 
 - forward → `read`: close the gap: read the first unread file
 - forward → `funnel`: the root's stage counts and rollup
