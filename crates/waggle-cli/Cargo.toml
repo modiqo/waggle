@@ -9,6 +9,8 @@ repository.workspace = true
 authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
+readme.workspace = true
+homepage.workspace = true
 
 [[bin]]
 name = "waggle"
@@ -17,9 +19,9 @@ path = "src/main.rs"
 [dependencies]
 waggle-core = { workspace = true }
 waggle-ops = { workspace = true }
-waggle-mcp = { path = "../waggle-mcp", version = "0.3.0", features = ["code-lens"] }
-waggle-store = { path = "../waggle-store", version = "0.3.0" }
-waggle-store-sqlite = { path = "../waggle-store-sqlite", version = "0.3.0" }
+waggle-mcp = { path = "../waggle-mcp", version = "0.4.0", features = ["code-lens"] }
+waggle-store = { path = "../waggle-store", version = "0.4.0" }
+waggle-store-sqlite = { path = "../waggle-store-sqlite", version = "0.4.0" }
 clap = { workspace = true }
 serde_json = { workspace = true }
 pollster = { workspace = true }
