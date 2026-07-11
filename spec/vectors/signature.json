@@ -17,6 +17,12 @@
       ]
     },
     "minted_at": 1700000000000,
+    "outline": {
+      "content_type": "application/waggle-outline+json",
+      "sha256": "abababababababababababababababababababababababababababababababab",
+      "size": 512,
+      "uri": "cas://spec-vector-outline"
+    },
     "schema": 1,
     "sharer": "spec",
     "target": "ws://spec/contracted-artifact",
@@ -37,7 +43,7 @@
   "contract_signature": {
     "alg": "ed25519",
     "key": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
-    "sig": "4f23a0b325d12e1558f2dde5c86fb5dc9f47c14b18b2113b94009e80b6401b084fd372127ae0ca6fe64fc46348486f9e2a4df0d7094da1e4ed07174c4a64d90c"
+    "sig": "80b0a78712db9f2d8454efcea4458827f2123299f6fc5f35e382671228f9bdb168c02911adb9eb6f1d30fec122623861d6d57211f706b82fa78755c85ec37f05"
   },
   "manifest": {
     "channel": "subagent/general",

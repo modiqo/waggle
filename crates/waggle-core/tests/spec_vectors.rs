@@ -58,17 +58,20 @@ fn signature_vector_holds() {
         waggle_core::trust::SignatureStatus::Valid { .. }
     ));
 
-    // The contract-free vector must never mention the contract field —
+    // The plain vector must never mention the optional core fields —
     // spec §2's absence rule, held at the published-bytes level.
-    assert!(
-        doc["manifest"].get("contract").is_none(),
-        "the contract-free vector grew a contract field"
-    );
+    for field in ["contract", "outline"] {
+        assert!(
+            doc["manifest"].get(field).is_none(),
+            "the plain vector grew a `{field}` field"
+        );
+    }
 
-    // The contract-bearing companion signs and verifies identically.
+    // The contract+outline companion signs and verifies identically.
     let contracted: waggle_core::AttributionManifest =
         serde_json::from_value(doc["contract_manifest"].clone()).unwrap();
     assert!(contracted.contract.is_some());
+    assert!(contracted.outline.is_some(), "the §2.2 pointer is pinned");
     let block = waggle_core::trust::sign_manifest(&contracted, &key);
     assert_eq!(
         serde_json::to_value(&block).unwrap(),

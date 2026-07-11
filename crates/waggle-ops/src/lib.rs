@@ -112,7 +112,7 @@ pub const MINT: OperationSpec = OperationSpec {
         ArgSpec { name: "content", required: false, doc: "Path to extracted text for a BINARY target (you extracted it with your own abilities): becomes the searchable content while the target stays the original. Mutually exclusive with snapshot." },
         ArgSpec { name: "attach", required: false, doc: "Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all." },
         ArgSpec { name: "attach-type", required: false, doc: "Content type of the attachment; inferred from the extension when omitted." },
-        ArgSpec { name: "require", required: false, doc: "Consumption contract region (repeatable, max 8): lines:START-END or section:HEADING (resolved against the target's outline at mint). `coverage` then reports met/unmet with untouched regions NAMED. Signed with the core — a contract is not renegotiable." },
+        ArgSpec { name: "require", required: false, doc: "Consumption contract region (repeatable, max 8): lines:START-END, section:HEADING (markdown), or symbol:NAME (code — resolved against the symbol outline at mint). `coverage` then reports met/unmet with untouched regions NAMED. Signed with the core — a contract is not renegotiable." },
         ArgSpec { name: "min-coverage", required: false, doc: "Fraction (0-1] of required regions a consumer must touch for the contract to be met; default 1.0 (every region)." },
     ],
     forward: &[
@@ -201,11 +201,12 @@ pub const READ: OperationSpec = OperationSpec {
     name: "read",
     surface: Surface::Both,
     kind: OpKind::RelaxedWrite,
-    description: "Read the token's CONTENT surgically: a line window, a markdown section, or a JSON pointer path — never the whole artifact. With no address: the overview (size, content type, available lenses, outline). Every response fits max-bytes and names the bytes you avoided.",
+    description: "Read the token's CONTENT surgically: a line window, a markdown section, a code symbol, or a JSON pointer path — never the whole artifact. With no address: the overview (size, content type, available lenses, outline; source code carries its symbol table of contents). Every response fits max-bytes and names the bytes you avoided.",
     args: &[
         ArgSpec { name: "token", required: true, doc: "The waggle token whose content to read." },
         ArgSpec { name: "lines", required: false, doc: "Line window, 1-based inclusive (e.g. 120-180)." },
         ArgSpec { name: "section", required: false, doc: "Markdown heading whose section to read (text/markdown lens)." },
+        ArgSpec { name: "symbol", required: false, doc: "Code symbol whose definition to read (symbol lens — tokens minted with a snapshot of source code); the overview's `symbols` lists what exists." },
         ArgSpec { name: "path", required: false, doc: "JSON pointer into parsed content (application/json lens), e.g. /dependencies/react." },
         ArgSpec { name: "max-bytes", required: false, doc: "Response budget in bytes (default 4096, floor 64)." },
     ],
@@ -320,7 +321,7 @@ pub const DAEMON: OperationSpec = OperationSpec {
     name: "daemon",
     surface: Surface::CliOnly,
     kind: OpKind::Read,
-    description: "Manage waggled: status (pid, store, uptime, connections), start (idempotent), stop (graceful over the socket; terminates orphans by pidfile), restart. Pidfile + idle exit make lingering orphans structurally unlikely.",
+    description: "Manage waggled: status (pid, store, uptime, connections, live resource subscriptions, disk weight of the store and blob CAS), start (idempotent), stop (graceful over the socket; terminates orphans by pidfile), restart. Pidfile + idle exit make lingering orphans structurally unlikely.",
     args: &[
         ArgSpec { name: "action", required: true, doc: "status | start | stop | restart | purge (kill EVERY waggled of yours, even zombies whose sockets/pidfiles are gone)." },
         ArgSpec { name: "idle-secs", required: false, doc: "For start/restart: exit after this many seconds with no connections (shim auto-starts default to 1800)." },
@@ -335,7 +336,7 @@ pub const INIT: OperationSpec = OperationSpec {
     name: "init",
     surface: Surface::CliOnly,
     kind: OpKind::RelaxedWrite,
-    description: "Install the five-line agent stub into this repo's harness convention files (CLAUDE.md, AGENTS.md, .cursorrules) — creating AGENTS.md and CLAUDE.md when none exist. Idempotent: re-running refreshes the managed block in place. Pair with: claude mcp add waggle -- waggle serve --stdio.",
+    description: "Install the short agent stub into this repo's harness convention files (CLAUDE.md, AGENTS.md, .cursorrules) — creating AGENTS.md and CLAUDE.md when none exist. Idempotent: re-running refreshes the managed block in place. Pair with: claude mcp add waggle -- waggle serve --stdio.",
     args: &[
         ArgSpec { name: "file", required: false, doc: "Target exactly this file instead of auto-detecting convention files." },
     ],

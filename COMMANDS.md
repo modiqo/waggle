@@ -19,7 +19,7 @@ Create an attributed reference (a waggle token) for an artifact instead of pasti
 | `--content` | false | Path to extracted text for a BINARY target (you extracted it with your own abilities): becomes the searchable content while the target stays the original. Mutually exclusive with snapshot. |
 | `--attach` | false | Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all. |
 | `--attach-type` | false | Content type of the attachment; inferred from the extension when omitted. |
-| `--require` | false | Consumption contract region (repeatable, max 8): lines:START-END or section:HEADING (resolved against the target's outline at mint). `coverage` then reports met/unmet with untouched regions NAMED. Signed with the core — a contract is not renegotiable. |
+| `--require` | false | Consumption contract region (repeatable, max 8): lines:START-END, section:HEADING (markdown), or symbol:NAME (code — resolved against the symbol outline at mint). `coverage` then reports met/unmet with untouched regions NAMED. Signed with the core — a contract is not renegotiable. |
 | `--min-coverage` | false | Fraction (0-1] of required regions a consumer must touch for the contract to be met; default 1.0 (every region). |
 
 - forward → `resolve`: self-check the projection each consumer will receive
@@ -80,13 +80,14 @@ A token's funnel: stage counts (impression → resolve → run → repeat) plus 
 
 ## `read` — CLI + MCP tool
 
-Read the token's CONTENT surgically: a line window, a markdown section, or a JSON pointer path — never the whole artifact. With no address: the overview (size, content type, available lenses, outline). Every response fits max-bytes and names the bytes you avoided.
+Read the token's CONTENT surgically: a line window, a markdown section, a code symbol, or a JSON pointer path — never the whole artifact. With no address: the overview (size, content type, available lenses, outline; source code carries its symbol table of contents). Every response fits max-bytes and names the bytes you avoided.
 
 | arg | required | doc |
 |---|---|---|
 | `--token` | true | The waggle token whose content to read. |
 | `--lines` | false | Line window, 1-based inclusive (e.g. 120-180). |
 | `--section` | false | Markdown heading whose section to read (text/markdown lens). |
+| `--symbol` | false | Code symbol whose definition to read (symbol lens — tokens minted with a snapshot of source code); the overview's `symbols` lists what exists. |
 | `--path` | false | JSON pointer into parsed content (application/json lens), e.g. /dependencies/react. |
 | `--max-bytes` | false | Response budget in bytes (default 4096, floor 64). |
 
@@ -154,7 +155,7 @@ Orientation. With no arguments: the global map of operations from where you stan
 
 ## `init` — CLI only
 
-Install the five-line agent stub into this repo's harness convention files (CLAUDE.md, AGENTS.md, .cursorrules) — creating AGENTS.md and CLAUDE.md when none exist. Idempotent: re-running refreshes the managed block in place. Pair with: claude mcp add waggle -- waggle serve --stdio.
+Install the short agent stub into this repo's harness convention files (CLAUDE.md, AGENTS.md, .cursorrules) — creating AGENTS.md and CLAUDE.md when none exist. Idempotent: re-running refreshes the managed block in place. Pair with: claude mcp add waggle -- waggle serve --stdio.
 
 | arg | required | doc |
 |---|---|---|
@@ -175,7 +176,7 @@ Run the waggle daemon (waggled): the single owner of the local store, serving ev
 
 ## `daemon` — CLI only
 
-Manage waggled: status (pid, store, uptime, connections), start (idempotent), stop (graceful over the socket; terminates orphans by pidfile), restart. Pidfile + idle exit make lingering orphans structurally unlikely.
+Manage waggled: status (pid, store, uptime, connections, live resource subscriptions, disk weight of the store and blob CAS), start (idempotent), stop (graceful over the socket; terminates orphans by pidfile), restart. Pidfile + idle exit make lingering orphans structurally unlikely.
 
 | arg | required | doc |
 |---|---|---|

@@ -22,12 +22,12 @@ Three zones, and the zoning is load-bearing:
 - **Immutable core** (set at mint, never changed): `schema`, `token`,
   `target`, `sharer`, `channel`, `minted_at`, `meta` (the mint-time
   snapshot — I-3), `parent`, `content` (the snapshot `MediaRef`),
-  `variants`, `private`, `contract` (the consumption contract, §2.1).
-  Signatures cover exactly this zone (§6), so mutations MUST NOT
-  invalidate them. An absent `contract` MUST NOT appear in the
-  serialized manifest or the canonical core bytes — contract-free
-  manifests keep the exact bytes (and signatures) they had before the
-  field existed.
+  `variants`, `private`, `contract` (the consumption contract, §2.1),
+  `outline` (the symbol-outline `MediaRef`, §2.2). Signatures cover
+  exactly this zone (§6), so mutations MUST NOT invalidate them. An
+  absent `contract` or `outline` MUST NOT appear in the serialized
+  manifest or the canonical core bytes — manifests without them keep
+  the exact bytes (and signatures) they had before the fields existed.
 - **Versioned mutable** (CAS by `version` — C-9): `expires_at`,
   `revoked_at`, `superseded_by`. Lifecycle changes MUST require
   `expected_version` and MUST fail with a conflict naming both versions
@@ -49,6 +49,20 @@ bounds at mint. The contract is satisfied when
 `touched × 1000 / required ≥ min-permille`, where a region counts as
 touched if any served read window or search hit overlapped it (§8).
 Coverage reports MUST name the untouched regions.
+
+### 2.2 · The symbol outline
+
+An optional `outline` points (content-addressed `MediaRef`,
+`application/waggle-outline+json`) at structure extracted from the
+snapshot at mint: parallel arrays
+`{x, kinds, names, kind[], start[], end[], depth[]}` of definitions
+with 1-based inclusive line ranges, where `x` pins the extractor
+version — readers MUST treat an unknown `x` as *no outline*, never an
+error. The outline is authored content derived from pinned bytes:
+serving it is a blob fetch plus a budget-fitted render, and
+implementations MUST NOT parse source on any serve path. `symbol:NAME`
+contract requirements resolve against it at mint into plain §2.1
+regions.
 
 ## 3 · Variants and the sealed matcher
 

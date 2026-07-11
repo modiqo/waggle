@@ -15,7 +15,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
 
-use waggle_mcp::{handle_message, Handler};
+use waggle_mcp::Handler;
 use waggle_store::ReadStore as _;
 use waggle_store_sqlite::SqliteStore;
 
@@ -29,6 +29,13 @@ struct DaemonState {
     /// G-8: cached foreign resolutions, honoring each response's OWN
     /// `revalidate_after` stamp. key → (envelope text, expires unix-ms).
     resolutions: std::sync::Mutex<std::collections::HashMap<String, (String, u64)>>,
+    /// The resource-subscription hub (doc 21 §3): lifecycle mutations
+    /// fan out to every connection; each session filters to what IT
+    /// subscribed. Lossy-by-design bound — mutations are rare.
+    hub: tokio::sync::broadcast::Sender<waggle_core::Token>,
+    /// Live resource subscriptions across all connections — a health
+    /// gauge for `waggled/status`, maintained by each connection loop.
+    subscriptions: AtomicU64,
 }
 
 fn now_secs() -> u64 {
@@ -88,6 +95,8 @@ pub fn run_daemon() -> i32 {
             active_connections: AtomicU64::new(0),
             last_activity_secs: AtomicU64::new(now_secs()),
             resolutions: std::sync::Mutex::new(std::collections::HashMap::new()),
+            hub: tokio::sync::broadcast::channel(64).0,
+            subscriptions: AtomicU64::new(0),
         });
         spawn_idle_monitor(&state, &sock);
         spawn_tcp_listener(&handler, &state, &sock);
@@ -141,6 +150,45 @@ fn bind(sock: &Path) -> Result<UnixListener, i32> {
     }
 }
 
+/// Write one newline-delimited frame; `false` means the client hung up.
+async fn write_frame<W: tokio::io::AsyncWrite + Unpin>(write: &mut W, frame: &str) -> bool {
+    write.write_all(frame.as_bytes()).await.is_ok() && write.write_all(b"\n").await.is_ok()
+}
+
+/// Tier-2 upstream forwarding (16 §3, 08 §0): serve a cached resolution
+/// inside its own revalidate window (G-8, never for `strict`), else ask
+/// the owner and cache what came back. Always yields a response frame.
+async fn forward_upstream(line: &str, token: waggle_core::Token, state: &DaemonState) -> String {
+    let id = serde_json::from_str::<serde_json::Value>(line)
+        .ok()
+        .and_then(|m| m.get("id").cloned())
+        .unwrap_or(serde_json::Value::Null);
+    let cache = crate::remote::resolve_cache_key(line);
+    if let Some((key, level)) = &cache {
+        if level != "strict" {
+            let now_ms = now_secs() * 1000;
+            let hit = state
+                .resolutions
+                .lock()
+                .ok()
+                .and_then(|m| m.get(key).cloned())
+                .filter(|(_, expires)| now_ms < *expires);
+            if let Some((envelope, _)) = hit {
+                return crate::remote::rewrap(&envelope, &id);
+            }
+        }
+    }
+    let forwarded = crate::remote::forward(line).await;
+    if let (Some((key, _)), Some(r)) = (&cache, &forwarded) {
+        if let Some((envelope, expires)) = crate::remote::cacheable_resolution(r) {
+            if let Ok(mut m) = state.resolutions.lock() {
+                m.insert(key.clone(), (envelope, expires));
+            }
+        }
+    }
+    forwarded.unwrap_or_else(|| crate::remote::unreachable_response(&id, token))
+}
+
 async fn serve_client<R, W>(
     mut lines: tokio::io::Lines<BufReader<R>>,
     mut write: W,
@@ -153,7 +201,28 @@ async fn serve_client<R, W>(
 {
     state.active_connections.fetch_add(1, Ordering::SeqCst);
     state.last_activity_secs.store(now_secs(), Ordering::SeqCst);
-    while let Ok(Some(line)) = lines.next_line().await {
+    // Per-connection resource subscriptions + the hub's fan-in: a
+    // lifecycle mutation anywhere notifies THIS connection iff it
+    // subscribed (doc 21 §3). Dropped with the connection.
+    let mut session = waggle_mcp::Session::default();
+    let mut hub_rx = state.hub.subscribe();
+    loop {
+        let line = tokio::select! {
+            line = lines.next_line() => match line {
+                Ok(Some(line)) => line,
+                _ => break,
+            },
+            evt = hub_rx.recv() => {
+                if let Ok(token) = evt {
+                    if session.contains(token)
+                        && !write_frame(&mut write, &waggle_mcp::updated_notification(token)).await
+                    {
+                        break;
+                    }
+                }
+                continue; // lagged receivers just miss — mutations re-resolve safely
+            }
+        };
         if line.trim().is_empty() {
             continue;
         }
@@ -172,54 +241,14 @@ async fn serve_client<R, W>(
                 .flatten()
                 .is_some();
             if !known && std::env::var("WAGGLE_UPSTREAM").is_ok() {
-                let id = serde_json::from_str::<serde_json::Value>(&line)
-                    .ok()
-                    .and_then(|m| m.get("id").cloned())
-                    .unwrap_or(serde_json::Value::Null);
-                // G-8: eventual serves a cached resolution inside its own
-                // revalidate window; strict always consults the owner.
-                let cache = crate::remote::resolve_cache_key(&line);
-                if let Some((key, level)) = &cache {
-                    if level != "strict" {
-                        let now_ms = now_secs() * 1000;
-                        let hit = state
-                            .resolutions
-                            .lock()
-                            .ok()
-                            .and_then(|m| m.get(key).cloned())
-                            .filter(|(_, expires)| now_ms < *expires);
-                        if let Some((envelope, _)) = hit {
-                            let response = crate::remote::rewrap(&envelope, &id);
-                            if write.write_all(response.as_bytes()).await.is_err()
-                                || write.write_all(b"\n").await.is_err()
-                            {
-                                break;
-                            }
-                            continue;
-                        }
-                    }
-                }
-                let forwarded = crate::remote::forward(&line).await;
-                if let (Some((key, _)), Some(r)) = (&cache, &forwarded) {
-                    if let Some((envelope, expires)) = crate::remote::cacheable_resolution(r) {
-                        if let Ok(mut m) = state.resolutions.lock() {
-                            m.insert(key.clone(), (envelope, expires));
-                        }
-                    }
-                }
-                let response = match forwarded {
-                    Some(r) => r,
-                    None => crate::remote::unreachable_response(&id, token),
-                };
-                if write.write_all(response.as_bytes()).await.is_err()
-                    || write.write_all(b"\n").await.is_err()
-                {
+                let response = forward_upstream(&line, token, state).await;
+                if !write_frame(&mut write, &response).await {
                     break;
                 }
                 continue;
             }
         }
-        let response = if let Some(mgmt) = manage_message(&line, state, sock) {
+        let frames = if let Some(mgmt) = manage_message(&line, state, sock) {
             let shutdown = mgmt.1;
             if write.write_all(mgmt.0.as_bytes()).await.is_ok() {
                 let _ = write.write_all(b"\n").await;
@@ -229,18 +258,48 @@ async fn serve_client<R, W>(
                 cleanup(sock);
                 std::process::exit(0);
             }
-            None
+            Vec::new()
         } else {
-            handle_message(handler, &line, now(), &mut os_entropy).await
+            let before = session.subscription_count();
+            let out =
+                waggle_mcp::handle_session(handler, &mut session, &line, now(), &mut os_entropy)
+                    .await;
+            // The status gauge follows this connection's subscription
+            // delta; the disconnect path below settles the remainder.
+            let after = session.subscription_count();
+            if after > before {
+                state
+                    .subscriptions
+                    .fetch_add(after - before, Ordering::SeqCst);
+            } else {
+                state
+                    .subscriptions
+                    .fetch_sub(before - after, Ordering::SeqCst);
+            }
+            // Fan a committed lifecycle mutation out through the hub —
+            // which includes THIS connection's own receiver, so the
+            // direct `out.notifications` are dropped here to avoid a
+            // double notify (they serve single-connection transports).
+            if let Some(token) = out.lifecycle {
+                let _ = state.hub.send(token);
+            }
+            out.reply.into_iter().collect()
         };
-        if let Some(response) = response {
-            if write.write_all(response.as_bytes()).await.is_err()
-                || write.write_all(b"\n").await.is_err()
-            {
-                break; // client hung up
+        let mut hung_up = false;
+        for frame in frames {
+            if !write_frame(&mut write, &frame).await {
+                hung_up = true;
+                break;
             }
         }
+        if hung_up {
+            break; // client hung up
+        }
     }
+    // Subscriptions die with the connection (21 §3) — settle the gauge.
+    state
+        .subscriptions
+        .fetch_sub(session.subscription_count(), Ordering::SeqCst);
     state.active_connections.fetch_sub(1, Ordering::SeqCst);
     state.last_activity_secs.store(now_secs(), Ordering::SeqCst);
 }
@@ -264,6 +323,8 @@ fn manage_message(line: &str, state: &DaemonState, sock: &Path) -> Option<(Strin
                 "started_unix_ms": state.started_unix_ms,
                 "uptime_secs": now_secs().saturating_sub(state.started_unix_ms / 1000),
                 "active_connections": state.active_connections.load(Ordering::SeqCst),
+                "subscriptions": state.subscriptions.load(Ordering::SeqCst),
+                "disk": crate::health::disk_stats(&crate::run::store_path()),
             });
             Some((
                 serde_json::json!({ "jsonrpc": "2.0", "id": id, "result": result }).to_string(),
