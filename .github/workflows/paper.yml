@@ -81,9 +81,11 @@ jobs:
           {
             echo '## Paper build'
             echo
-            printf '- **PDF size:** %s\n' "$(du -h waggle.pdf | cut -f1)"
-            printf '- **Overfull boxes:** %s\n' "${over:-0}"
-            printf '- **Underfull boxes:** %s (typically harmless)\n' "${under:-0}"
+            # echo, not printf: these lines start with '-', which printf
+            # would read as an option flag.
+            echo "- **PDF size:** $(du -h waggle.pdf | cut -f1)"
+            echo "- **Overfull boxes:** ${over:-0}"
+            echo "- **Underfull boxes:** ${under:-0} (typically harmless)"
             if [ "${over:-0}" != '0' ]; then
               echo
               echo '<details><summary>overfull boxes (into the margin)</summary>'
