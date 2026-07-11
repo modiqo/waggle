@@ -38,6 +38,12 @@ bench:
     cargo bench -p waggle-store-sqlite --bench store_paths
     cargo bench -p waggle-mcp --bench query_paths
 
+# Regenerate the paper's benchmark artifacts (design doc 22): the Tier-1
+# cost-model sweep + tables and the reconstruction-determinism gate. Writes
+# paper/generated/*.{dat,tex}. Fails if reconstruction is non-deterministic.
+bench-paper:
+    cargo run -p waggle-bench -- all
+
 # Format everything
 fmt:
     cargo fmt --all

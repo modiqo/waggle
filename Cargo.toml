@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/*", "edge-worker", "xtask"]
+members = ["crates/*", "edge-worker", "xtask", "bench"]
 
 [workspace.package]
 version = "0.4.0"

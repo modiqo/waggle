@@ -1,0 +1,15 @@
+{
+  "id": "swe-lite/django__django-11099",
+  "substrate": "code",
+  "source": {
+    "dataset": "swe-bench-lite",
+    "instance": "django__django-11099",
+    "note": "Data is NOT vendored here — the harness resolves the instance from the public SWE-bench Lite split at run time."
+  },
+  "artifact": "the repo snapshot minted at the failing commit",
+  "planted_region": { "kind": "symbol", "name": "URLValidator.__call__" },
+  "question": "graded by the instance's own FAIL_TO_PASS tests",
+  "strategies": ["copy-paste", "raw-path", "rag-chunk", "waggle"],
+  "grader": "swebench-harness",
+  "tier": 3
+}
