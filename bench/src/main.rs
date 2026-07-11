@@ -21,7 +21,10 @@
 
 mod cost_model;
 mod determinism;
+mod driver;
 mod emit;
+mod rng;
+mod tier2;
 mod tokenizer;
 
 use std::fs;
@@ -47,10 +50,10 @@ fn main() -> ExitCode {
     match cmd {
         "cost-model" => run_cost(&out),
         "determinism" => run_determinism(&out),
+        "tier2" => run_tier2(&out),
         "all" => {
-            let a = run_cost(&out);
-            let b = run_determinism(&out);
-            if a == ExitCode::SUCCESS && b == ExitCode::SUCCESS {
+            let codes = [run_cost(&out), run_determinism(&out), run_tier2(&out)];
+            if codes.iter().all(|c| *c == ExitCode::SUCCESS) {
                 ExitCode::SUCCESS
             } else {
                 ExitCode::FAILURE
@@ -59,7 +62,7 @@ fn main() -> ExitCode {
         other => {
             eprintln!(
                 "unknown subcommand: {other}\n\
-                 usage: waggle-bench [cost-model|determinism|all] [out-dir]"
+                 usage: waggle-bench [cost-model|determinism|tier2|all] [out-dir]"
             );
             ExitCode::FAILURE
         }
@@ -177,4 +180,51 @@ fn run_determinism(out: &Path) -> ExitCode {
         // A real gate: non-determinism fails the benchmark.
         ExitCode::FAILURE
     }
+}
+
+// Tier-2 behaviour model (design doc 22 §3). Pre-registered here.
+const T2_REGIONS: usize = 3;
+const T2_TRIALS: usize = 400;
+const T2_BLUFFER_RATE: f64 = 0.25;
+const T2_P_READ: f64 = 0.98; // genuine per-region thoroughness
+const T2_P_BLUFF: f64 = 0.04; // bluffer incidental touch
+const T2_BYPASS: f64 = 0.35; // side-door bypass probability
+const T2_SEED: u64 = 0x5EA1_C0DE;
+
+fn run_tier2(out: &Path) -> ExitCode {
+    ensure_dir(out);
+    let r = tier2::run(
+        T2_REGIONS,
+        T2_TRIALS,
+        T2_BLUFFER_RATE,
+        T2_P_READ,
+        T2_P_BLUFF,
+        T2_BYPASS,
+        T2_SEED,
+    );
+    let tex = out.join("tier2.tex");
+    if let Err(e) = emit::write_tier2(&tex, &r) {
+        eprintln!("write {}: {e}", tex.display());
+        return ExitCode::FAILURE;
+    }
+    let dat = out.join("tier2_roc.dat");
+    if let Err(e) = emit::write_roc_dat(&dat, &r.roc) {
+        eprintln!("write {}: {e}", dat.display());
+        return ExitCode::FAILURE;
+    }
+    println!(
+        "tier2: sealed(P={:.2} R={:.2} F1={:.2}) side-door(P={:.2} R={:.2} F1={:.2}) · FNR {:.1}%→{:.1}% · bluffers caught {:.1}% · AUC={:.3}",
+        r.sealed.precision(),
+        r.sealed.recall(),
+        r.sealed.f1(),
+        r.side_door.precision(),
+        r.side_door.recall(),
+        r.side_door.f1(),
+        r.sealed.false_negative_rate() * 100.0,
+        r.side_door.false_negative_rate() * 100.0,
+        r.sealed.bluffer_detection() * 100.0,
+        r.auc,
+    );
+    println!("  wrote {} and {}", tex.display(), dat.display());
+    ExitCode::SUCCESS
 }

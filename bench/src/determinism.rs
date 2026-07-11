@@ -12,6 +12,8 @@ use waggle_core::{
     ResolverContext, Seq, Sharer, Stage, Timestamp,
 };
 
+use crate::rng::Lcg;
+
 /// Outcome of the determinism check.
 pub(crate) struct Report {
     /// Distinct tokens minted.
@@ -24,23 +26,6 @@ pub(crate) struct Report {
     pub all_identical: bool,
     /// Time for one clean reconstruction, microseconds.
     pub fold_micros: u128,
-}
-
-/// A tiny deterministic PRNG (LCG). No external dependency; seed-stable so
-/// the check reproduces exactly on any machine.
-struct Lcg(u64);
-
-impl Lcg {
-    fn next_u64(&mut self) -> u64 {
-        self.0 = self
-            .0
-            .wrapping_mul(6_364_136_223_846_793_005)
-            .wrapping_add(1_442_695_040_888_963_407);
-        self.0
-    }
-    fn below(&mut self, n: usize) -> usize {
-        (self.next_u64() >> 33) as usize % n
-    }
 }
 
 fn stage_cycle(i: usize) -> Stage {
@@ -112,7 +97,7 @@ pub(crate) fn run(k: usize, events_per: usize, permutations: usize, seed: u64) -
     let baseline = serialized(&base_records);
     let fold_micros = t0.elapsed().as_micros();
 
-    let mut rng = Lcg(seed);
+    let mut rng = Lcg::new(seed);
     let mut all_identical = true;
     for _ in 0..permutations {
         let mut recs = base_records.clone();

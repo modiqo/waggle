@@ -24,18 +24,32 @@ This regenerates, under `paper/generated/`:
   `WorldState` byte-identical. **Non-determinism fails the command** (a real
   gate, not a report).
 
-Subcommands: `cargo run -p waggle-bench -- [cost-model|determinism|all] [out-dir]`.
+Subcommands: `cargo run -p waggle-bench -- [cost-model|determinism|tier2|all] [out-dir]`.
 
-## What is specified and seam-ready (Tiers 2–3 — model-driven)
+## Tier 2 — verification without trust (runs now, deterministic)
 
-Doc 22 §3–4 defines these; they run when API keys and public datasets are
+The decisive experiment (doc 22 §3): receipt reliability under a *seal* vs a
+*side door*, with *bluffers* injected. Every trial routes through the **real
+coverage machinery** — `Event` region-touch bits, folded by
+`RegionTouchFold`, judged by `Contract::evaluate` — so the receipt signal is
+the substrate's own. Only the *agent behaviour* is modelled, and it lives
+behind the `AgentDriver` seam: a `ScriptedDriver` produces the touch mask
+deterministically today; an `ApiDriver` would derive it from a real model's
+substrate reads when keys are supplied.
+
+Emits `tier2.tex` (a sealed-vs-side-door table + macros) and
+`tier2_roc.dat` (the coverage ROC). The headline it produces: precision
+stays ~1.0 (bluffers are caught either way), while the side door roughly
+6×'s the false-negative rate versus the seal, and the coverage signal's ROC
+AUC is ~0.9. The behaviour model (touch/bypass/bluff rates) is pre-registered
+in `main.rs` constants.
+
+## What is seam-ready (Tier 3 — model-driven)
+
+Doc 22 §4 defines this; it runs when API keys and public datasets are
 supplied. `manifests/` holds example task descriptors (pointers to public
 data — nothing is vendored):
 
-- **Tier 2 — verification without trust** (`receipt-seal-example.json`):
-  receipt reliability under *seal* vs *side-door*, with bluffers injected.
-  Precision/recall/F1 of the "consumed the required region" signal, plus a
-  coverage ROC. This is the metric the paper's Limitations call decisive.
 - **Tier 3 — cost at fixed quality** (`swe-lite-example.json`): the
   cost-vs-task-success frontier on SWE-bench Lite + a long-doc QA set,
   across `{copy-paste, raw-path, rag-chunk, waggle}`, plus symbol-lens vs
