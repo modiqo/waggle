@@ -29,9 +29,11 @@ mod map;
 mod outline_wire;
 pub mod query;
 mod record;
+mod resources;
 mod rpc;
 
 pub use envelope::{validate_next, Envelope, NextCall, Stats};
 pub use handlers::Handler;
 pub use map::{global_map, handoff_line, token_map};
-pub use rpc::{handle_message, tool_list, PROTOCOL_VERSION};
+pub use resources::{updated_notification, Session};
+pub use rpc::{handle_message, handle_session, tool_list, SessionOutput, PROTOCOL_VERSION};
