@@ -127,29 +127,133 @@ The task is deliberately minimal and controlled (a planted fact inside a
 required region), because the *mechanism*, not task difficulty, is under
 test here.
 
-## 4 · Tier 3 — cost at fixed quality (the flagship)
+## 4 · Tier 3 — the substrate under load (restructured)
 
-Pre-empts "you just sent less and lost information." Anchored on public
-data so the task cannot be accused of favouring us.
+### 4.0 What the SWE-bench pilot exposed — and why it is withdrawn
 
-- **Code substrate:** SWE-bench Lite instances — real repos, gradeable by
-  test pass. An orchestrator delegates localization + patch to subagents
-  via file references.
-- **Prose substrate:** a public long-document QA set — the delegated
-  artifact; graded by EM / F1.
-- **Strategies (same instances, paired):** `copy-paste`, `raw-path`,
-  `RAG-chunk`, `waggle`.
-- **Headline:** the *cost vs task-success frontier*. The credible claim is
-  "waggle holds equal success at materially lower cost **and** yields
-  attribution the other three structurally cannot" — the last clause
-  survives even a modest cost delta.
-- **Interrogation (question 3), quantified here:** on the SWE-bench repos,
-  ops-to-locate and tokens-to-locate for `read --symbol` (precision@1 to
-  the correct extent) vs `rg` (typically 2–3 ops, no receipt). This is the
-  numeric form of §"Interrogation versus lexical search."
+A first Tier-3 was built against SWE-bench Lite (9 models × 12 instances ×
+{copy, waggle}, test-graded in Docker). It ran, it graded, and it produced a
+tempting headline (`gpt-4o-mini` resolved an instance through waggle on
+4.3k tokens where the paste arm failed on 16.4k). **We withdraw it.** The
+pilot was a good harness for the wrong experiment, and it failed on four
+counts we would not accept from anyone else:
 
-Tier-3 transcripts are fed through the *Tier-1 accounting functions*
-(§2.1), so the cost model is confirmed on real logs by construction.
+1. **It under-represented the system.** The waggle arm used only
+   `mint --snapshot` plus `read`/`search`. It never exercised a consumption
+   contract, never read a funnel back, never resolved a *projection*, never
+   used lineage, revocation, or `--tree`. It measured waggle as a lazy file
+   reader — and a lazy file reader can only ever produce a token-cost
+   number, the least distinctive of our claims. Attribution, the thing a
+   path cannot do, went **entirely untested**.
+2. **The arms differed in more than the handoff.** `copy` was effectively
+   single-shot with everything pasted; `waggle` was a multi-turn agentic
+   loop. Turn count was confounded with mechanism, and the honest
+   competitor the paper itself names — *a raw path plus ordinary file
+   tools* — was not an arm at all. Beating a paste baseline proves little.
+3. **The task leaked its own answer.** The candidate file set was the
+   gold-patch files plus siblings: oracle localization, handed to both arms.
+   That both inflates the resolve rate and deletes the retrieval problem
+   where a symbol lens is supposed to earn its keep.
+4. **Measurement integrity broke.** Anthropic token counts were
+   *approximated* (the gateway strips `usage`), so cross-family cost was not
+   apples-to-apples; transport timeouts were silently recorded as model
+   failures; and — the disqualifying one — the patch-applier was made more
+   permissive **after** observing that the waggle arm was failing. That is
+   post-hoc tuning toward a preferred result. Pre-registration exists to
+   make exactly that impossible, and it caught us.
+
+Only one artefact of the pilot survives: the evidence that the pipeline
+*can* be built (Docker grading resolves a gold patch in ~59 s; both model
+families are callable). The results are quarantined and are not reported.
+
+### 4.1 The right experiment: the substrate, across every modality
+
+Waggle is not a code-retrieval trick; it is a handoff substrate with lenses
+over heterogeneous artifacts. Tier 3 is therefore restructured as a
+**feature × modality matrix**, benchmarking what the system actually claims:
+
+- **Mint** — what minting costs and, more importantly, what it *discovers*
+  (a symbol outline for code, a heading tree for markdown, page/segment
+  structure for PDF, timecoded segments for video/voice).
+- **Resolution vs. a reference** — the head-to-head. A path or URI is the
+  competitor; the token is the claim.
+- **Lens projections and querying** — outline / section / lines / symbol /
+  JSON-path / search, per modality: how surgical is the slice, and how many
+  bytes did it spare?
+- **Per-consumer projection** — one token, different truthful renderings
+  (the sealed matcher): digest for a small-context model, media for a vision
+  or audio consumer, transcript for a consumer with neither.
+
+Across **six resource types**: `text`, `markdown`, `code`, `pdf`, `video`,
+`voice`. The binary three are the interesting ones, because they are where a
+raw reference degenerates entirely: a path to an MP4 hands the consumer
+nothing it can read, while a waggle token carries the transcript to the
+text-only consumer and the media itself to the one that can watch or listen.
+
+### 4.2 Three arms, turn-matched
+
+Every arm gets the *same* question, the *same* turn budget, and the *same*
+grading. Only the handoff differs.
+
+| arm | the handoff | what it can do |
+|---|---|---|
+| `copy` | the artifact's content, pasted | today's default; whole artifact enters the window |
+| `reference` | a path/URI + ordinary file tools (open, grep) | the honest competitor the paper names |
+| `waggle` | a ~30-byte token + the substrate's verbs | resolve → projection; lens; search; receipts |
+
+The `reference` arm is mandatory. Without it we are only beating a straw
+man, and the paper's own framing ("waggle's competitor is *`Here's
+/tmp/analysis.md`*") is left unanswered.
+
+### 4.3 The corpus and its ground truth
+
+Each modality contributes artifacts carrying a **planted fact** inside a
+known region, so a question is answerable *only* by reaching that region.
+This gives three graded quantities at once: **correctness** (did it answer),
+**cost** (bytes/tokens ingested), and **coverage** (did the receipts show it
+actually consumed the region — the attribution claim, measurable only in the
+waggle arm, and that asymmetry is itself the finding).
+
+- `text`, `markdown` — long documents; fact inside a specific section.
+- `code` — real source files; fact is a symbol's behaviour.
+- `pdf` — a real paper; fact on a specific page.
+- `video`, `voice` — media with transcripts; fact at a specific timecode.
+
+### 4.4 What is measured
+
+Per (modality × arm × model):
+
+- **tokens-to-correct-answer** and **ops-to-correct-answer** (the frontier).
+- **bytes spared** — the artifact's size minus what actually entered the
+  window (waggle names this in every response; the other arms cannot).
+- **correctness** — graded against the planted fact.
+- **coverage / receipts** — did the funnel and coverage fold record the
+  consumption the model claims? (`waggle` only; the *absence* elsewhere is
+  the point.)
+- **projection fidelity** — for the same token, does a vision consumer get
+  the media, a text-only consumer the transcript, a small-context consumer
+  the digest — and does the tuned projection change the *outcome* for the
+  weak model?
+- **mint cost** — latency and the structure discovered, per modality.
+
+### 4.5 Measurement hygiene (the pilot's failures, closed)
+
+- **Exact token usage for both families.** No approximation. If a gateway
+  strips `usage`, it is fixed or that family's cost is reported only as a
+  within-family ratio, explicitly labelled.
+- **Transport errors are not model failures.** They are classified,
+  retried within a bounded budget, and any run with an unrecovered transport
+  error is *excluded and reported as excluded*.
+- **One grader, frozen before the run**, applied identically to every arm.
+  No post-hoc leniency, for any arm, in either direction.
+- **Selection is published.** The corpus and the sampling seed are fixed in
+  advance; no instance is dropped after seeing its result.
+
+### 4.6 Power
+
+≥ 30 artifacts per modality, ≥ 3 seeds, all 9 models, three arms; medians
+with bootstrap CIs and a paired test, per §5. Anything less is a
+demonstration, not a benchmark, and will be labelled as such.
 
 ## 5 · Statistical protocol (pre-registered)
 
@@ -222,9 +326,14 @@ replays fixtures (so the harness is testable with no API), and an
 - **Phase 2 (cheap model calls):** §3 receipt-reliability under seal +
   bluffer ROC. Turns §"A live delegation" from an existence proof into a
   controlled measurement; fills the gap Limitations flag as decisive.
-- **Phase 3 (flagship spend):** §4 cost-vs-success frontier on SWE-bench
-  Lite + long-doc QA; symbol-lens-vs-rg locate numbers. Becomes the new
-  quantitative core of §Evaluation.
+- **Phase 3 (flagship spend):** §4 as restructured — the feature × modality
+  matrix (mint · resolution-vs-reference · lens projection · querying)
+  across `text`, `markdown`, `code`, `pdf`, `video`, `voice`, over three
+  turn-matched arms (`copy`, `reference`, `waggle`) and all nine models.
+  Becomes the new quantitative core of §Evaluation. The withdrawn SWE-bench
+  pilot (§4.0) is reported as a negative methodological result, not as a
+  measurement — the honest thing to do with an experiment that failed its
+  own pre-registration.
 
 For a **pre-print**, Phase 1 (fully) + Phase 2 (fully) + a Phase-3 *pilot*
 (≈30 SWE-bench-Lite instances, 2 models, scoped honestly as a pilot) is
