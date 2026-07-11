@@ -148,6 +148,45 @@ assemble these well-worn primitives — with the bee's discipline of
 per-consumer resolution and honest expiry — into a substrate an agent can
 use in one line.
 
+## Stand in the swarm
+
+The abstraction is easiest to feel from inside. Take the three positions
+in turn.
+
+**You are the orchestrator.** You have written a plan and spawned three
+subagents. Under copy semantics you paste the plan into each prompt —
+three copies, re-billed on every turn, and afterward no way to tell which
+subagent read it. Under name semantics you hand each the same 30-byte
+line. When they return, the funnel reads back which resolved and read it
+and which never opened it — the bluff is caught before its answer is
+trusted — and a single revoke propagates a correction to all three. The
+delegation stops being an act of faith.
+
+**You are the subagent.** You wake with one line, `resolve b2uQyZUC`, and
+nothing else about the artifact. You present your context and receive the
+projection matched to it — a digest for your model, an outline that tells
+you the shape before you read a byte, executable next steps pointing where
+to look. You interrogate: grep for the one fact and take a few hundred
+bytes, not the nine-thousand-token plan. You are the follower at the
+field, using her own senses, carrying home only what she came for.
+
+**Now move the subagent to another machine.** Nothing about the loop
+changes. The same line, the same resolve, the same grep — the bytes never
+leave the orchestrator's laptop; only the matches travel back. What you
+learned in one process is, byte for byte, what you do across a continent.
+
+And this is the argument for why the reference layer cannot live *inside* a
+harness. A harness could build clever handoffs of its own — but that
+cleverness would die at its boundary. A subagent in another harness could
+not see it; the orchestrator's memory of who made what and who read it
+would be prose in one vendor's context window, gone at the next
+compaction. The colony did not keep the dance floor inside one bee. The
+handoff has to sit on a shared, neutral medium every actor can read
+according to its own state — which is exactly what a distributed-systems
+problem demands, and exactly what solving it inside a single harness's
+logic forecloses. Share the name on the common surface; let every harness,
+every vendor, every machine resolve it in turn.
+
 ## The paradigm, stated plainly
 
 Committing to name semantics has four consequences, and they are what make
