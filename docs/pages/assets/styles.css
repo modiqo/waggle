@@ -81,6 +81,7 @@ code, pre, .mono { font-family: var(--mono); }
   font-family: var(--mono); font-size: 13px; letter-spacing: 0.06em;
   color: var(--amber); text-transform: uppercase; margin-bottom: 18px;
 }
+.hero .hero-contrast { font-family: "Fraunces", Georgia, serif; font-weight: 500; font-size: clamp(19px, 2.8vw, 29px); color: var(--faint); margin: 0 0 4px; letter-spacing: -0.01em; }
 .hero h1 { font-size: clamp(38px, 6vw, 62px); margin: 0 0 20px; }
 .hero .lede { font-size: clamp(18px, 2.4vw, 22px); color: var(--muted); max-width: 720px; margin: 0 auto 30px; }
 .hero .lede strong { color: var(--ink); font-weight: 600; }
