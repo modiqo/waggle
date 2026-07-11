@@ -61,6 +61,7 @@ pub struct MintSpec {
     content: Option<crate::MediaRef>,
     private: bool,
     contract: Option<crate::Contract>,
+    outline: Option<crate::MediaRef>,
     labels: std::collections::BTreeMap<String, String>,
     ttl_ms: Option<u64>,
 }
@@ -79,6 +80,7 @@ impl MintSpec {
             content: None,
             private: false,
             contract: None,
+            outline: None,
             labels: std::collections::BTreeMap::new(),
             ttl_ms: None,
         }
@@ -159,6 +161,14 @@ impl MintSpec {
         self
     }
 
+    /// Attach the symbol outline extracted from the snapshot at mint
+    /// (doc `20 §3`): a content-addressed pointer, signed with the core.
+    #[must_use]
+    pub fn outline(mut self, media: crate::MediaRef) -> Self {
+        self.outline = Some(media);
+        self
+    }
+
     /// Expire the token `ttl_ms` after mint.
     #[must_use]
     pub fn ttl_ms(mut self, ttl_ms: u64) -> Self {
@@ -206,6 +216,7 @@ pub fn mint(
         content: spec.content,
         private: spec.private,
         contract: spec.contract,
+        outline: spec.outline,
         signature: None, // hosts with an identity sign after mint (trust)
         variants,
         version: 1,

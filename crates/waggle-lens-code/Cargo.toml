@@ -1,0 +1,33 @@
+[package]
+name = "waggle-lens-code"
+description = "The symbol lens (design doc 20): mint-time source-code structure via tree-sitter tags — extraction, the arena outline, the budget-fitted render. Daemon-side only; never compiled to wasm."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tree-sitter = "0.25"
+streaming-iterator = "0.1"
+tree-sitter-rust = "0.24"
+tree-sitter-python = "0.23"
+tree-sitter-typescript = "0.23"
+tree-sitter-javascript = "0.25"
+tree-sitter-go = "0.23"
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "extract"
+harness = false
+
+[lints]
+workspace = true

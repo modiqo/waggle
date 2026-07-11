@@ -48,9 +48,11 @@ check:
     cargo clippy --workspace --all-targets -- -D warnings
     cargo run -p xtask -- lint-file-size
 
-# Workspace unit + integration tests
+# Workspace unit + integration tests — plus the code-lens feature's
+# native-only paths (the CLI ships with it on; the edge never sees it)
 test:
     cargo test --workspace
+    cargo test -p waggle-mcp --features code-lens
 
 # Verify the sans-I/O crates compile for the Workers target
 wasm-check:

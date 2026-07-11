@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use serde_json::{json, Value};
 use waggle_core::{EntropyError, Sharer, Timestamp};
-use waggle_mcp::{handle_message, Handler};
+use waggle_mcp::{handle_session, Handler, Session};
 use waggle_store_sqlite::SqliteStore;
 
 /// OS entropy as a closure — the only randomness source in the binary.
@@ -31,7 +31,7 @@ pub fn store_path_display() -> String {
     store_path().display().to_string()
 }
 
-fn store_path() -> PathBuf {
+pub(crate) fn store_path() -> PathBuf {
     if let Ok(p) = std::env::var("WAGGLE_STORE") {
         return PathBuf::from(p);
     }
@@ -127,18 +127,27 @@ pub fn serve_stdio() -> i32 {
     };
     let stdin = std::io::stdin();
     let mut stdout = std::io::stdout();
+    // One connection, one session: subscriptions live exactly as long
+    // as the pipe (doc 21 §3).
+    let mut session = Session::default();
     for line in stdin.lock().lines() {
         let Ok(line) = line else { break };
         if line.trim().is_empty() {
             continue;
         }
-        let response = pollster::block_on(handle_message(&handler, &line, now(), &mut os_entropy));
-        if let Some(response) = response {
-            if writeln!(stdout, "{response}")
+        let out = pollster::block_on(handle_session(
+            &handler,
+            &mut session,
+            &line,
+            now(),
+            &mut os_entropy,
+        ));
+        for frame in out.reply.iter().chain(out.notifications.iter()) {
+            if writeln!(stdout, "{frame}")
                 .and_then(|()| stdout.flush())
                 .is_err()
             {
-                break; // client hung up
+                return 0; // client hung up
             }
         }
     }
