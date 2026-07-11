@@ -3,14 +3,19 @@ resolver = "2"
 members = ["crates/*", "edge-worker", "xtask"]
 
 [workspace.package]
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/modiqo/waggle"
+homepage = "https://github.com/modiqo/waggle"
 authors = ["Modiqo <oss@modiqo.ai>"]
 keywords = ["agents", "mcp", "attribution", "handoff", "coordination"]
 categories = ["development-tools"]
+# Every published crate shows the repository README on crates.io. Inherited
+# `readme` paths resolve from the workspace root, so this one file serves
+# the whole family (crates opt in with `readme.workspace = true`).
+readme = "README.md"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -28,12 +33,12 @@ loom = "0.7"
 ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "net", "io-util", "macros", "time", "sync"] }
 
-waggle-core = { path = "crates/waggle-core", version = "0.3.0" }
-waggle-ops = { path = "crates/waggle-ops", version = "0.3.0" }
-waggle-agent = { path = "crates/waggle-agent", version = "0.3.0" }
-waggle-social = { path = "crates/waggle-social", version = "0.3.0" }
-waggle-store = { path = "crates/waggle-store", version = "0.3.0" }
-waggle-store-sqlite = { path = "crates/waggle-store-sqlite", version = "0.3.0" }
+waggle-core = { path = "crates/waggle-core", version = "0.4.0" }
+waggle-ops = { path = "crates/waggle-ops", version = "0.4.0" }
+waggle-agent = { path = "crates/waggle-agent", version = "0.4.0" }
+waggle-social = { path = "crates/waggle-social", version = "0.4.0" }
+waggle-store = { path = "crates/waggle-store", version = "0.4.0" }
+waggle-store-sqlite = { path = "crates/waggle-store-sqlite", version = "0.4.0" }
 
 [workspace.lints.rust]
 missing_docs = "deny"
@@ -43,3 +48,8 @@ pedantic = { level = "warn", priority = -1 }
 module_name_repetitions = "allow"
 must_use_candidate = "allow"
 missing_errors_doc = "allow"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

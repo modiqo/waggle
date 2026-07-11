@@ -9,11 +9,13 @@ repository.workspace = true
 authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
+readme.workspace = true
+homepage.workspace = true
 
 [dependencies]
 waggle-core = { workspace = true }
 waggle-ops = { workspace = true }
-waggle-store = { path = "../waggle-store", version = "0.3.0" }
+waggle-store = { path = "../waggle-store", version = "0.4.0" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 getrandom = { workspace = true }
@@ -23,7 +25,7 @@ ed25519-dalek = { workspace = true }
 # feature-gated off by default — the edge worker compiles this crate to
 # wasm and serves precomputed outlines as data (outline_wire.rs, always
 # compiled). The CLI/daemon turn the feature on.
-waggle-lens-code = { path = "../waggle-lens-code", version = "0.3.0", optional = true }
+waggle-lens-code = { path = "../waggle-lens-code", version = "0.4.0", optional = true }
 
 [features]
 default = []
@@ -31,9 +33,9 @@ code-lens = ["dep:waggle-lens-code"]
 
 [dev-dependencies]
 pollster = { workspace = true }
-waggle-store-sqlite = { path = "../waggle-store-sqlite", version = "0.3.0" }
+waggle-store-sqlite = { path = "../waggle-store-sqlite", version = "0.4.0" }
 waggle-social = { workspace = true }
-waggle-lens-code = { path = "../waggle-lens-code", version = "0.3.0" }
+waggle-lens-code = { path = "../waggle-lens-code", version = "0.4.0" }
 criterion = { workspace = true }
 tempfile = "3"
 
