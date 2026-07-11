@@ -1,102 +1,72 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 540" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
-  <defs>
-    <radialGradient id="hwarm" cx="38%" cy="46%" r="80%">
-      <stop offset="0%" stop-color="#fffefb"/>
-      <stop offset="66%" stop-color="#fdf7ea"/>
-      <stop offset="100%" stop-color="#f3e8cf"/>
-    </radialGradient>
-    <linearGradient id="hgold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f4cf78"/>
-      <stop offset="55%" stop-color="#d3920f"/>
-      <stop offset="100%" stop-color="#a8690a"/>
-    </linearGradient>
-    <linearGradient id="thread" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#d3920f" stop-opacity="0.9"/>
-      <stop offset="100%" stop-color="#e6b34f" stop-opacity="0.35"/>
-    </linearGradient>
-    <filter id="hglow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="9" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <filter id="hdrop" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="4" stdDeviation="7" flood-color="#6b4e15" flood-opacity="0.16"/>
-    </filter>
-    <pattern id="hcomb" width="52" height="45" patternUnits="userSpaceOnUse">
-      <path d="M13 0 L39 0 L52 22.5 L39 45 L13 45 L0 22.5 Z" fill="none" stroke="#e8d9b4" stroke-width="1" opacity="0.5"/>
-    </pattern>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 560" width="1120" height="560" font-family="'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace">
+  <style>
+    text { font-family: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; }
+    .ink{fill:#141414} .soft{fill:#2e2f34} .muted{fill:#6a6b70} .faint{fill:#9b9ca1}
+    .honey{fill:#b8791a} .green{fill:#1f7a3f} .red{fill:#b23b30}
+    .b{font-weight:600}
+  </style>
 
-  <rect width="1000" height="540" fill="url(#hwarm)"/>
-  <rect width="1000" height="540" fill="url(#hcomb)" opacity="0.5"/>
+  <rect x="0" y="0" width="1120" height="560" fill="#ffffff"/>
 
-  <!-- source artifact, left -->
-  <g transform="translate(96 196) rotate(-4)" filter="url(#hdrop)">
-    <rect x="0" y="0" width="140" height="176" rx="8" fill="#ffffff" stroke="#e2dac9"/>
-    <rect x="20" y="24" width="76" height="9" rx="4.5" fill="#c9860a"/>
-    <rect x="20" y="46" width="100" height="6" rx="3" fill="#dfe1e6"/>
-    <rect x="20" y="60" width="92" height="6" rx="3" fill="#dfe1e6"/>
-    <rect x="20" y="74" width="100" height="6" rx="3" fill="#dfe1e6"/>
-    <rect x="20" y="96" width="58" height="9" rx="4.5" fill="#c9860a"/>
-    <rect x="20" y="118" width="96" height="6" rx="3" fill="#dfe1e6"/>
-    <rect x="20" y="132" width="84" height="6" rx="3" fill="#dfe1e6"/>
-    <rect x="20" y="146" width="98" height="6" rx="3" fill="#dfe1e6"/>
-    <!-- wax seal (mint) -->
-    <circle cx="120" cy="156" r="17" fill="url(#hgold)" stroke="#8a5a08" stroke-width="1.2"/>
-    <text x="120" y="160" text-anchor="middle" font-size="8.5" fill="#3a2606">MINT</text>
-  </g>
-  <text x="166" y="404" text-anchor="middle" font-size="12.5" fill="#8a7a58">the artifact</text>
+  <!-- ===== source artifact (left) ===== -->
+  <rect x="70" y="156" width="150" height="196" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <rect x="90" y="180" width="76"  height="9" rx="2" fill="#b8791a"/>
+  <rect x="90" y="198" width="110" height="6" rx="3" fill="#e2e2de"/>
+  <rect x="90" y="210" width="96"  height="6" rx="3" fill="#e2e2de"/>
+  <rect x="90" y="222" width="108" height="6" rx="3" fill="#e2e2de"/>
+  <rect x="90" y="242" width="58"  height="9" rx="2" fill="#b8791a"/>
+  <rect x="90" y="260" width="104" height="6" rx="3" fill="#e2e2de"/>
+  <rect x="90" y="272" width="88"  height="6" rx="3" fill="#e2e2de"/>
+  <rect x="90" y="284" width="106" height="6" rx="3" fill="#e2e2de"/>
+  <rect x="126" y="312" width="64" height="24" rx="3" fill="#b8791a"/>
+  <text x="158" y="328" text-anchor="middle" font-size="11" fill="#ffffff" class="b">MINT</text>
+  <text x="145" y="374" text-anchor="middle" font-size="13" class="muted">the artifact</text>
 
-  <!-- threads from the token to each projection -->
-  <g fill="none" stroke="url(#thread)" stroke-width="2.6" stroke-linecap="round">
-    <path d="M470 264 C 560 150, 600 118, 668 112"/>
-    <path d="M470 270 C 560 232, 600 214, 668 210"/>
-    <path d="M470 276 C 560 314, 600 330, 668 336"/>
-    <path d="M470 282 C 560 420, 600 442, 668 448"/>
+  <!-- connector artifact -> token -->
+  <path d="M220 258 C 300 258, 330 274, 393 276" fill="none" stroke="#b8791a" stroke-width="2" stroke-dasharray="1.5 6" stroke-linecap="round" opacity="0.65"/>
+
+  <!-- ===== the token ===== -->
+  <rect x="395" y="256" width="150" height="46" rx="5" fill="#b8791a"/>
+  <text x="470" y="285" text-anchor="middle" font-size="16" fill="#ffffff" class="b">b2uQyZUC</text>
+  <text x="470" y="328" text-anchor="middle" font-size="13" class="muted">a ~30-byte name</text>
+
+  <!-- threads token -> projections -->
+  <g fill="none" stroke="#b8791a" stroke-width="2" stroke-linecap="round" opacity="0.5">
+    <path d="M547 274 C 630 200, 680 120, 718 112"/>
+    <path d="M549 278 C 630 250, 680 232, 718 228"/>
+    <path d="M549 282 C 630 320, 680 340, 718 344"/>
+    <path d="M547 286 C 630 400, 680 456, 718 460"/>
   </g>
 
-  <!-- the token: one 30-byte name -->
-  <g filter="url(#hglow)">
-    <rect x="322" y="248" width="150" height="46" rx="23" fill="url(#hgold)" stroke="#8a5a08" stroke-width="1.3"/>
-  </g>
-  <text x="397" y="277" text-anchor="middle" font-size="16" fill="#2e1e04" font-weight="600">b2uQyZUC</text>
-  <text x="397" y="320" text-anchor="middle" font-size="12" fill="#9a8250">a ~30-byte name</text>
-  <!-- connector from artifact to token -->
-  <path d="M244 300 C 280 300, 300 278, 322 272" fill="none" stroke="#d3920f" stroke-width="2.4" stroke-dasharray="1.5 6" stroke-linecap="round" opacity="0.7"/>
+  <!-- ===== four projections (right) ===== -->
+  <!-- 1 · digest -->
+  <rect x="720" y="70" width="330" height="84" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <text x="738" y="96" font-size="13" class="honey b">claude · digest</text>
+  <rect x="738" y="108" width="200" height="6" rx="3" fill="#e2e2de"/>
+  <rect x="738" y="120" width="288" height="6" rx="3" fill="#e2e2de"/>
+  <rect x="738" y="132" width="150" height="6" rx="3" fill="#e2e2de"/>
 
-  <!-- four consumer projections, right -->
-  <!-- 1 · digest (Claude-tuned) -->
-  <g transform="translate(672 78)" filter="url(#hdrop)">
-    <rect width="240" height="66" rx="10" fill="#ffffff" stroke="#e2dac9"/>
-    <text x="16" y="24" font-size="11.5" fill="#8a6a1e">claude · digest</text>
-    <rect x="16" y="34" width="150" height="5" rx="2.5" fill="#e0e2e7"/>
-    <rect x="16" y="46" width="196" height="5" rx="2.5" fill="#e0e2e7"/>
-    <rect x="16" y="58" width="120" height="5" rx="2.5" fill="#e0e2e7"/>
-  </g>
-  <!-- 2 · image (vision) -->
-  <g transform="translate(672 178)" filter="url(#hdrop)">
-    <rect width="240" height="66" rx="10" fill="#ffffff" stroke="#e2dac9"/>
-    <text x="16" y="24" font-size="11.5" fill="#3a7d44">vision · image</text>
-    <rect x="16" y="32" width="52" height="26" rx="4" fill="#eef4ee" stroke="#bcd2bc"/>
-    <circle cx="30" cy="42" r="4" fill="#8bbf8b"/>
-    <path d="M22 54 l 10 -10 l 8 8 l 6 -5 l 8 7" fill="none" stroke="#6ea36e" stroke-width="1.6"/>
-    <text x="82" y="50" font-size="11" fill="#9aa6a0">the chart, delivered</text>
-  </g>
-  <!-- 3 · transcript (the earless) -->
-  <g transform="translate(672 304)" filter="url(#hdrop)">
-    <rect width="240" height="66" rx="10" fill="#ffffff" stroke="#e2dac9"/>
-    <text x="16" y="24" font-size="11.5" fill="#8a6a1e">no ears · transcript</text>
-    <path d="M16 46 q 4 -12 8 0 t 8 0 t 8 0 t 8 0 t 8 0" fill="none" stroke="#c9860a" stroke-width="1.6"/>
-    <text x="86" y="50" font-size="11" fill="#9a8a68">&#8594; text you can read</text>
-  </g>
-  <!-- 4 · fail-closed (CI) -->
-  <g transform="translate(672 416)" filter="url(#hdrop)">
-    <rect width="240" height="66" rx="10" fill="#ffffff" stroke="#e2dac9"/>
-    <text x="16" y="24" font-size="11.5" fill="#b3423a">ci · fail-closed</text>
-    <rect x="16" y="34" width="18" height="16" rx="3" fill="#fbeeec" stroke="#d59089"/>
-    <path d="M20 34 v-3 a5 5 0 0 1 10 0 v3" fill="none" stroke="#b3423a" stroke-width="1.6"/>
-    <text x="44" y="47" font-size="11" fill="#a86a63">no human? then no writes</text>
-  </g>
+  <!-- 2 · image -->
+  <rect x="720" y="186" width="330" height="84" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <text x="738" y="212" font-size="13" class="green b">vision · image</text>
+  <rect x="738" y="224" width="60" height="32" rx="3" fill="#eef6f0" stroke="#cfe3d6" stroke-width="1.3"/>
+  <circle cx="753" cy="236" r="4" fill="#8bbf8b"/>
+  <path d="M744 250 l 12 -12 l 8 8 l 6 -5 l 8 7" fill="none" stroke="#3a7d44" stroke-width="1.6"/>
+  <text x="814" y="245" font-size="13" class="muted">the chart, delivered</text>
+
+  <!-- 3 · transcript -->
+  <rect x="720" y="302" width="330" height="84" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <text x="738" y="328" font-size="13" class="honey b">no ears · transcript</text>
+  <path d="M738 356 q 5 -14 10 0 t 10 0 t 10 0 t 10 0 t 10 0" fill="none" stroke="#b8791a" stroke-width="1.8"/>
+  <text x="808" y="361" font-size="13" class="muted">→ text you can read</text>
+
+  <!-- 4 · fail-closed -->
+  <rect x="720" y="418" width="330" height="84" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <text x="738" y="444" font-size="13" class="red b">ci · fail-closed</text>
+  <rect x="738" y="456" width="20" height="17" rx="2.5" fill="#fbefed" stroke="#b23b30" stroke-width="1.4"/>
+  <path d="M742 456 v-4 a6 6 0 0 1 12 0 v4" fill="none" stroke="#b23b30" stroke-width="1.4"/>
+  <text x="770" y="470" font-size="13" class="muted">no human? then no writes</text>
 
   <!-- caption -->
-  <text x="500" y="516" text-anchor="middle" font-size="13.5" fill="#7a6a48">one name travels — each consumer resolves its <tspan font-style="italic" fill="#6b4a12">own</tspan> truthful rendering, where the bytes live</text>
+  <text x="560" y="536" text-anchor="middle" font-size="15" class="muted">one name travels — each consumer resolves its <tspan class="honey b">own</tspan> truthful rendering, where the bytes live</text>
 </svg>

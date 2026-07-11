@@ -1,96 +1,75 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 520" width="1120" height="520" font-family="'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace">
+  <style>
+    text { font-family: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; }
+    .ink{fill:#141414} .soft{fill:#2e2f34} .muted{fill:#6a6b70} .faint{fill:#9b9ca1}
+    .honey{fill:#b8791a} .green{fill:#1f7a3f}
+    .b{font-weight:600}
+  </style>
   <defs>
-    <radialGradient id="rwarm" cx="18%" cy="50%" r="95%">
-      <stop offset="0%" stop-color="#fffefb"/>
-      <stop offset="66%" stop-color="#fdf7ea"/>
-      <stop offset="100%" stop-color="#f3e8cf"/>
-    </radialGradient>
-    <linearGradient id="rgold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f4cf78"/><stop offset="100%" stop-color="#c9860a"/>
-    </linearGradient>
-    <linearGradient id="rthread" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#c9860a"/><stop offset="100%" stop-color="#e6b34f" stop-opacity="0.6"/>
-    </linearGradient>
-    <filter id="rdrop" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#6b4e15" flood-opacity="0.16"/>
-    </filter>
-    <marker id="rgo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0 0 L10 5 L0 10 z" fill="#c9860a"/>
+    <marker id="rg" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 1 L9 5 L0 9" fill="none" stroke="#b8791a" stroke-width="1.6"/>
     </marker>
-    <pattern id="rcomb" width="52" height="45" patternUnits="userSpaceOnUse">
-      <path d="M13 0 L39 0 L52 22.5 L39 45 L13 45 L0 22.5 Z" fill="none" stroke="#e8d9b4" stroke-width="1" opacity="0.4"/>
-    </pattern>
   </defs>
 
-  <rect width="1000" height="500" fill="url(#rwarm)"/>
-  <rect width="1000" height="500" fill="url(#rcomb)" opacity="0.5"/>
+  <rect x="0" y="0" width="1120" height="520" fill="#ffffff"/>
 
-  <text x="52" y="58" font-family="Fraunces, Georgia, serif" font-size="26" font-weight="600" fill="#241d12">One token, three radii</text>
-  <text x="54" y="84" font-size="12.5" fill="#8a7a58">the verb loop is identical &#8212; only the transport lengthens</text>
+  <text x="48" y="52" font-size="26" class="ink b" letter-spacing="-0.5">One token, three radii</text>
+  <text x="48" y="82" font-size="15" class="muted">the verb loop is identical — only the transport lengthens</text>
 
-  <!-- expanding shells, centered on the origin machine (150,300) -->
-  <g fill="none" stroke-linecap="round">
-    <path d="M150 118 A 182 182 0 0 1 150 482" stroke="#e2c98a" stroke-width="2" stroke-dasharray="3 7"/>
-    <path d="M150 70  A 348 230 0 0 1 150 530" stroke="#d9bd78" stroke-width="2" stroke-dasharray="3 7" opacity="0.8"/>
-    <path d="M150 30  A 520 270 0 0 1 150 570" stroke="#cdae63" stroke-width="2" stroke-dasharray="3 7" opacity="0.6"/>
+  <!-- zone dividers -->
+  <g stroke="#e2e2de" stroke-width="1.5" stroke-dasharray="2 6">
+    <line x1="400" y1="108" x2="400" y2="474"/>
+    <line x1="740" y1="108" x2="740" y2="474"/>
   </g>
-  <g font-size="12.5" fill="#8a6a1e">
-    <text x="300" y="150">&#9312; one machine</text>
-    <text x="470" y="118">&#9313; across machines</text>
-    <text x="638" y="92">&#9314; the edge</text>
+  <g font-size="13" class="honey">
+    <text x="70"  y="132">① one machine</text>
+    <text x="424" y="132">② across machines</text>
+    <text x="762" y="132">③ the edge</text>
   </g>
 
-  <!-- origin machine: harnesses -> one daemon -->
-  <g filter="url(#rdrop)">
-    <rect x="70" y="222" width="160" height="150" rx="12" fill="#ffffff" stroke="#e2dac9"/>
+  <!-- ===== zone 1 : origin machine ===== -->
+  <rect x="90" y="250" width="172" height="150" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <g font-size="9.5">
+    <rect x="106" y="278" width="66" height="22" rx="3" fill="#f6f6f4" stroke="#e6e6e2" stroke-width="1.2"/><text x="139" y="292" text-anchor="middle" class="soft">claude code</text>
+    <rect x="106" y="306" width="66" height="22" rx="3" fill="#f6f6f4" stroke="#e6e6e2" stroke-width="1.2"/><text x="139" y="320" text-anchor="middle" class="soft">codex</text>
+    <rect x="106" y="334" width="66" height="22" rx="3" fill="#f6f6f4" stroke="#e6e6e2" stroke-width="1.2"/><text x="139" y="348" text-anchor="middle" class="soft">cursor</text>
   </g>
-  <text x="150" y="245" text-anchor="middle" font-size="11.5" fill="#8a7a58">one machine</text>
-  <g font-size="11" fill="#1f2430">
-    <rect x="84" y="256" width="60" height="20" rx="5" fill="#fdf7ea" stroke="#e2dac9"/><text x="114" y="270" text-anchor="middle" font-size="9.5">claude code</text>
-    <rect x="84" y="282" width="60" height="20" rx="5" fill="#fdf7ea" stroke="#e2dac9"/><text x="114" y="296" text-anchor="middle" font-size="9.5">codex</text>
-    <rect x="84" y="308" width="60" height="20" rx="5" fill="#fdf7ea" stroke="#e2dac9"/><text x="114" y="322" text-anchor="middle" font-size="9.5">cursor</text>
+  <rect x="184" y="300" width="66" height="34" rx="4" fill="#b8791a"/>
+  <text x="217" y="322" text-anchor="middle" font-size="11" fill="#ffffff" class="b">waggled</text>
+  <g stroke="#b8791a" stroke-width="1.6">
+    <line x1="172" y1="289" x2="182" y2="311" marker-end="url(#rg)"/>
+    <line x1="172" y1="317" x2="182" y2="317" marker-end="url(#rg)"/>
+    <line x1="172" y1="345" x2="182" y2="323" marker-end="url(#rg)"/>
   </g>
-  <rect x="158" y="278" width="64" height="34" rx="8" fill="url(#rgold)" stroke="#8a5a08" stroke-width="1.1"/>
-  <text x="190" y="299" text-anchor="middle" font-size="10.5" fill="#2e1e04" font-weight="600">waggled</text>
-  <g stroke="#c9860a" stroke-width="1.6">
-    <line x1="144" y1="266" x2="158" y2="288" marker-end="url(#rgo)"/>
-    <line x1="144" y1="292" x2="158" y2="295" marker-end="url(#rgo)"/>
-    <line x1="144" y1="318" x2="158" y2="302" marker-end="url(#rgo)"/>
-  </g>
+  <text x="176" y="422" text-anchor="middle" font-size="12" class="muted">harnesses → one daemon</text>
 
-  <!-- second machine (federation) -->
-  <g filter="url(#rdrop)">
-    <rect x="452" y="250" width="120" height="66" rx="12" fill="#ffffff" stroke="#e2dac9"/>
-  </g>
-  <rect x="470" y="268" width="64" height="30" rx="7" fill="url(#rgold)" stroke="#8a5a08" stroke-width="1.1"/>
-  <text x="502" y="287" text-anchor="middle" font-size="10" fill="#2e1e04" font-weight="600">waggled</text>
-  <text x="512" y="245" text-anchor="middle" font-size="10.5" fill="#8a7a58">another machine</text>
-  <path d="M230 296 C 330 296, 360 283, 452 283" fill="none" stroke="url(#rthread)" stroke-width="2.6" marker-end="url(#rgo)"/>
-  <text x="340" y="276" text-anchor="middle" font-size="10.5" fill="#a3872f">federation</text>
+  <!-- ===== zone 2 : another machine ===== -->
+  <text x="553" y="278" text-anchor="middle" font-size="12" class="muted">another machine</text>
+  <rect x="478" y="286" width="150" height="78" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <rect x="506" y="302" width="94" height="34" rx="4" fill="#b8791a"/>
+  <text x="553" y="324" text-anchor="middle" font-size="11" fill="#ffffff" class="b">waggled</text>
+  <path d="M250 318 C 360 318, 380 325, 476 325" fill="none" stroke="#b8791a" stroke-width="2" marker-end="url(#rg)"/>
+  <text x="363" y="308" text-anchor="middle" font-size="12" class="honey">federation</text>
 
-  <!-- the edge: a globe where grep runs -->
-  <g transform="translate(812 288)" filter="url(#rdrop)">
-    <circle r="62" fill="#fbfaf6" stroke="#d9c9a4"/>
-    <ellipse rx="62" ry="24" fill="none" stroke="#dcc9a0" stroke-width="1"/>
-    <ellipse rx="40" ry="62" fill="none" stroke="#dcc9a0" stroke-width="1"/>
-    <ellipse rx="20" ry="62" fill="none" stroke="#dcc9a0" stroke-width="1"/>
-    <line x1="-62" y1="0" x2="62" y2="0" stroke="#dcc9a0" stroke-width="1"/>
-    <!-- grep magnifier -->
-    <g transform="translate(16 8)">
-      <circle r="15" fill="#fdf3dd" stroke="#c9860a" stroke-width="2"/>
-      <line x1="11" y1="11" x2="24" y2="24" stroke="#c9860a" stroke-width="3.5" stroke-linecap="round"/>
-      <text y="4" text-anchor="middle" font-size="9" fill="#8a6a1e">grep</text>
+  <!-- ===== zone 3 : the edge ===== -->
+  <g transform="translate(900 322)">
+    <circle r="58" fill="#fbfbf9" stroke="#d3d3ce" stroke-width="1.5"/>
+    <ellipse rx="58" ry="22" fill="none" stroke="#e2e2de" stroke-width="1"/>
+    <ellipse rx="38" ry="58" fill="none" stroke="#e2e2de" stroke-width="1"/>
+    <ellipse rx="18" ry="58" fill="none" stroke="#e2e2de" stroke-width="1"/>
+    <line x1="-58" y1="0" x2="58" y2="0" stroke="#e2e2de" stroke-width="1"/>
+    <g transform="translate(14 8)">
+      <circle r="15" fill="#faf3e6" stroke="#b8791a" stroke-width="2"/>
+      <line x1="11" y1="11" x2="24" y2="24" stroke="#b8791a" stroke-width="3.5" stroke-linecap="round"/>
+      <text y="4" text-anchor="middle" font-size="9" class="honey b">grep</text>
     </g>
   </g>
-  <text x="812" y="368" text-anchor="middle" font-size="11.5" fill="#8a7a58">the edge</text>
-  <path d="M572 283 C 660 283, 690 288, 752 288" fill="none" stroke="url(#rthread)" stroke-width="2.6" marker-end="url(#rgo)"/>
-  <text x="662" y="272" text-anchor="middle" font-size="10.5" fill="#a3872f">log replay</text>
+  <text x="900" y="410" text-anchor="middle" font-size="12" class="muted">the edge</text>
+  <path d="M628 322 C 720 322, 748 322, 838 322" fill="none" stroke="#b8791a" stroke-width="2" marker-end="url(#rg)"/>
+  <text x="735" y="308" text-anchor="middle" font-size="12" class="honey">log replay</text>
 
-  <!-- source-never-leaves seal -->
-  <g transform="translate(150 430)">
-    <rect x="-84" y="-16" width="230" height="34" rx="17" fill="#eef4ee" stroke="#bcd2bc"/>
-    <text x="30" y="5" text-anchor="middle" font-size="11.5" fill="#2c5134">the source files never leave your laptop</text>
-  </g>
-
-  <text x="812" y="452" text-anchor="middle" font-size="11.5" fill="#a3872f">matches travel back &#8212; the bytes stay put</text>
+  <!-- seals -->
+  <rect x="70" y="446" width="300" height="32" rx="4" fill="#eef6f0" stroke="#cfe3d6" stroke-width="1.3"/>
+  <text x="220" y="467" text-anchor="middle" font-size="11.5" class="green">the source files never leave your laptop</text>
+  <text x="900" y="466" text-anchor="middle" font-size="12" class="honey">matches travel back — the bytes stay put</text>
 </svg>
