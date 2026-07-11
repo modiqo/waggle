@@ -8,6 +8,7 @@ where your question is.
 | | |
 |---|---|
 | [**WHY.md**](WHY.md) | The cornerstone essay: how resources actually pass between agents today (the four-boundary matrix), what it costs, why provider optimizations don't transfer, the bee that inspired the design — and how the substrate works at every radius. |
+| [**The essay**](design/essay.md) | The long-form front door (formerly the repository README): the dance, the problem, the demo, the architecture at all three radii. |
 
 ## How do I use it? *(the guides — in reading order)*
 
@@ -52,3 +53,4 @@ concern:
 - **The agent experience** — [06 agent coordination](design/06-agent-coordination.md) · [17 agent fluency](design/17-agent-fluency.md) · [18 content access](design/18-content-access.md) · [05 social minting](design/05-social-minting.md)
 - **Storage & concurrency** — [07 storage interface](design/07-storage-interface.md) · [15 concurrency model](design/15-concurrency-model.md) · [16 deployment topologies](design/16-deployment-topologies.md)
 - **The edge** — [08 cloudflare foundation](design/08-cloudflare-foundation.md) (incl. the E1-E13 completeness matrix)
+- **What's next** — [19 interrogation telemetry](design/19-interrogation-telemetry.md) *(plan)*: convergence, receipt-driven routing, scaffold distillation · [20 the symbol lens](design/20-symbol-lens.md) *(design)*: source-code handoffs, mint-time structure

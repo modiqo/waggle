@@ -15,6 +15,62 @@ Counts only — events are payload-free by construction. The funnel answers
 the orchestrator's real questions: which handoffs were consumed, which
 stalled at resolve, which delivered repeat value.
 
+## Judging the work: outcomes and the escalation choreography
+
+Consumption is the consumer's story; the **verdict** is yours. When a
+delegation comes back, record it — the verdict is a stage, so nothing
+about *why* ever enters the log:
+
+```bash
+waggle record --token 7Kp2mQ9x --stage accepted    # or: rejected
+waggle funnel --token 7Kp2mQ9x
+# → { "stages": { ..., "rejected": 1 }, "outcome": "rejected", ... }
+```
+
+`outcome` is derived from counts, order-free: neither verdict →
+`pending`, one → that verdict, both → `contested` (surfaced for you to
+resolve, never silently overwritten — re-judgments should supersede,
+not overwrite).
+
+A rejection's response teaches the **escalation choreography**: re-mint
+the same target under the *same parent* (aimed at a stronger consumer),
+then supersede the rejected child so late readers follow the pointer:
+
+```bash
+waggle mint --target file://$PWD/plan.md --parent M9kQ2vRe   # → 9rTq3wXk
+waggle mutate --token 7Kp2mQ9x --change supersede=9rTq3wXk --expected-version 1
+```
+
+The escalation is now **lineage, not lore**: a rejected child
+superseded by a sibling under the same parent is a queryable fact —
+the raw material for the routing scorecard (design doc 19 §4.6).
+
+## Proof of reading: consumption contracts
+
+When the handoff has load-bearing sections, declare them at mint —
+`section:` sugar resolves against the outline right then; the manifest
+stores plain line ranges, signed with the core:
+
+```bash
+waggle mint --target file://$PWD/plan.md --snapshot \
+    --require section:Pricing --require "lines:120-180" --min-coverage 1.0
+```
+
+Every served `read` window and `search` hit stamps which required
+regions it overlapped (positions only — patterns and text never enter
+the log). `coverage` on the token then answers the question no
+orchestrator could ask before:
+
+```bash
+waggle coverage --token 7Kp2mQ9x
+# → { "met": false, "contract": { "required": 2, "touched": 1, ... },
+#     "missed": [ { "region": 0, "label": "Pricing", "lines": "847-920" } ] }
+```
+
+Misses are **named**. A subagent that claims to have followed the plan
+with `met: false` gets caught before its answer is trusted — check the
+receipt, then record your verdict.
+
 ## Correcting the record: supersede and revoke
 
 Handoffs go stale. The report gets corrected. Two lifecycle moves, both

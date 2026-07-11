@@ -16,6 +16,7 @@ Read in this order if you're new:
 
 | Doc | What it settles |
 |---|---|
+| [essay](essay.md) | The long-form front door (formerly the repository README): the dance, the problem, the sixty-second demo, the architecture at all three radii |
 | [02 — domain model](02-domain-model.md) | Tokens, the three-zone attribution manifest, variants, channels, lineage: the nouns and their invariants |
 | [03 — core architecture](03-core-architecture.md) | The sans-I/O discipline: time as a value, entropy as a parameter, effects at the edges |
 | [04 — event sourcing](04-event-sourcing.md) | The append-only log as truth; payload-free events; the reconstruct guarantees R-1..R-4 |
@@ -27,3 +28,5 @@ Read in this order if you're new:
 | [16 — deployment topologies](16-deployment-topologies.md) | One machine, many machines, the daemon, the shim principle |
 | [08 — cloudflare foundation](08-cloudflare-foundation.md) | Computation-travels-to-data; the Durable Object decision; the E1-E13 completeness matrix |
 | [05 — social minting](05-social-minting.md) | The human face: unfurls, mint-time snapshots (I-3), QR, share packages |
+| [19 — interrogation telemetry](19-interrogation-telemetry.md) | *(plan)* Convergence classification of consumer traces, receipt-driven routing, scaffold distillation — the research grounding and the complete scoping |
+| [20 — the symbol lens](20-symbol-lens.md) | *(design)* Source-code handoffs: mint-time symbol outlines via tree-sitter tags, `symbol:` contracts, zero serve-time cost — hypothesis, performance budget, reference pseudo-code |

@@ -140,6 +140,25 @@ inline threshold (02 MediaRef); the manifest's `sha256` is the integrity
 contract — a resolver verifies what it fetched; tier 3's CAS is R2 (08),
 same layout, presigned delivery.
 
+**Retention (the live-set policy).** The store compounds by design —
+the log appends forever (C-2) and blobs are immutable — but growth
+tracks *churn*, not usage: identical bytes dedupe by construction, so
+re-minting an unchanged tree adds nothing. The weight is blobs, and
+their GC policy falls out of resolution semantics: a blob is **live**
+iff some manifest that still *serves* references it (`content`, attach
+media, derived artifacts such as outlines). Revoked and expired tokens
+serve nothing by spec, so their blobs are semantically dead the moment
+they tombstone — sweepable without breaking any promise. What survives
+forever is deliberately cheap: the tombstone, and the payload-free
+history. Superseded tokens still serve (content + pointer) and stay
+live until revoked or expired. `BlobStore::gc` (mark-and-sweep against
+a live set) is the shipped mechanism; the policy layer — computing the
+live set from manifests and exposing a `gc` verb with a dry-run — is a
+planned follow-up, alongside disk stats in `daemon status`. Log
+compaction, should anyone ever want it, is already a spec guarantee:
+R-2 (snapshot + suffix ≡ full) is the primitive; archive the prefix as
+JSONL and keep the state snapshot.
+
 - **Concurrency = WAL semantics**: many readers, one writer; readers get
   consistent snapshot transactions natively (this *is* the G-2 guarantee,
   provided rather than built); the daemon's committer task is the single
