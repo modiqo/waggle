@@ -1,0 +1,230 @@
+[
+ {
+  "id": "text_0",
+  "modality": "text",
+  "path": "/tmp/tier3/corpus/text_0.txt",
+  "answer": "Z9K-8782",
+  "region": "Section 9",
+  "region_kind": "lines",
+  "bytes": 24266
+ },
+ {
+  "id": "md_0",
+  "modality": "markdown",
+  "path": "/tmp/tier3/corpus/md_0.md",
+  "answer": "W6R-4234",
+  "region": "Runbook 4: Recovery Path",
+  "region_kind": "section",
+  "bytes": 23715
+ },
+ {
+  "id": "code_0",
+  "modality": "code",
+  "path": "/tmp/tier3/corpus/code_0.py",
+  "answer": "W1P-6991",
+  "region": "disable_noerror_messages",
+  "region_kind": "symbol",
+  "bytes": 17501
+ },
+ {
+  "id": "pdf_0",
+  "modality": "pdf",
+  "path": "/tmp/tier3/corpus/doc_0.pdf",
+  "content": "/tmp/tier3/corpus/doc_0.txt",
+  "answer": "Q2R-9583",
+  "region": "Runbook 8: Recovery Path",
+  "region_kind": "section",
+  "bytes": 19981
+ },
+ {
+  "id": "voice_0",
+  "modality": "voice",
+  "path": "/tmp/tier3/corpus/voice_0.aiff",
+  "content": "/tmp/tier3/corpus/voice_0.txt",
+  "answer": "Q1M-5956",
+  "region": "the audit code",
+  "region_kind": "lines",
+  "bytes": 1256066
+ },
+ {
+  "id": "video_0",
+  "modality": "video",
+  "path": "/tmp/tier3/corpus/video_0.mp4",
+  "content": "/tmp/tier3/corpus/voice_0.txt",
+  "answer": "Q1M-5956",
+  "region": "the audit code",
+  "region_kind": "lines",
+  "bytes": 284120
+ },
+ {
+  "id": "text_1",
+  "modality": "text",
+  "path": "/tmp/tier3/corpus/text_1.txt",
+  "answer": "Q1K-7736",
+  "region": "Section 7",
+  "region_kind": "lines",
+  "bytes": 24266
+ },
+ {
+  "id": "md_1",
+  "modality": "markdown",
+  "path": "/tmp/tier3/corpus/md_1.md",
+  "answer": "X5M-7585",
+  "region": "Runbook 10: Recovery Path",
+  "region_kind": "section",
+  "bytes": 23715
+ },
+ {
+  "id": "code_1",
+  "modality": "code",
+  "path": "/tmp/tier3/corpus/code_1.py",
+  "answer": "Q4K-7213",
+  "region": "test_check_import",
+  "region_kind": "symbol",
+  "bytes": 9852
+ },
+ {
+  "id": "pdf_1",
+  "modality": "pdf",
+  "path": "/tmp/tier3/corpus/doc_1.pdf",
+  "content": "/tmp/tier3/corpus/doc_1.txt",
+  "answer": "Q3P-5201",
+  "region": "Runbook 10: Recovery Path",
+  "region_kind": "section",
+  "bytes": 19737
+ },
+ {
+  "id": "voice_1",
+  "modality": "voice",
+  "path": "/tmp/tier3/corpus/voice_1.aiff",
+  "content": "/tmp/tier3/corpus/voice_1.txt",
+  "answer": "Q2M-4522",
+  "region": "the audit code",
+  "region_kind": "lines",
+  "bytes": 1246188
+ },
+ {
+  "id": "video_1",
+  "modality": "video",
+  "path": "/tmp/tier3/corpus/video_1.mp4",
+  "content": "/tmp/tier3/corpus/voice_1.txt",
+  "answer": "Q2M-4522",
+  "region": "the audit code",
+  "region_kind": "lines",
+  "bytes": 281277
+ },
+ {
+  "id": "text_2",
+  "modality": "text",
+  "path": "/tmp/tier3/corpus/text_2.txt",
+  "answer": "Z5R-9853",
+  "region": "Section 6",
+  "region_kind": "lines",
+  "bytes": 24266
+ },
+ {
+  "id": "md_2",
+  "modality": "markdown",
+  "path": "/tmp/tier3/corpus/md_2.md",
+  "answer": "X8P-7431",
+  "region": "Runbook 11: Recovery Path",
+  "region_kind": "section",
+  "bytes": 23715
+ },
+ {
+  "id": "code_2",
+  "modality": "code",
+  "path": "/tmp/tier3/corpus/code_2.py",
+  "answer": "Z5K-4521",
+  "region": "test_fail_under",
+  "region_kind": "symbol",
+  "bytes": 57099
+ },
+ {
+  "id": "pdf_2",
+  "modality": "pdf",
+  "path": "/tmp/tier3/corpus/doc_2.pdf",
+  "content": "/tmp/tier3/corpus/doc_2.txt",
+  "answer": "Z6K-5088",
+  "region": "Runbook 7: Recovery Path",
+  "region_kind": "section",
+  "bytes": 19817
+ },
+ {
+  "id": "voice_2",
+  "modality": "voice",
+  "path": "/tmp/tier3/corpus/voice_2.aiff",
+  "content": "/tmp/tier3/corpus/voice_2.txt",
+  "answer": "X3R-9579",
+  "region": "the audit code",
+  "region_kind": "lines",
+  "bytes": 1251596
+ },
+ {
+  "id": "video_2",
+  "modality": "video",
+  "path": "/tmp/tier3/corpus/video_2.mp4",
+  "content": "/tmp/tier3/corpus/voice_2.txt",
+  "answer": "X3R-9579",
+  "region": "the audit code",
+  "region_kind": "lines",
+  "bytes": 281778
+ },
+ {
+  "id": "text_3",
+  "modality": "text",
+  "path": "/tmp/tier3/corpus/text_3.txt",
+  "answer": "Q9P-2013",
+  "region": "Section 6",
+  "region_kind": "lines",
+  "bytes": 24266
+ },
+ {
+  "id": "md_3",
+  "modality": "markdown",
+  "path": "/tmp/tier3/corpus/md_3.md",
+  "answer": "Z9M-9894",
+  "region": "Runbook 11: Recovery Path",
+  "region_kind": "section",
+  "bytes": 23715
+ },
+ {
+  "id": "code_3",
+  "modality": "code",
+  "path": "/tmp/tier3/corpus/code_3.py",
+  "answer": "X3M-5322",
+  "region": "test_stdin",
+  "region_kind": "symbol",
+  "bytes": 52744
+ },
+ {
+  "id": "pdf_3",
+  "modality": "pdf",
+  "path": "/tmp/tier3/corpus/doc_3.pdf",
+  "content": "/tmp/tier3/corpus/doc_3.txt",
+  "answer": "W9P-7816",
+  "region": "Runbook 7: Recovery Path",
+  "region_kind": "section",
+  "bytes": 19989
+ },
+ {
+  "id": "voice_3",
+  "modality": "voice",
+  "path": "/tmp/tier3/corpus/voice_3.aiff",
+  "content": "/tmp/tier3/corpus/voice_3.txt",
+  "answer": "Q1P-1045",
+  "region": "the audit code",
+  "region_kind": "lines",
+  "bytes": 1264768
+ },
+ {
+  "id": "video_3",
+  "modality": "video",
+  "path": "/tmp/tier3/corpus/video_3.mp4",
+  "content": "/tmp/tier3/corpus/voice_3.txt",
+  "answer": "Q1P-1045",
+  "region": "the audit code",
+  "region_kind": "lines",
+  "bytes": 285884
+ }
+]
