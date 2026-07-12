@@ -81,8 +81,14 @@ read it?'' from an unanswerable question into a query, and a mint-time
 structural lens for source code that gives an agent a symbol-addressable
 handoff without any parser on the serving path. We report microbenchmarks
 (39\,ns cache-hit resolution, 323\,\textmu{}s end-to-end over a domain
-socket, a million-event fold in 334\,\textmu{}s) and a live delegation
-case study, and we are candid about the mechanism's limits.
+socket, a million-event fold in 334\,\textmu{}s) and an evaluation across
+six modalities---text, markdown, code, PDF, voice and video---in which nine
+models answer the same question under three turn-matched handoffs. Pasting
+the artifact is the accuracy ceiling; a raw path collapses the moment the
+bytes stop being text (0\,\% on PDF and video); the token answers within
+6.5 points of the ceiling while ingesting 14$\times$ fewer bytes, and is
+the only handoff that can be audited at all---its coverage receipt tracks
+correctness exactly. We are candid about the mechanism's limits.
 \end{abstract}
 
 % ===========================================================================
@@ -748,6 +754,56 @@ harness.}
 \label{fig:roc}
 \end{figure}
 
+\subsection{The substrate across six modalities}
+\label{sec:tier3}
+\input{generated/tier3_modality.tex}
+The measurements above test the receipt machinery. This one tests the
+\emph{handoff}, against the competitor the introduction named. Twenty-four
+artifacts spanning \texttt{text}, \texttt{markdown}, \texttt{code},
+\texttt{pdf}, \texttt{voice} and \texttt{video} each carry one unique audit
+code at a known region, so correctness, cost and coverage are exactly
+gradable. Nine models across two families answer the same question about the
+same artifact under three \emph{turn-matched} arms: \emph{copy} pastes the
+artifact's text; \emph{reference} hands a path plus ordinary file tools
+(open, grep); \emph{waggle} hands a token and lets the consumer interrogate.
+Of 648 runs, 640 are analysed; eight are excluded for unrecovered transport
+errors, and we say so rather than counting them as model failures.
+
+Table~\ref{tab:tier3mod} reports the result, and it does not flatter us
+uniformly. \textbf{Pasting is the accuracy ceiling}: \emph{copy} answers
+100\,\% everywhere, because these artifacts are small enough to paste whole.
+Against that ceiling waggle answers 93.5\,\% --- while ingesting
+\textbf{14$\times$ fewer bytes} of artifact (1.2\,KB against 17.8\,KB) and
+spending \textbf{3.1$\times$ fewer tokens}. Interrogation is not free: the
+6.5-point gap is the real price of asking instead of being told, and on a
+small artifact that a window can simply hold, pasting remains the better
+trade. The substrate earns its keep as the artifact grows, as the holders
+multiply, and---decisively---as the modality stops being text.
+
+\paragraph{Where a path stops working.} The \emph{reference} arm answers
+37.5\,\% overall, and the average conceals the shape: on \texttt{pdf} it
+scores \textbf{0\,\%}, on \texttt{video} \textbf{0\,\%}, on \texttt{voice}
+\textbf{3\,\%}. This is not a defect of the arm; it is what a path \emph{is}.
+A filesystem location handed to a text consumer conveys nothing when the
+bytes are an MP4, and ordinary tools cannot interpret them. The extraction
+must travel \emph{with} the reference---which is exactly what a token does
+and a location cannot. The same token carries the transcript to the
+text-only consumer and the media itself to the one that can watch or listen;
+waggle answers 94--100\,\% on precisely the modalities where the path
+collapses. This, and not the token count, is the argument for name semantics.
+
+\paragraph{The receipt predicts the answer.} The most useful column is the
+one the other two arms structurally cannot have. In the waggle arm coverage
+does not merely correlate with correctness---it \emph{tracks} it: GPT-4.1
+answers 67\,\% with 67\,\% coverage, GPT-4o 79\,\% with 79\,\%, GPT-4o mini
+96\,\% with 96\,\%; every model that reached the required region answered,
+and every model that did not, did not. The orchestrator therefore does not
+need to grade the answer to know whether to trust it: the receipt already
+said. Interrogation competence, we note, is itself model-dependent---five of
+the nine models interrogate to 100\,\%, and the weaker ones fail by never
+reaching the region---which is the routing signal of \S\ref{sec:eval} in the
+wild rather than in a model.
+
 \subsection{Interrogation versus lexical search}
 For a code artifact crossing a delegation boundary, the token's structural
 layer changes the interaction. Locating and reading a function with a
@@ -781,7 +837,9 @@ negative---the ``side door.'' The remedy is sealing: moving the source
 into a vault so the token is the only access path, which the system
 supports and which we recommend whenever receipts carry consequences; the
 reliability of receipts under seal, across many trials, is the metric that
-would settle the mechanism's value and remains to be measured at scale.
+would settle the mechanism's value; \S\ref{sec:tier2} measures it, and the
+side door roughly sextuples the false-negative rate. Measuring it against
+\emph{live} agents rather than a modelled read pattern remains open.
 Third, any behavioral signal used for routing invites Goodhart's law; we
 keep interrogation-shape features as inputs to an outcome-labeled judgment
 rather than as free-standing rewards, mirroring the finding that
@@ -789,7 +847,17 @@ intermediate rewards help little while outcome supervision
 drives gains~\citep{jin2025}. Fourth, the substrate earns its keep only for
 \emph{produced artifacts that cross a delegation boundary}; for
 shared-workspace exploration the filesystem is already the reference and
-the substrate should stay out of the way.
+the substrate should stay out of the way. Fifth---and \S\ref{sec:tier3}
+says it in numbers---\textbf{pasting is the accuracy ceiling}. On an
+artifact small enough for the window to simply hold, a copy answers
+100\,\% and the token answers 93.5\,\%; interrogation costs accuracy, and
+we do not pretend otherwise. The substrate's case rests on the artifact
+growing, the holders multiplying, the modality ceasing to be text, and the
+answer needing to be \emph{audited}---not on winning a contest that pasting
+already wins. Finally, our cross-modality corpus plants a known needle in
+each artifact: that makes correctness and coverage exactly gradable, but it
+is a retrieval task, not a reasoning one, and a harder task would compress
+the arms' differences.
 
 The outlook follows from the three-radii result. As harnesses routinely
 fan work across machines and across vendors, the copy discipline's costs
