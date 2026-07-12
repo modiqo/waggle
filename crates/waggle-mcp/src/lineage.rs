@@ -309,19 +309,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         // so. Without it, `complete` is a fact the orchestrator may consult;
         // with it, `met` is a verdict it can refuse an answer on.
         let requires_all = requires_all_files(view.as_ref());
-        let next = if let Some(first) = unread.first() {
-            vec![NextCall {
-                tool: "read".into(),
-                args: json!({ "token": first["token"] }),
-                why: "close the gap: the first file nobody has opened".into(),
-            }]
-        } else {
-            vec![NextCall {
-                tool: "funnel".into(),
-                args: json!({ "token": root.as_str() }),
-                why: "full coverage — the rollup has the totals".into(),
-            }]
-        };
+        let next = tree_coverage_next(root, unread.first(), requires_all);
         let mut result = json!({
             "token": root.as_str(),
             "files": files,
@@ -408,4 +396,57 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             seq: None,
         })
     }
+}
+
+/// What to offer a consumer whose tree coverage is short.
+///
+/// Do not send someone to close an ELEVEN-file gap one file at a time. It cannot
+/// be done inside a turn budget, and we measured what happens when you try: a
+/// model told to open "the first file nobody has opened" fetched them singly,
+/// exhausted its turns, and never answered — while the ungated arm, holding the
+/// SAME correct answer, was simply allowed to give it. The contract demanded the
+/// whole tree; the guidance offered a footpath.
+///
+/// The fan-out is the move that satisfies `files:all`: one call, one lens, every
+/// file served. Offer THAT first. A refusal is only fair if the way to satisfy it
+/// is on the table.
+fn tree_coverage_next(
+    root: waggle_core::Token,
+    first_unread: Option<&Value>,
+    requires_all: bool,
+) -> Vec<NextCall> {
+    let Some(first) = first_unread else {
+        return vec![NextCall {
+            tool: "funnel".into(),
+            args: json!({ "token": root.as_str() }),
+            why: "full coverage — the rollup has the totals".into(),
+        }];
+    };
+    let mut n = Vec::new();
+    if requires_all {
+        n.push(NextCall {
+            tool: "read".into(),
+            args: json!({
+                "token": root.as_str(),
+                "section": "<a heading common to these files>",
+            }),
+            why: "THE CHEAP WAY TO CLOSE THIS: fans the lens across EVERY file in the tree \
+                  at once. Check `complete` on the result — if it is false, page on with \
+                  `from`. Files with no such section are not served and stay unread; read \
+                  those directly. Fetching children one at a time will exhaust your turns \
+                  before it closes the gap."
+                .into(),
+        });
+    }
+    n.push(NextCall {
+        tool: "read".into(),
+        args: json!({ "token": first["token"] }),
+        why: if requires_all {
+            "or close the gap one file at a time — slow, and the tree may outlast you"
+        } else {
+            "close the gap: the first file nobody has opened"
+        }
+        .into(),
+    });
+    n
 }

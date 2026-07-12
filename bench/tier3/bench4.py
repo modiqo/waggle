@@ -56,6 +56,20 @@ ARMS = ("copy", "reference", "waggle", "waggle+gate")
 # result set, with no record of which run got which. Freeze it, hash it, report it.
 WAGGLE_BIN = os.environ.get("WAGGLE_BIN", "waggle")
 
+# What the consumer actually SEES of a tool result.
+#
+# This used to be two numbers that disagreed: we asked waggle for up to 8,000
+# bytes and then showed the model the first 4,500. A tree fan-out came back with
+# ten runbooks, the model was shown five, and waggle's receipt — correctly, on
+# its own terms — recorded that it had SERVED all ten. The gate read `met` and
+# accepted an answer built from half the evidence, and accuracy fell precisely
+# because the gate had started passing everyone.
+#
+# A receipt may only attest to bytes the consumer received. So there is ONE
+# number: what we ask for is what we display, and what we display is what we
+# count as ingested. Never ask for more than you will show.
+VIEW_BYTES = 8000
+
 
 def assert_clean_substrate() -> None:
     """No foreign daemon, and say which binary is under test.
@@ -68,7 +82,12 @@ def assert_clean_substrate() -> None:
     caveat later.
     """
     ps = subprocess.run(["ps", "ax", "-o", "command"], capture_output=True, text=True).stdout
-    stray = [l for l in ps.splitlines() if "waggle serve --daemon" in l]
+    # Match the daemon, not the shell line that mentions it: our own
+    # `pkill -f "waggle serve --daemon"` contains the string verbatim, and the
+    # guard tripped on itself.
+    stray = [l for l in ps.splitlines()
+             if "waggle serve --daemon" in l
+             and not any(x in l for x in ("pkill", "grep", "zsh -c", "bash -c", "/bin/sh"))]
     if stray:
         raise SystemExit(
             "REFUSING TO RUN: a waggle daemon is alive and shares the store:\n  "
@@ -330,7 +349,8 @@ def wag_exec(cmd: dict, parent: str) -> tuple[str, int]:
             "outline": struct, "next": r.get("next")})
         return out, len(out)
     if c == "section":
-        a = ["read", "--token", tok, "--section", cmd.get("name", ""), "--max-bytes", "8000"]
+        a = ["read", "--token", tok, "--section", cmd.get("name", ""),
+             "--max-bytes", str(VIEW_BYTES)]
         if cmd.get("from") is not None:
             frm = as_int(cmd["from"], -1)
             if frm >= 0:
@@ -491,6 +511,17 @@ def run_one(it: dict, model: str, arm: str) -> Run:
                         gap = receipt_gap(it, tok)
                         where = (" You have NOT been served these files: "
                                  + ", ".join(gap[:8]) + ". Read them.") if gap else ""
+                        if it["modality"] in CONTRACT_ALL and gap:
+                            # Do not refuse an eleven-file contract and then point
+                            # at one file. gpt-4o-mini HELD the correct answer,
+                            # was rejected four times, fetched files singly, and
+                            # died at the turn cap — while the ungated arm gave
+                            # the same answer and was believed. The fan-out closes
+                            # the whole gap in ONE call; say so at the moment of
+                            # refusal, or the refusal is a trap.
+                            where += (' Do NOT fetch them one by one — you will run out of turns. '
+                                      'Use the tree fan-out: {"cmd":"section","name":"<heading>"} '
+                                      'on the PARENT token serves that section from EVERY file at once.')
                         convo += ("\n\nREJECTED: your receipt shows you have not consumed what "
                                   "the author requires, so this answer is not yet supported by "
                                   "your own trail." + where +
@@ -517,9 +548,14 @@ def run_one(it: dict, model: str, arm: str) -> Run:
             chunks = []
             for o in ops[:6]:
                 r.ops += 1
-                out, n = (ref_exec(o, it) if arm == "reference" else wag_exec(o, tok))
-                r.ingested += n
-                chunks.append(f"> {json.dumps(o)}\n{out[:4500]}")
+                out, _ = (ref_exec(o, it) if arm == "reference" else wag_exec(o, tok))
+                # Truncate ONCE, and count what the model actually received —
+                # not what the tool returned. Counting the latter both overstates
+                # the arm's ingestion and, worse, lets a receipt certify bytes
+                # that never reached the consumer.
+                shown = out[:VIEW_BYTES]
+                r.ingested += len(shown)
+                chunks.append(f"> {json.dumps(o)}\n{shown}")
             if arm == "copy":
                 convo += "\n\nThe artifact is already above. Answer now."
             else:

@@ -200,17 +200,18 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         let mut truncated = false;
 
         for child in all.iter().skip(start) {
-            if budget > max_bytes {
-                truncated = true;
-                break;
-            }
             let Ok(Some(v)) = self.store.manifest(*child).await else {
                 continue;
             };
             let entry = self
                 .tree_entry(*child, &v, base.as_deref(), max_bytes, &mut total_bytes)
                 .await;
-            budget += entry.to_string().len();
+            let cost = entry.to_string().len();
+            if !files.is_empty() && budget + cost > max_bytes {
+                truncated = true;
+                break;
+            }
+            budget += cost;
             files.push(entry);
         }
 
@@ -328,6 +329,48 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         // answer confidently and wrongly. Completeness has to be resumable, and
         // incompleteness has to be loud.
         let from = usize::try_from(args_from.unwrap_or(0)).unwrap_or(0);
+        // `max_bytes` is a PER-RESPONSE cap, and applying it to an N-file
+        // response is a category error. It was being split `max_bytes / 6` — a
+        // hardcoded six-file assumption — so a fan-out over eleven files served
+        // nine and silently dropped two. `--require files:all` was therefore
+        // unsatisfiable in one call BY CONSTRUCTION: the one move that closes a
+        // completeness contract could not close it. Consumers fell back to
+        // fetching children one at a time, and the weaker ones burned their turn
+        // budget and never answered — while the gate, correctly, refused to
+        // believe the ones that answered early.
+        //
+        // Nor is the answer to divide the budget by the file count: the load-
+        // bearing sentence is usually at the END of a section, and slicing every
+        // file to a thin prefix serves all of them while cutting the fact out of
+        // each. Full coverage, zero information.
+        //
+        // Only four ways exist to fit eleven full sections into an eight-kilobyte
+        // budget, and three of them are wrong:
+        //
+        //   thin every file  — the load-bearing sentence is at the END of a
+        //                      section; a thin prefix of all of them serves
+        //                      everything and cuts the fact out of each. Full
+        //                      coverage, zero information.
+        //   drop files       — the original bug: nine of eleven, silently.
+        //   overrun the caller — we tried this, and it was the worst of the
+        //                      three. `max_bytes` is a CONTRACT with the caller.
+        //                      We returned 9,255 bytes against a budget of 8,000;
+        //                      the client showed its model the first 4,500 and
+        //                      dropped the rest — while our receipt certified all
+        //                      ten files as read. The gate then believed a
+        //                      consumer that had seen five runbooks out of eleven.
+        //                      A receipt must never attest to bytes the consumer
+        //                      did not get, and we cannot know what a client
+        //                      truncates: so we must not exceed what it asked for.
+        //
+        //   PAGE             — serve as many WHOLE files as the budget holds, say
+        //                      `complete: false`, hand back `from`. Honest about
+        //                      depth, honest about coverage, honest about cost.
+        //
+        // So each served file gets a full single-file allowance, and the response
+        // as a whole never exceeds the budget the caller set.
+        let per_file = max_bytes;
+        let ceiling = max_bytes;
         let mut queue: std::collections::VecDeque<_> = all.into_iter().skip(from).collect();
         let mut files = Vec::new();
         let mut visited = 0usize;
@@ -339,7 +382,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
 
         while let Some(child) = queue.pop_front() {
             visited += 1;
-            if visited > 200 || budget >= max_bytes {
+            if visited > 200 {
                 truncated = true;
                 break;
             }
@@ -352,7 +395,6 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 skipped += 1;
                 continue;
             };
-            let per_file = (max_bytes / 6).max(crate::query::MIN_MAX_BYTES);
             let served = self.lens_one(child, &cv, kind, value, per_file).await;
             let Some(slice) = served else {
                 skipped += 1; // this file simply has no such section/symbol
@@ -371,9 +413,21 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 "lines": slice["lines"],
                 "text": slice["text"],
             });
-            budget += entry.to_string().len();
+            // Decide BEFORE committing. Appending an entry and only then noticing
+            // we are over budget overshoots by up to one whole file — and an
+            // overshoot is not a rounding error, it is a receipt that lies: the
+            // client truncates what we overran, and we have already stamped the
+            // file `read`. If it does not fit, stop here and let `from` carry it.
+            let cost = entry.to_string().len();
+            if !files.is_empty() && budget + cost > ceiling {
+                truncated = true;
+                consumed -= 1;
+                break;
+            }
+            budget += cost;
             files.push(entry);
-            // Bytes were served: the receipt says so.
+            // Bytes were served — and only now, once we know the consumer will
+            // actually receive them, does the receipt say so.
             self.record_read(child, now, None).await;
         }
 
