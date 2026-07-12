@@ -45,6 +45,9 @@ pub fn lenses_for(content_type: &str) -> Vec<&'static str> {
         lenses.push("outline");
         lenses.push("section");
     }
+    if content_type == "text/plain" {
+        lenses.push("outline");
+    }
     if content_type == "application/json" {
         lenses.push("path");
     }
@@ -64,6 +67,10 @@ pub fn overview(text: &str, content_type: &str, max_bytes: usize) -> Value {
     });
     if content_type == "text/markdown" {
         out["outline"] = outline(text);
+    } else if content_type == "text/plain" {
+        // Plain text is what extracted PDF/transcript content becomes. Without
+        // an outline the consumer has nothing to steer by but a guessed regex.
+        out["outline"] = outline_plain(text);
     }
     if content_type == "application/json" {
         if let Ok(parsed) = serde_json::from_str::<Value>(text) {
@@ -73,6 +80,54 @@ pub fn overview(text: &str, content_type: &str, max_bytes: usize) -> Value {
         }
     }
     out
+}
+
+/// A structural outline for **plain text**: setext underlines, and named or
+/// numbered section headers, with their 1-based line numbers.
+///
+/// Plain text has no formal structure, so this is frankly a heuristic. It
+/// exists because the alternative was an *empty* outline, and an empty
+/// outline is a dead end — the one thing a projection must never be. A
+/// consumer that cannot navigate can only guess, and a guessing consumer is
+/// exactly the one the receipts catch bluffing.
+///
+/// Deliberately conservative: it recognises *structure*, never content. A
+/// heuristic that surfaced arbitrary "interesting-looking" lines would be
+/// leaking the answer rather than affording navigation.
+#[must_use]
+pub fn outline_plain(text: &str) -> Value {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut items: Vec<Value> = Vec::new();
+    for (i, raw) in lines.iter().enumerate() {
+        let line = raw.trim();
+        if line.is_empty() || line.len() > 90 {
+            continue;
+        }
+        // A setext underline on the following line (===== or -----).
+        let underlined = lines.get(i + 1).is_some_and(|n| {
+            let n = n.trim();
+            n.len() >= 3 && (n.chars().all(|c| c == '=') || n.chars().all(|c| c == '-'))
+        });
+        // A named division: "Section 4.", "Chapter 2", "Appendix B".
+        let lower = line.to_ascii_lowercase();
+        let named = ["section ", "chapter ", "part ", "appendix ", "runbook "]
+            .iter()
+            .any(|p| lower.starts_with(p));
+        // A numbered heading: "3." or "2.1" followed by a title.
+        let mut words = line.split_whitespace();
+        let numbered = words.next().is_some_and(|w| {
+            let w = w.trim_end_matches('.');
+            !w.is_empty() && w.chars().all(|c| c.is_ascii_digit() || c == '.')
+        }) && words.next().is_some();
+
+        if underlined || named || numbered {
+            items.push(json!({ "line": i + 1, "heading": line }));
+        }
+        if items.len() >= 80 {
+            break;
+        }
+    }
+    Value::Array(items)
 }
 
 /// The markdown outline: ATX headings with their 1-based line numbers.
@@ -208,12 +263,43 @@ pub fn search(
         }));
     }
     let returned = matches.len();
-    Ok(json!({
+    let mut out = json!({
         "matches": matches,
         "total_matches": total,
         "returned": returned,
         "truncated": returned < total,
-    }))
+    });
+    if total == 0 {
+        // A zero-match search used to be a cliff: an empty list, no signal,
+        // nowhere to go. Consumers that hit it guessed — and the receipts
+        // caught them guessing. A projection owes the consumer a *fork*, not
+        // a dead end, so an empty result carries the way out.
+        out["hint"] = json!(format!(
+            "0 matches for this pattern. The artifact has {} lines ({} bytes). \
+             The pattern is a Rust regex: prefix (?i) for case-insensitive, and \
+             prefer a broad pattern over an over-specific literal.",
+            lines.len(),
+            text.len()
+        ));
+        out["next"] = json!([
+            {
+                "tool": "read",
+                "args": {},
+                "why": "the overview: content type, lenses, and the outline to steer by"
+            },
+            {
+                "tool": "read",
+                "args": { "lines": "1-40" },
+                "why": "sample the head to learn the artifact's actual vocabulary"
+            },
+            {
+                "tool": "search",
+                "args": { "pattern": "(?i)" },
+                "why": "retry case-insensitively, or with a broader pattern"
+            }
+        ]);
+    }
+    Ok(out)
 }
 
 /// JSON pointer lens: parse and delegate to the CP-7 slice engine — one
@@ -358,5 +444,74 @@ mod tests {
             // matches payload stays within budget + envelope slack
             assert!(ser.len() <= budget + 256, "{} > {budget}", ser.len());
         }
+    }
+}
+
+#[cfg(test)]
+mod projection_tests {
+    use super::*;
+
+    const PLAIN: &str = "Section 3. Operational Notes\n\
+        ============================\n\
+        the pipeline reconciles records\n\
+        AUDIT CODE: Z9K-8782\n\
+        more prose here\n\
+        Section 4. Recovery\n\
+        ===================\n\
+        tail\n";
+
+    #[test]
+    fn plain_text_gets_an_outline_to_steer_by() {
+        let Value::Array(items) = outline_plain(PLAIN) else {
+            panic!("array")
+        };
+        let heads: Vec<&str> = items
+            .iter()
+            .map(|i| i["heading"].as_str().unwrap())
+            .collect();
+        assert!(heads.iter().any(|h| h.starts_with("Section 3")));
+        assert!(heads.iter().any(|h| h.starts_with("Section 4")));
+    }
+
+    #[test]
+    fn the_outline_affords_navigation_and_never_leaks_content() {
+        // Structure, not content: the outline must not surface the payload
+        // line itself, or it would be answering the question rather than
+        // affording the consumer a way to go and find the answer.
+        let Value::Array(items) = outline_plain(PLAIN) else {
+            panic!("array")
+        };
+        for i in &items {
+            let h = i["heading"].as_str().unwrap();
+            assert!(!h.contains("Z9K-8782"), "outline leaked content: {h}");
+            assert!(!h.contains("AUDIT"), "outline leaked content: {h}");
+        }
+    }
+
+    #[test]
+    fn plain_text_overview_advertises_the_outline_lens() {
+        let o = overview(PLAIN, "text/plain", 4096);
+        assert!(o["lenses"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|l| l == "outline"));
+        assert!(!o["outline"].as_array().unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_zero_match_search_is_a_fork_not_a_cliff() {
+        let r = search(PLAIN, "X9Y-[0-9]{4}", 2, 5, 4096).unwrap();
+        assert_eq!(r["total_matches"], 0);
+        // The consumer must be handed a way out, not an empty list.
+        assert!(r["hint"].as_str().unwrap().contains("0 matches"));
+        assert!(!r["next"].as_array().unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_hit_search_carries_no_hint() {
+        let r = search(PLAIN, "Z9K-8782", 1, 5, 4096).unwrap();
+        assert_eq!(r["total_matches"], 1);
+        assert!(r["hint"].is_null());
     }
 }
