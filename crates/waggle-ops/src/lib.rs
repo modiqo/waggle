@@ -201,7 +201,7 @@ pub const READ: OperationSpec = OperationSpec {
     name: "read",
     surface: Surface::Both,
     kind: OpKind::RelaxedWrite,
-    description: "Read the token's CONTENT surgically: a line window, a markdown section, a code symbol, or a JSON pointer path — never the whole artifact. With no address: the overview (size, content type, available lenses, outline; source code carries its symbol table of contents). Every response fits max-bytes and names the bytes you avoided.",
+    description: "Read the token's CONTENT surgically: a line window, a markdown section, a code symbol, or a JSON pointer path — never the whole artifact. With no address: the overview (size, content type, available lenses, outline; source code carries its symbol table of contents). If the token names a FOLDER (minted --tree), read DESCRIBES it — every file, its own token, size, type and outline: the folder's table of contents — and a lens applied to the folder token FANS OUT across every file at once, so you ask once, not once per file. A fan-out that exhausts its budget reports complete=false with examined/total_files and a `from` cursor to resume: never conclude anything about a tree you have not finished reading. Every response fits max-bytes and names the bytes you avoided.",
     args: &[
         ArgSpec { name: "token", required: true, doc: "The waggle token whose content to read." },
         ArgSpec { name: "lines", required: false, doc: "Line window, 1-based inclusive (e.g. 120-180)." },
@@ -212,7 +212,9 @@ pub const READ: OperationSpec = OperationSpec {
         ArgSpec { name: "max-bytes", required: false, doc: "Response budget in bytes (default 4096, floor 64)." },
     ],
     forward: &[
-        EdgeSpec { to: "read", why: "continue the window or follow the outline deeper" },
+        EdgeSpec { to: "read", why: "continue the window, follow the outline deeper, or resume a truncated folder fan-out from its `from` cursor" },
+        EdgeSpec { to: "search", why: "grep the artifact — or, on a folder token, every file in the tree at once" },
+        EdgeSpec { to: "coverage", why: "on a folder: which files you have actually been served, and which you have not" },
         EdgeSpec { to: "record", why: "report run when the content did its job" },
     ],
     reverse: &[],
@@ -224,7 +226,7 @@ pub const SEARCH: OperationSpec = OperationSpec {
     name: "search",
     surface: Surface::Both,
     kind: OpKind::RelaxedWrite,
-    description: "Grep the token's CONTENT: regex matches with line numbers and context, capped and budgeted — the matches travel, the artifact stays put. total_matches is counted in full even when the list is truncated. Works wherever the content's blobs replicate.",
+    description: "Grep the token's CONTENT: regex matches with line numbers and context, capped and budgeted — the matches travel, the artifact stays put. total_matches is counted in full even when the list is truncated. A FOLDER token (minted --tree) greps as a TREE: every file is searched and matches come back grouped per file, each with that file's own token so you can open it surgically. Works wherever the content's blobs replicate.",
     args: &[
         ArgSpec { name: "token", required: true, doc: "The waggle token whose content to search." },
         ArgSpec { name: "pattern", required: true, doc: "Regex (Rust syntax; (?i) prefix for case-insensitive)." },

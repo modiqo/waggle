@@ -80,7 +80,7 @@ A token's funnel: stage counts (impression → resolve → run → repeat) plus 
 
 ## `read` — CLI + MCP tool
 
-Read the token's CONTENT surgically: a line window, a markdown section, a code symbol, or a JSON pointer path — never the whole artifact. With no address: the overview (size, content type, available lenses, outline; source code carries its symbol table of contents). Every response fits max-bytes and names the bytes you avoided.
+Read the token's CONTENT surgically: a line window, a markdown section, a code symbol, or a JSON pointer path — never the whole artifact. With no address: the overview (size, content type, available lenses, outline; source code carries its symbol table of contents). If the token names a FOLDER (minted --tree), read DESCRIBES it — every file, its own token, size, type and outline: the folder's table of contents — and a lens applied to the folder token FANS OUT across every file at once, so you ask once, not once per file. A fan-out that exhausts its budget reports complete=false with examined/total_files and a `from` cursor to resume: never conclude anything about a tree you have not finished reading. Every response fits max-bytes and names the bytes you avoided.
 
 | arg | required | doc |
 |---|---|---|
@@ -92,12 +92,14 @@ Read the token's CONTENT surgically: a line window, a markdown section, a code s
 | `--from` | false | For a FOLDER token with a lens: continue the fan-out from this file index. A truncated tree-lens names the cursor to resume from — a partial folder read that looks like a whole one is how a confident wrong answer gets made. |
 | `--max-bytes` | false | Response budget in bytes (default 4096, floor 64). |
 
-- forward → `read`: continue the window or follow the outline deeper
+- forward → `read`: continue the window, follow the outline deeper, or resume a truncated folder fan-out from its `from` cursor
+- forward → `search`: grep the artifact — or, on a folder token, every file in the tree at once
+- forward → `coverage`: on a folder: which files you have actually been served, and which you have not
 - forward → `record`: report run when the content did its job
 
 ## `search` — CLI + MCP tool
 
-Grep the token's CONTENT: regex matches with line numbers and context, capped and budgeted — the matches travel, the artifact stays put. total_matches is counted in full even when the list is truncated. Works wherever the content's blobs replicate.
+Grep the token's CONTENT: regex matches with line numbers and context, capped and budgeted — the matches travel, the artifact stays put. total_matches is counted in full even when the list is truncated. A FOLDER token (minted --tree) greps as a TREE: every file is searched and matches come back grouped per file, each with that file's own token so you can open it surgically. Works wherever the content's blobs replicate.
 
 | arg | required | doc |
 |---|---|---|

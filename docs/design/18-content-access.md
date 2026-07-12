@@ -151,3 +151,50 @@ blobs (audio segments, resumable pulls — ranges, never decoding).
   response;
 - catalog: parity + reachability green with `read`/`search`; COMMANDS.md
   regenerated; tutorial (guide 07) written from live transcripts.
+
+
+---
+
+## 9 · The directory affordances (added; see doc 22 §4)
+
+A token may name a **folder** (`mint --tree`: one parent, every file a child).
+These three affordances were not designed at a whiteboard — each exists
+because the cross-modality benchmark caught an agent needing it and not
+having it, and the traces name the failure exactly.
+
+### 9.1 Describe (`read` on a tree)
+
+`search` had always grepped a tree. `read` answered **null**. So a folder
+could be searched and never *described* — and the first move every agent
+makes with a shared directory is to ask what is in it. Both models we traced
+opened with an overview call and received 83 bytes of nulls, then had to
+guess a regex blind; one guessed wrong and got zero matches.
+
+`read` on a tree now returns **the tree**: each file, its own token, size,
+content type, and outline. The folder's table of contents. Listing is *not*
+consumption — no `read` stage is stamped for the children, because a table of
+contents tells you what exists and does not serve you the bytes.
+
+### 9.2 Lens (`read --section/--symbol/--lines` on a tree)
+
+A tree could be grepped but not *lensed*. We watched an agent issue
+`section: "Retry Policy"` **ten times**, once per child token — hand-rolling
+a fan-out the substrate should perform in one call. A lens on the folder
+token now answers for **every file at once** (13 ops → 3; 11k tokens → 4.5k).
+Unlike the listing, this *serves bytes*, so every file it answers for is
+stamped read: the receipt records what the consumer actually got.
+
+### 9.3 Finish (`complete` / `examined` / `total_files` / `--from`)
+
+And that fan-out promptly produced a **confident wrong answer**. It exhausted
+its budget after nine of ten runbooks; the missing one was the one that
+mattered; the agent reasoned over a partial folder and answered with
+conviction. **A truncated fan-out that reads like a whole one is worse than a
+slow one.** The response now carries `total_files`, `examined`, and
+`complete`, and when it is short it returns a `from` cursor and a `next` that
+says INCOMPLETE in words. Given that, the same agent resumes and gets it
+right.
+
+The rule the three share is the one this document has argued from the start,
+now stated for trees: **a projection must never be a dead end, and it must
+never pretend to be whole when it is not.**

@@ -340,3 +340,45 @@ For a **pre-print**, Phase 1 (fully) + Phase 2 (fully) + a Phase-3 *pilot*
 defensible and publishable. The honest voice of the current draft is an
 asset — the benchmark keeps it: pre-registered, CI'd, null results
 reported.
+
+
+---
+
+## 10 · What the benchmark taught the product
+
+The point of a benchmark is not to score the system; it is to find out where
+the system is wrong. Ours did, four times, and every one of the fixes below is
+a *substrate* change that the traces demanded — not a harness tweak, and not a
+prompt trick.
+
+| The trace | What it revealed | The fix |
+|---|---|---|
+| A model searched `X9Y-[0-9]{4}` (our own example, taken literally), got `[]`, and answered "NOT FOUND" | A zero-match search was a **cliff**: no total, no signal, nowhere to go | An empty search now returns the count, a hint, and next steps |
+| Consumers of an extracted PDF/transcript could only guess a regex | `text/plain` carried **no outline** — nothing to steer by | Plain text gets a structural outline (structure, never content) |
+| Both models opened a folder with an overview call and got 83 bytes of nulls | A folder could be **grepped but not described** | `read` on a tree returns the tree: files, tokens, sizes, outlines |
+| An agent issued `section: "Retry Policy"` **ten times**, once per child | A tree could be grepped but not **lensed** | A lens on the folder token fans out over every file |
+| The fan-out truncated at 9 of 10 runbooks — the missing one was the violator — and the agent answered **confidently and wrongly** | Incompleteness was **silent** | `complete`/`examined`/`total_files` + a `from` cursor, and a `next` that says INCOMPLETE in words |
+
+Two of these were found *only* because the receipts existed. The coverage fold
+recorded consumers guessing, and that is what sent us to the traces. An
+evaluation that looked only at answers would have scored the model down and
+shipped the defect.
+
+### 10.1 A harness failure worth naming
+
+The harness was **dropping waggle's `next` hints** — the substrate's
+guidance-at-point-of-use mechanism — and thereby under-representing the system
+it was measuring. That is why the agent never discovered the fan-out on its
+own: nothing told it. Any harness that evaluates waggle must surface `next`,
+because that channel *is* part of the interface. It is now carried on every
+response.
+
+### 10.2 The open question the corpus cannot answer
+
+Whether a folder needs **filtering** (narrow the file set before lensing —
+by glob, by outline, by search hit) is *not* settled by this benchmark: our
+folders are eleven files, and the listing fits in one response. The evidence
+justified **completeness** (pagination, loud truncation), not filtering.
+Deciding filtering honestly requires a **large tree** — hundreds of files,
+where the listing itself truncates — and that is a corpus shape to add, not a
+feature to assume.

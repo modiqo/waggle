@@ -152,6 +152,37 @@ def make_multihop(i: int, rng, n_sec: int = 18):
     return "".join(body), c, [titles[s - 1] for s in slots], names[0]
 
 
+# ----------------------------------------------------------------- reasoning
+def make_reasoning(i: int, rng, n_files: int = 10):
+    """Not a needle: a JUDGEMENT that requires reading several regions.
+
+    Each runbook declares a retry budget. The escalation policy declares a
+    ceiling. The question asks which runbook VIOLATES the policy — which cannot
+    be grepped, because no single line contains the answer: it exists only in
+    the relation between two regions. Retrieval finds strings; this needs the
+    consumer to read, compare, and decide.
+    """
+    d = f"{OUT}/reasoning_{i}"
+    os.makedirs(d, exist_ok=True)
+    ceiling = rng.choice([3, 4, 5])
+    budgets, total = {}, 0
+    violator = rng.randrange(1, n_files + 1)
+    for f in range(1, n_files + 1):
+        b = ceiling + rng.randint(1, 3) if f == violator else rng.randint(1, ceiling)
+        budgets[f] = b
+        body = (f"# Runbook {f}: Recovery Path\n\n## Retry Policy\n\n{FILLER*2}\n\n"
+                f"This runbook sets a retry budget of {b} attempts before escalation.\n\n"
+                f"## Stage 2: Reconciliation\n\n{FILLER*3}\n\n")
+        p = f"{d}/runbook_{f:02d}.md"
+        open(p, "w").write(body)
+        total += len(body)
+    pol = (f"# Escalation Policy\n\n## Ceiling\n\n{FILLER*2}\n\n"
+           f"No runbook may set a retry budget exceeding {ceiling} attempts.\n\n")
+    open(f"{d}/00_escalation_policy.md", "w").write(pol)
+    total += len(pol)
+    return d, f"runbook_{violator:02d}", total, ceiling, budgets
+
+
 # ----------------------------------------------------------------- build
 def main() -> int:
     rng = random.Random(SEED)
@@ -186,6 +217,12 @@ def main() -> int:
         items.append(dict(id=f"multihop_{i}", modality="multihop", path=p, answer=c3,
                           region=regions, region_kind="sections", bytes=len(body),
                           entry=entry, note="pointer chain: 3 hops"))
+
+        # a REASONING task: the answer is in the relation between regions
+        d, viol, total, ceiling, _ = make_reasoning(i, rng)
+        items.append(dict(id=f"reasoning_{i}", modality="reasoning", path=d, answer=viol,
+                          region="Retry Policy", region_kind="section", bytes=total,
+                          note=f"ceiling {ceiling}"))
 
     json.dump(items, open(f"{OUT}/manifest.json", "w"), indent=1)
     by: dict[str, int] = {}
