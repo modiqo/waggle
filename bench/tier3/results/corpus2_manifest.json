@@ -1,0 +1,142 @@
+[
+ {
+  "id": "folder_0",
+  "modality": "folder",
+  "path": "/tmp/tier3/corpus2/folder_0",
+  "answer": "W5R-3899",
+  "region": "Stage 5: Reconciliation",
+  "region_kind": "section",
+  "bytes": 110089,
+  "note": "runbook_05.md"
+ },
+ {
+  "id": "bigcode_0",
+  "modality": "bigcode",
+  "path": "/tmp/tier3/corpus2/bigcode_0.py",
+  "answer": "Z8K-6380",
+  "region": "is_empty_str_literal",
+  "region_kind": "symbol",
+  "bytes": 68969,
+  "note": "2031 lines"
+ },
+ {
+  "id": "multihop_0",
+  "modality": "multihop",
+  "path": "/tmp/tier3/corpus2/multihop_0.md",
+  "answer": "Z2M-4318",
+  "region": [
+   "Onyx Culvert",
+   "Umber Lattice",
+   "Cobalt Meridian"
+  ],
+  "region_kind": "sections",
+  "bytes": 27541,
+  "entry": "Onyx Culvert",
+  "note": "pointer chain: 3 hops"
+ },
+ {
+  "id": "folder_1",
+  "modality": "folder",
+  "path": "/tmp/tier3/corpus2/folder_1",
+  "answer": "W7R-6388",
+  "region": "Stage 5: Reconciliation",
+  "region_kind": "section",
+  "bytes": 110089,
+  "note": "runbook_03.md"
+ },
+ {
+  "id": "bigcode_1",
+  "modality": "bigcode",
+  "path": "/tmp/tier3/corpus2/bigcode_1.py",
+  "answer": "Z4R-6786",
+  "region": "leave_classdef",
+  "region_kind": "symbol",
+  "bytes": 84027,
+  "note": "2174 lines"
+ },
+ {
+  "id": "multihop_1",
+  "modality": "multihop",
+  "path": "/tmp/tier3/corpus2/multihop_1.md",
+  "answer": "W5M-2658",
+  "region": [
+   "Umber Lattice",
+   "Onyx Culvert",
+   "Slate Ferrule"
+  ],
+  "region_kind": "sections",
+  "bytes": 27536,
+  "entry": "Umber Lattice",
+  "note": "pointer chain: 3 hops"
+ },
+ {
+  "id": "folder_2",
+  "modality": "folder",
+  "path": "/tmp/tier3/corpus2/folder_2",
+  "answer": "X7R-9605",
+  "region": "Stage 5: Reconciliation",
+  "region_kind": "section",
+  "bytes": 110089,
+  "note": "runbook_12.md"
+ },
+ {
+  "id": "bigcode_2",
+  "modality": "bigcode",
+  "path": "/tmp/tier3/corpus2/bigcode_2.py",
+  "answer": "Q6M-2294",
+  "region": "open",
+  "region_kind": "symbol",
+  "bytes": 83415,
+  "note": "2172 lines"
+ },
+ {
+  "id": "multihop_2",
+  "modality": "multihop",
+  "path": "/tmp/tier3/corpus2/multihop_2.md",
+  "answer": "Z4P-3119",
+  "region": [
+   "Marigold Bastion",
+   "Basalt Harbour",
+   "Vermilion Cascade"
+  ],
+  "region_kind": "sections",
+  "bytes": 27552,
+  "entry": "Marigold Bastion",
+  "note": "pointer chain: 3 hops"
+ },
+ {
+  "id": "folder_3",
+  "modality": "folder",
+  "path": "/tmp/tier3/corpus2/folder_3",
+  "answer": "Z4R-4583",
+  "region": "Stage 5: Reconciliation",
+  "region_kind": "section",
+  "bytes": 110089,
+  "note": "runbook_11.md"
+ },
+ {
+  "id": "bigcode_3",
+  "modality": "bigcode",
+  "path": "/tmp/tier3/corpus2/bigcode_3.py",
+  "answer": "W8M-4676",
+  "region": "visit_call",
+  "region_kind": "symbol",
+  "bytes": 88508,
+  "note": "2157 lines"
+ },
+ {
+  "id": "multihop_3",
+  "modality": "multihop",
+  "path": "/tmp/tier3/corpus2/multihop_3.md",
+  "answer": "Q1P-2795",
+  "region": [
+   "Slate Ferrule",
+   "Onyx Culvert",
+   "Marigold Bastion"
+  ],
+  "region_kind": "sections",
+  "bytes": 27541,
+  "entry": "Slate Ferrule",
+  "note": "pointer chain: 3 hops"
+ }
+]

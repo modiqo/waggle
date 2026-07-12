@@ -162,13 +162,18 @@ def ref_exec(cmd: dict, it: dict) -> tuple[str, int]:
 
 def wag_exec(cmd: dict, tok: str) -> tuple[str, int]:
     c = cmd.get("cmd")
+    if c == "outline":
+        r = wag(["read", "--token", tok])
+        out = json.dumps((r.get("outline") or (r.get("symbols") or {}).get("symbols") or []))
+        return out, len(out)
     if c == "overview":
         r = wag(["read", "--token", tok])
         syms = (r.get("symbols") or {}).get("symbols", [])
         out = json.dumps({
             "content_type": r.get("content_type"), "lines": r.get("total_lines"),
             "bytes": r.get("total_bytes"), "lenses": r.get("lenses"),
-            "outline": [f"{s['name']} ({s['kind']}) L{s['lines']}" for s in syms][:60],
+            "outline": ([f"{s['name']} ({s['kind']}) L{s['lines']}" for s in syms][:60]
+                        or [f"{o.get('heading')} L{o.get('line')}" for o in (r.get("outline") or [])][:60]),
         })
         return out, len(out)
     if c == "section":
@@ -180,7 +185,14 @@ def wag_exec(cmd: dict, tok: str) -> tuple[str, int]:
     elif c == "search":
         r = wag(["search", "--token", tok, "--pattern", cmd.get("pattern", ""),
                  "--max-matches", "8", "--max-bytes", "3000"])
-        out = json.dumps(r.get("matches", []))
+        # Forward the WHOLE search reply. The earlier harness forwarded only
+        # `matches`, so a zero-match search reached the model as a bare `[]` —
+        # discarding the total, the hint and the next-steps waggle actually
+        # returns. That was a harness defect that under-represented the
+        # substrate, and it is the arm's own metadata, not a hint we invented.
+        out = json.dumps({k: r.get(k) for k in
+                          ("matches", "total_matches", "truncated", "hint", "next")
+                          if r.get(k) is not None})
         return out, len(out)
     else:
         return f"error: unknown cmd {c!r}", 0
