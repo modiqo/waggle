@@ -232,6 +232,20 @@ def ref_exec(cmd: dict, it: dict) -> tuple[str, int]:
     return f"error: unknown cmd {c!r}", 0
 
 
+def as_int(v, default: int) -> int:
+    """Model-supplied values must never crash the harness.
+
+    An agent that echoes a placeholder (`"from": "<the cursor>"`) or sends a
+    string where a number belongs should get a sane default, not a dead run.
+    We lost runs to `int("<the cursor>")` — the harness being brittle about
+    the model's input, which is the harness's fault, never the model's.
+    """
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return default
+
+
 def wag_exec(cmd: dict, parent: str) -> tuple[str, int]:
     c = cmd.get("cmd")
     tok = cmd.get("token") or parent
@@ -256,14 +270,16 @@ def wag_exec(cmd: dict, parent: str) -> tuple[str, int]:
     if c == "section":
         a = ["read", "--token", tok, "--section", cmd.get("name", ""), "--max-bytes", "8000"]
         if cmd.get("from") is not None:
-            a += ["--from", str(int(cmd["from"]))]
+            frm = as_int(cmd["from"], -1)
+            if frm >= 0:
+                a += ["--from", str(frm)]
         r = wag(a)
     elif c == "symbol":
         r = wag(["read", "--token", tok, "--symbol", cmd.get("name", ""), "--max-bytes", "3000"])
     elif c == "lines":
         r = wag(["read", "--token", tok, "--lines", cmd.get("range", ""), "--max-bytes", "3000"])
     elif c == "search":
-        ctx = str(int(cmd.get("context", 1)))
+        ctx = str(max(0, as_int(cmd.get("context", 1), 1)))
         r = wag(["search", "--token", tok, "--pattern", cmd.get("pattern", ""),
                  "--context", ctx, "--max-matches", "10", "--max-bytes", "3500"])
         out = json.dumps({k: r.get(k) for k in
@@ -440,7 +456,7 @@ def main() -> int:
     print(f"runs: {len(jobs)} ({len(items)} artifacts x {len(models)} models x {len(arms)} arms)",
           flush=True)
     runs: list[Run] = []
-    with ThreadPoolExecutor(max_workers=4) as ex:
+    with ThreadPoolExecutor(max_workers=10) as ex:
         futs = [ex.submit(run_one, it, m, a) for (it, m, a) in jobs]
         for n, f in enumerate(futs, 1):
             runs.append(f.result())
