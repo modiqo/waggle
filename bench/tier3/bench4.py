@@ -35,6 +35,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import random
 import re
 import signal
 import subprocess
@@ -589,9 +590,56 @@ def main() -> int:
         items = kept
     os.makedirs(OUT, exist_ok=True)
 
-    jobs = [(it, m, a) for it in items for m in models for a in arms]
+    # TIER3_SAMPLE=k draws a representative short run: k (artifact, model) PAIRS
+    # per shape, then every arm runs on every pair.
+    #
+    # Two properties, and both matter:
+    #
+    #  STRATIFIED — equal pairs per shape, and models assigned round-robin over a
+    #  seeded shuffle, so no shape and no model is over-represented. A slice that
+    #  always takes artifact[0] measures the same four documents forever; this
+    #  rotates through them.
+    #
+    #  PAIRED — the arms are compared on the SAME pairs. Sampling independently
+    #  per arm would confound the comparison with which artifacts and models each
+    #  arm happened to draw, and at short-run sample sizes that noise is bigger
+    #  than the effect we are trying to measure. Every arm faces identical work,
+    #  so a difference between arms is a difference between arms.
+    sample = int(os.environ.get("TIER3_SAMPLE", "0"))
+    if sample:
+        rng = random.Random(int(os.environ.get("TIER3_SEED", "20260712")))
+        by_shape: dict[str, list] = {}
+        for it in items:
+            by_shape.setdefault(it["modality"], []).append(it)
+        # Rotate models GLOBALLY, not per shape. Shuffling within each shape lets
+        # a model land 5 times in one sample and 3 in another; with 36 pairs over
+        # 9 models it should be exactly 4 apiece, or an arm's score partly
+        # measures which models it drew.
+        ms = rng.sample(models, len(models))         # seeded: reproducible
+        pairs, i = [], 0
+        for shape in sorted(by_shape):
+            arts = by_shape[shape]
+            for k in range(sample):
+                pairs.append((arts[k % len(arts)], ms[i % len(ms)]))
+                i += 1
+        jobs = [(it, m, a) for (it, m) in pairs for a in arms]
+        print(f"stratified sample: {sample} (artifact,model) pairs x {len(by_shape)} shapes "
+              f"x {len(arms)} arms — paired across arms, seed "
+              f"{os.environ.get('TIER3_SEED', '20260712')}", flush=True)
+    else:
+        jobs = [(it, m, a) for it in items for m in models for a in arms]
     print(f"runs: {len(jobs)} ({len(items)} artifacts x {len(models)} models x {len(arms)} arms)",
           flush=True)
+    if os.environ.get("TIER3_DRYRUN"):
+        # Prove the sample is balanced BEFORE spending a token on it.
+        import collections as _c
+        print("  shapes:", dict(_c.Counter(it["modality"] for (it, _, _) in jobs)))
+        print("  models:", dict(_c.Counter(m for (_, m, _) in jobs)))
+        print("  arms:  ", dict(_c.Counter(a for (_, _, a) in jobs)))
+        pairs = {(it["id"], m) for (it, m, _) in jobs}
+        print(f"  distinct (artifact,model) pairs: {len(pairs)}; "
+              f"each run by all {len(arms)} arms: {len(pairs)*len(arms) == len(jobs)}")
+        return 0
     runs: list[Run] = []
     t0 = time.time()
     done = 0
