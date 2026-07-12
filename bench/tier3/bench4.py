@@ -628,6 +628,7 @@ def main() -> int:
               f"{os.environ.get('TIER3_SEED', '20260712')}", flush=True)
     else:
         jobs = [(it, m, a) for it in items for m in models for a in arms]
+    random.Random(int(os.environ.get("TIER3_SEED", "20260712"))).shuffle(jobs)
     print(f"runs: {len(jobs)} ({len(items)} artifacts x {len(models)} models x {len(arms)} arms)",
           flush=True)
     if os.environ.get("TIER3_DRYRUN"):
@@ -643,7 +644,8 @@ def main() -> int:
     runs: list[Run] = []
     t0 = time.time()
     done = 0
-    with ThreadPoolExecutor(max_workers=10) as ex:
+    workers = int(os.environ.get("TIER3_WORKERS", "6"))
+    with ThreadPoolExecutor(max_workers=workers) as ex:
         futs = {ex.submit(run_one, it, m, a): (it, m, a) for (it, m, a) in jobs}
         for f in as_completed(futs):
             r = f.result()

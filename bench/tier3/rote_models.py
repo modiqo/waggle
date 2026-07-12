@@ -108,7 +108,12 @@ def call(model: str, system: str, user: str, max_tokens: int = 2048, retries: in
             last = r.text
         except Exception as e:  # transport blew up entirely
             last = f"{type(e).__name__}: {e}"
-        time.sleep(2 * (attempt + 1) + random.random())
+        # A rate limit is not a blip. Retrying it in two seconds keeps us over
+        # budget and starves every other worker; the sweep then looks hung when
+        # it is merely being throttled. Back off exponentially, and hard.
+        throttled = any(k in last.lower() for k in ("rate_limit", "429", "overloaded"))
+        base = 15 if throttled else 2
+        time.sleep(base * (2 ** attempt) + random.random() * 2)
     raise RuntimeError(f"{model}: {last[:180]}")
 
 
