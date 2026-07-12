@@ -17,7 +17,8 @@ RUNS = os.environ.get("TIER3_RUNS4", "/tmp/tier3/out4/runs4.json")
 GEN = os.environ.get("TIER3_GEN", "paper/generated")
 
 SHAPES = ["text", "markdown", "code", "pdf", "voice", "video",
-          "folder", "bigcode", "multihop", "reasoning"]
+          "folder", "bigcode", "multihop", "reasoning",
+          "bigtree_find", "bigtree_count"]
 ARMS = ["copy", "reference", "waggle", "waggle+gate"]
 LABEL = {"copy": "copy", "reference": "reference", "waggle": "waggle",
          "waggle+gate": "waggle+gate"}
@@ -69,8 +70,9 @@ def main() -> int:
           f"tokens {c['tok']/max(g['tok'],1):.1f}x fewer   "
           f"bytes {c['ing']/max(g['ing'],1):.0f}x fewer")
 
-    # The gate only bites where a contract exists (a --tree parent has none).
-    TREE = ("folder", "reasoning")
+    # The gate only bites where a contract exists (a --tree parent has none, and
+    # bigtree deliberately carries none — see bench4.CONTRACT_ALL).
+    TREE = ("folder", "bigtree_find", "bigtree_count")
     a2 = agg(runs, lambda r: r["modality"] not in TREE)
     print(f"\n=== where the gate can act (contract-bearing shapes) ===")
     for x in ARMS:
@@ -95,7 +97,7 @@ def main() -> int:
          "\\midrule"]
     for s in SHAPES:
         st = agg(runs, lambda r, s=s: r["modality"] == s)
-        if s == "folder":
+        if s in ("folder", "bigtree_find"):
             L.append("\\midrule")
         L.append(f"{s} & " + " & ".join(
             f"{st[x]['ok']:.0%}".replace("%", "\\%") + f" & {st[x]['ing']:.0f}" for x in ARMS) + "\\\\")
@@ -105,6 +107,13 @@ def main() -> int:
         for x in ARMS) + "\\\\")
     L += ["\\bottomrule\n\\end{tabular}\n\\end{table*}"]
     open(f"{GEN}/tier3_gate.tex", "w").write("\n".join(L) + "\n")
+    # Where copy actually breaks: an artifact too big for the window is not a
+    # transport failure, it is the strategy failing. Say how often.
+    ov = [r for r in json.load(open(RUNS))
+          if r["arm"] == "copy" and "context_overflow" in (r.get("error") or "")]
+    if ov:
+        print(f"\n  copy runs that overflowed the context window: {len(ov)}")
+
     print(f"\nwrote {GEN}/tier3_gate.tex")
     return 0
 

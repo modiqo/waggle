@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import random
 import re
+import os
 import subprocess
 import time
 from dataclasses import dataclass
@@ -49,7 +50,7 @@ def _rote(args: list[str]) -> str:
         cwd=ROTE_WS,
         capture_output=True,
         text=True,
-        timeout=600,
+        timeout=int(os.environ.get("ROTE_TIMEOUT", "180")),
     )
     return out.stdout + out.stderr
 

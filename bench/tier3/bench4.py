@@ -36,9 +36,11 @@ import glob
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
-from concurrent.futures import ThreadPoolExecutor
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, asdict
 
 import rote_models as M
@@ -52,6 +54,28 @@ ARMS = ("copy", "reference", "waggle", "waggle+gate")
 # a sweep would swap the substrate mid-experiment and blend two builds into one
 # result set, with no record of which run got which. Freeze it, hash it, report it.
 WAGGLE_BIN = os.environ.get("WAGGLE_BIN", "waggle")
+
+
+def assert_clean_substrate() -> None:
+    """No foreign daemon, and say which binary is under test.
+
+    A `waggle serve --daemon` left over from `cargo test` is built from a
+    DIFFERENT source tree and holds the same store open. Plain verbs dispatch
+    in-process so it cannot answer for us, but it contends on the store, and a
+    measurement that shares its substrate with an unknown build is not a
+    measurement. Fail loudly rather than produce a number we would have to
+    caveat later.
+    """
+    ps = subprocess.run(["ps", "ax", "-o", "command"], capture_output=True, text=True).stdout
+    stray = [l for l in ps.splitlines() if "waggle serve --daemon" in l]
+    if stray:
+        raise SystemExit(
+            "REFUSING TO RUN: a waggle daemon is alive and shares the store:\n  "
+            + "\n  ".join(stray[:4])
+            + "\n\nKill it (pkill -f 'waggle serve --daemon') and re-run.")
+    h = subprocess.run(["shasum", "-a", "256", WAGGLE_BIN], capture_output=True, text=True)
+    print(f"binary under test: {WAGGLE_BIN}\n  sha256 {h.stdout.split()[0][:16] if h.stdout else '?'}",
+          flush=True)
 BINARY = ("pdf", "voice", "video")
 TREE = ("folder", "reasoning", "bigtree_find", "bigtree_count")
 
@@ -338,16 +362,30 @@ def wag_exec(cmd: dict, parent: str) -> tuple[str, int]:
 
 
 def receipt_gap(it: dict, tok: str) -> list[str]:
-    """Which files the receipt says the consumer has NOT been served.
+    """What the receipt says the consumer has NOT been served.
 
-    A refusal without a path is a dead end, and we have now made that mistake
-    three times. The gate must not merely decline; it must hand back the way to
-    satisfy it. Naming the unread files is not leaking the answer — it is
-    exactly what a completeness contract is FOR.
+    A refusal without a path is a dead end, and we had made that mistake three
+    times when this was written — and then made it a fourth, right here: this
+    read only `unread`, which a TREE reports. A region-contract token reports
+    `missed`, with the author's label AND the line range AND a ready-made `read`
+    call in `next`. On multihop the gate therefore said "not supported" and
+    handed back nothing at all, and we watched gpt-4.1 burn all ten turns
+    against a locked door. waggle emitted the guidance; the harness dropped it.
+
+    Naming a missed region is not leaking the answer. The label is the AUTHOR's
+    declared demand — that is what a completeness contract IS. The answer is the
+    content inside the region, which the gate never reads.
     """
     cov = wag(["coverage", "--token", tok])
-    return [str(u.get("target", "")).rsplit("/", 1)[-1]
-            for u in (cov.get("unread") or [])] if cov else []
+    if not cov:
+        return []
+    # tree: whole files were never served
+    gap = [str(u.get("target", "")).rsplit("/", 1)[-1] for u in (cov.get("unread") or [])]
+    # region contract: named regions were never served — say which, and where
+    gap += [f"section '{m.get('label')}' (lines {m.get('lines')})" if m.get("label")
+            else f"lines {m.get('lines')}"
+            for m in (cov.get("missed") or [])]
+    return gap
 
 
 def receipt_backs_it(it: dict, tok: str) -> bool | None:
@@ -506,7 +544,24 @@ def run_one(it: dict, model: str, arm: str) -> Run:
     return r
 
 
+def _reap_children() -> None:
+    """Take our subprocesses down with us.
+
+    A killed sweep used to leave its in-flight `rote` calls running — dozens of
+    them, still spending tokens, still holding API concurrency, and starving the
+    next sweep to the point where it looked like waggle had hung. Own the
+    cleanup: put every child in our process group and signal the group.
+    """
+    try:
+        os.killpg(os.getpgid(0), signal.SIGTERM)
+    except Exception:
+        pass
+
+
 def main() -> int:
+    assert_clean_substrate()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, lambda *_: (_reap_children(), sys.exit(130)))
     items = []
     for c in (os.environ.get("TIER3_CORPUS", "/tmp/tier3/corpus"),
               os.environ.get("TIER3_CORPUS2", "/tmp/tier3/corpus2"),
@@ -520,18 +575,37 @@ def main() -> int:
     if shapes:
         keep = set(shapes.split(","))
         items = [it for it in items if it["modality"] in keep]
+    # A thin slice across EVERY shape catches harness faults for a fraction of a
+    # sweep. Full sweeps are for measuring, not for finding bugs.
+    per = int(os.environ.get("TIER3_PER_SHAPE", "0"))
+    if per:
+        seen: dict[str, int] = {}
+        kept = []
+        for it in items:
+            n = seen.get(it["modality"], 0)
+            if n < per:
+                kept.append(it)
+                seen[it["modality"]] = n + 1
+        items = kept
     os.makedirs(OUT, exist_ok=True)
 
     jobs = [(it, m, a) for it in items for m in models for a in arms]
     print(f"runs: {len(jobs)} ({len(items)} artifacts x {len(models)} models x {len(arms)} arms)",
           flush=True)
     runs: list[Run] = []
+    t0 = time.time()
+    done = 0
     with ThreadPoolExecutor(max_workers=10) as ex:
-        futs = [ex.submit(run_one, it, m, a) for (it, m, a) in jobs]
-        for n, f in enumerate(futs, 1):
-            runs.append(f.result())
-            if n % 25 == 0 or n == len(futs):
-                print(f"[{n}/{len(futs)}] correct {sum(1 for x in runs if x.correct)}", flush=True)
+        futs = {ex.submit(run_one, it, m, a): (it, m, a) for (it, m, a) in jobs}
+        for f in as_completed(futs):
+            r = f.result()
+            runs.append(r)
+            done += 1
+            if done % 10 == 0 or done == len(futs):
+                ok = sum(1 for x in runs if x.correct)
+                print(f"[{done}/{len(futs)}] {time.time()-t0:6.0f}s  correct {ok} "
+                      f"({ok/done:.0%})  last={r.modality}/{r.model.split('-')[0]}/{r.arm}",
+                      flush=True)
                 json.dump([{**asdict(x), "dollars": x.dollars} for x in runs],
                           open(f"{OUT}/runs4.json", "w"), indent=1)
     json.dump([{**asdict(x), "dollars": x.dollars} for x in runs],
