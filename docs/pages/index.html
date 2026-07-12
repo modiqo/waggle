@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="waggle gives agent handoffs a first-class reference: a ~30-byte attributed token that each subagent resolves into its own projection, interrogates under byte budgets where the bytes live, and leaves payload-free receipts. Share names, not payloads.">
+    <meta name="description" content="Your agents pass work by copying whole documents into each other. waggle shares a 30-byte name instead: each agent opens only the part it needs, every read is counted, and one fix reaches every holder. Same accuracy as pasting, 25x less context.">
     <meta property="og:title" content="waggle — tracked file paths for agents">
     <meta property="og:description" content="Share names, not payloads. A ~30-byte attributed token replaces context-forwarding between agents and subagents.">
     <meta property="og:type" content="website">
-    <title>waggle — tracked file paths for agents</title>
+    <title>waggle — stop copy-pasting between agents</title>
     <link rel="icon" href="./assets/logo.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,20 +32,29 @@
     <main>
       <!-- ================= HERO ================= -->
       <section class="hero plain wrap">
-        <div class="kicker">the handoff layer for multi-agent systems</div>
-        <p class="hero-contrast">Not a path. Not a URL.</p>
-        <h1>A handoff that answers back.</h1>
+        <div class="kicker">the sharing layer for AI agents</div>
+        <p class="hero-contrast">Your agents email attachments to each other.</p>
+        <h1>Give them a link.</h1>
         <p class="lede">
-          Locations are dumb &mdash; no per-agent shaping, no receipts, no way to fix them once
-          sent. waggle's 30-byte <strong>token</strong> resolves into each agent's own view,
-          <strong>counts every read</strong>, and propagates a correction to every holder.
-          A path can't do that; a URL needs a server; this needs neither.
+          One agent writes a report. To pass it on, it pastes the whole thing into the next
+          agent &mdash; and the next, on every turn. You pay for every copy, you can&rsquo;t tell
+          what anyone actually read, and if the report was wrong, <strong>every copy is still
+          wrong</strong>.
+        </p>
+        <p class="lede">
+          waggle shares a <strong>30-byte name</strong> instead. Each agent opens only the part
+          it needs. Every read is counted. Fix it once &mdash; everyone has the fix.
         </p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="#install">Install</a>
           <a class="btn btn-ghost" href="/paper.pdf">Read the paper</a>
           <a class="btn btn-ghost" href="https://github.com/modiqo/waggle">GitHub &#8599;</a>
         </div>
+        <ul class="proof">
+          <li><strong>25&times;</strong> less context</li>
+          <li><strong>same</strong> accuracy as pasting</li>
+          <li><strong>1,705</strong> measured runs</li>
+        </ul>
         <div class="hero-visual">
           <img src="./assets/hero.svg" alt="One token travels; each consumer resolves its own projection — a digest, an image, a transcript, fail-closed CI — where the bytes live">
         </div>
@@ -55,7 +64,7 @@
       <section id="unlock">
         <div class="wrap">
           <div class="eyebrow">the unlock</div>
-          <h2>Each handoff loses context. That's a copy problem.</h2>
+          <h2>Every copy is billed again, forever.</h2>
           <div class="prose">
             <p>
               LLM APIs are <strong>stateless</strong> — every turn re-sends the whole
