@@ -83,20 +83,25 @@ handoff without any parser on the serving path. We report microbenchmarks
 (39\,ns cache-hit resolution, 323\,\textmu{}s end-to-end over a domain
 socket, a million-event fold in 334\,\textmu{}s) and an evaluation over ten
 artifact shapes---text, markdown, code, PDF, voice, video, a folder of many
-files, a $>$2000-line source, a multi-hop chain, and a reasoning task no single
-line answers---in which nine models answer the same question under four
-turn-matched handoffs. A raw path collapses the moment the bytes stop being
-text (0\,\% on PDF and video) and again when structure must be \emph{traversed}
-rather than described (29\,\% on the chain). The token matches the paste
-exactly on all six text-and-media modalities (100\,\%) while ingesting 650
-bytes against 24{,}000, and answers 95.8\,\% overall against pasting's 99.2\,\%
-with 13$\times$ fewer bytes. The benchmark's first service was to find five
-defects---in the substrate, not the models---two of them visible only because
-the receipts recorded consumers guessing. And the receipt is a control, not
-merely a diagnostic: an orchestrator that declines any answer its coverage
-does not back lifts the hardest shapes by ten points, and of the runs whose
-coverage showed the region unconsumed, none were correct. We are candid about
-the mechanism's limits.
+files, a $>$2000-line source, a multi-hop chain, a reasoning task no single line
+answers, and a 180-file tree---in which nine models answer the same question
+under four turn-matched, \emph{paired} handoffs (1705 runs). A raw path collapses
+the moment the bytes stop being text (0\,\% on PDF, voice and video) and again
+when structure must be \emph{traversed} rather than described (33\,\% on the
+chain); against it the token wins 124 paired comparisons and loses 9. Against
+\emph{pasting} the token neither wins nor loses: 95.3\,\% against 95.6\,\%, a
+statistical tie---bought at \textbf{25$\times$ fewer ingested bytes} and
+9$\times$ less money. Pasting was never inaccurate; it was expensive, and it
+left no record. It does collapse once, and instructively: asked to \emph{count}
+across a 180-file tree, a copy holding every byte answers 53\,\% where the token
+answers 97\,\%---context was never the missing thing. Two results outlast the
+arms. The receipt is an \emph{oracle}: runs whose coverage showed the required
+regions consumed were 98\,\% correct, and those showing them unconsumed 28\,\%,
+a seventy-point collapse visible to an orchestrator that never read the answer.
+And the benchmark's first service was to find seven defects---in the substrate,
+not the models---which taught us to stop using a language model as a bug
+detector and write the deterministic conformance suite that should have existed
+first. We are candid about the mechanism's limits, including one it made worse.
 \end{abstract}
 
 % ===========================================================================
@@ -350,6 +355,60 @@ $best \leftarrow \bot$;\quad $bestSpec \leftarrow -1$\;
 admits $c$; an undeclared context value \emph{fails} a constrained
 dimension; modalities match by superset.\;
 \end{algorithm}
+
+\subsection{What the substrate refuses to understand}
+\label{sec:opaque}
+
+A PDF is a container. So is an MP4, a WAV, a scanned page. Somewhere inside is
+something a consumer needs, and the obvious move---the one every ingestion
+pipeline makes---is to reach in and transcode: OCR the scan, transcribe the
+audio, caption the frames, hand back a clean string. We do not do this. The
+refusal is deliberate, and it is a design commitment rather than an omission.
+
+The first reason is \emph{competence}, and it is not close. The models on the far
+side of the handoff already see and hear. A frontier model reads a table out of a
+rasterised page, follows the arrows in an architecture diagram, notices that a
+chart's $y$-axis begins at forty, and hears the hesitation in a speaker's voice.
+No extraction pipeline we could ship would match it, and the gap widens with
+every model generation while our pipeline stands still. To OCR a page \emph{for}
+such a model is to demote it: to replace a perceptual system that improves
+without us with a lossy one that does not.
+
+The second reason is that a transcode is a \emph{projection chosen at the wrong
+time, by the wrong party}. Any extraction we perform is committed in advance, at
+mint, by a substrate that does not know the question. It fixes what counts as
+content---text, and not the layout that gave the text its meaning; words, and not
+the tone that inverted them---and it discards the rest irrecoverably. The
+consumer's own perception is a projection chosen \emph{at the point of use}, by
+the party that knows what it is looking for. Interposing ours substitutes the
+worse instrument for the better one and files the substitution under
+preprocessing. A table's structure survives our OCR only if we guessed that
+structure mattered; the model, holding the question, never has to guess.
+
+The third reason is the receipt. A substrate that transcodes must \emph{read} the
+content it carries---and reading content is exactly what invariant~I-1 forbids.
+The log stays payload-free, and the matcher stays sealed and deterministic,
+because the substrate never interprets what it holds; the moment it OCRs a page,
+it has an opinion about the bytes, that opinion is non-deterministic, model-shaped
+and drifting, and every receipt downstream inherits it. The receipts are worth
+something precisely \emph{because} the thing issuing them cannot read.
+
+So the token carries the bytes and not a summary of them. What the substrate does
+extract, it extracts for \emph{structure, never content}: an outline, a symbol
+table, a line index---enough to lens, to search, to name a region in a
+consumption contract, and never enough to answer the question. The opaque bytes
+themselves travel with the token, intact, and are handed to the consumer's own
+vision or speech stack at the point of use. The substrate addresses; the model
+perceives. The receipt records that the bytes were served, and takes no view on
+what was in them.
+
+This is also the mechanism behind the sharpest result in \S\ref{sec:tier3}. Given
+a filesystem path to a PDF, a voice memo or a video, an agent with ordinary file
+tools scores \textbf{zero}---not poorly, zero---because a location is not an
+artifact, and \tok{cat} on an MP4 is noise. The bytes must travel \emph{with} the
+reference, and a path cannot carry them. That a token can is not an incidental
+convenience; it is the difference between a name that points at content and a
+name that \emph{delivers} it.
 
 \subsection{The log is the truth}
 Everything downstream of a mint is an \emph{event} in an append-only log,
@@ -766,81 +825,123 @@ harness.}
 \label{sec:tier3}
 \input{generated/tier3_gate.tex}
 The measurements above test the receipt machinery. This one tests the
-\emph{handoff}, against the competitor the introduction named. Ten artifact
+\emph{handoff}, against the competitor the introduction named. Twelve artifact
 shapes---\texttt{text}, \texttt{markdown}, \texttt{code}, \texttt{pdf},
-\texttt{voice}, \texttt{video}, and the shapes real work has: a 110\,KB
-\emph{folder} of twelve runbooks, a \emph{$>$2000-line} source file, a
-\emph{multi-hop} pointer chain, and a \emph{reasoning} task whose answer no
-line contains---each carrying one audit code at a known region, so
-correctness, cost and coverage are exactly gradable. Nine models across two
-families answer the same question under four \emph{turn-matched} arms.
-\emph{copy} pastes the artifact; \emph{reference} hands a path plus ordinary
-file tools; \emph{waggle} hands a token; \emph{waggle+gate} adds the one move
-no other arm can make. Of 1440 runs, 1410 are analysed; the rest are excluded
-for unrecovered transport errors, and we say so rather than counting them as
-model failures.
+\texttt{voice}, \texttt{video}, and the shapes real work has: a \emph{folder} of
+twelve runbooks, a \emph{$>$2000-line} source file, a \emph{multi-hop} pointer
+chain, a \emph{reasoning} task whose answer no single line contains, and a
+\emph{big tree} of 180 files across 310\,KB, interrogated twice---once for a
+needle, once for a \emph{count}. Nine models across two families answer the same
+question under four \emph{turn-matched} arms. \emph{copy} pastes the artifact;
+\emph{reference} hands a filesystem path plus \tok{ls}, \tok{grep} and
+\tok{open}; \emph{waggle} hands a token; \emph{waggle+gate} adds the one move no
+other arm can make. Of 1728 runs, 1705 are analysed; the rest are excluded for
+unrecovered transport errors, and we say so rather than counting them as model
+failures. Because every arm answers the same (artifact, model) pairs, the arms
+are \emph{paired}, and we report the sign test on the runs where two arms
+disagreed---the only runs that carry information about the difference between
+them.
 
-\paragraph{The benchmark's first job was to find our bugs.} It found five, and
-they were ours, not the models'. A zero-match \tok{search} returned a bare
-empty list---no total, no signal, nowhere to go---and consumers who hit that
-cliff stopped interrogating and began guessing. \texttt{text/plain}, which is
-what an extracted PDF or a transcript \emph{becomes}, carried no outline, so a
-consumer had nothing to steer by. A folder could be \emph{grepped} but not
-\emph{described}: \tok{read} on a tree answered \texttt{null}, and the first
-move every agent makes with a shared directory is to ask what is in it. A tree
-could not be \emph{lensed} either---we watched an agent issue
-\texttt{section:\,"Retry Policy"} ten times, once per child, hand-rolling a
-fan-out the substrate should do in one call. And when we gave it that
-fan-out, it promptly truncated at nine of ten runbooks---the missing one was
-the violator---and the agent reasoned over a partial folder and answered with
-conviction. A truncated fan-out that reads like a whole one is worse than a
-slow one. Each was fixed in the substrate; each fix is a rule this paper has
-argued from the start, now stated for trees: \textbf{a projection must never
-be a dead end, and must never pretend to be whole when it is not}. Two of the
-five were findable \emph{only} because the receipts recorded consumers
-guessing. An evaluation that looked only at answers would have marked the
-model down and shipped the defect.
+\paragraph{Parity with the paste, at a twenty-fifth of the context.} Across all
+1705 runs, \emph{waggle} answers 95.3\,\% and \emph{copy} 95.6\,\%. Paired, they
+are indistinguishable: 18 runs where waggle is right and copy wrong, 19 the other
+way. \emph{waggle+gate} answers 96.7\,\% against copy's 95.6\,\%, and we decline
+to call that a win: 19 discordant pairs to 14, $p=0.49$. \textbf{The honest claim
+is parity, not victory}---and parity is bought at \textbf{2{,}627 bytes of
+ingested context against pasting's 83{,}284}, a factor of 25, for 6.6$\times$
+fewer tokens and 9$\times$ less money ({\$}4.67 against {\$}51.30 for the same
+1705 answers). Pasting was never inaccurate. It was expensive, and it left no
+record; the substrate's case is that you can stop paying for it without paying
+for it in correctness.
 
-\paragraph{Where the gap closed, and where it did not.} On all six
-text-and-media modalities \emph{waggle+gate} now answers \textbf{100\,\%}---
-exactly matching the paste---while ingesting \textbf{650 bytes} against
-pasting's 24{,}000. The accuracy trade-off we reported in an earlier draft has,
-on those shapes, disappeared. Across all ten, waggle+gate answers 95.8\,\%
-against pasting's 99.2\,\%, ingesting \textbf{13$\times$ fewer bytes} and
-spending 2.4$\times$ fewer tokens. Pasting remains the ceiling, and we do not
-pretend otherwise---but the whole of the remaining gap now lives in the two
-hardest shapes, the multi-hop chain (89\,\%) and the reasoning task (78\,\%),
-and nowhere else.
+\paragraph{Where the path collapses.} The \emph{reference} arm---a path and
+ordinary file tools, which is what an agent is handed today---answers 68.0\,\%,
+and against it the substrate's advantage is not a matter of interpretation:
+\textbf{124 paired wins to 9} ($p<0.05$). The average conceals two distinct
+failures. On \texttt{pdf}, \texttt{voice} and \texttt{video} it scores
+\textbf{zero}, for the reason \S\ref{sec:opaque} sets out: a filesystem location
+conveys nothing to a consumer that cannot decode the bytes, and the extraction
+must travel \emph{with} the reference---which is what a token does and a location
+cannot. And on the multi-hop chain it scores \textbf{33\,\%}, for a second and
+more interesting reason: \tok{grep} cannot search for a section whose name it has
+not read yet. Lexical search is superb at finding what you can already describe;
+it has no answer at all for structure you must \emph{traverse}. We remain equally
+clear about the other direction: on a small local text file a \tok{grep} is still
+cheaper than a token, and the substrate's case was never that it beats \tok{grep}
+at \tok{grep}'s own game.
 
-\paragraph{Where the path stops working---twice.} The \emph{reference} arm
-answers 63.4\,\%, and the average conceals the shape. On \texttt{pdf},
-\texttt{voice} and \texttt{video} it scores \textbf{zero}: a filesystem
-location handed to a text consumer conveys nothing when the bytes are an MP4,
-and the extraction must travel \emph{with} the reference---which is what a
-token does and a location cannot. And on the multi-hop chain it scores
-\textbf{29\,\%}, for a second and more interesting reason: \tok{grep} cannot
-search for a section whose name it has not read yet. Lexical search is superb
-at finding what you can already describe; it has no answer at all for
-structure you must \emph{traverse}. We remain equally clear about the other
-direction: on a small local text file a \tok{grep} is still cheaper than a
-token, and the substrate's case was never that it beats \tok{grep} at
-\tok{grep}'s own game.
+\paragraph{Where the paste collapses.} It collapses exactly once, and the shape
+is worth stating plainly, because it is the one place the ceiling is not a
+ceiling. Asked how many files in a 180-file tree mention a deprecated call,
+\emph{copy}---holding all 310\,KB in its context---answers correctly
+\textbf{53\,\%} of the time. \emph{waggle+gate} answers \textbf{97\,\%}. The
+paste has every byte and cannot count them; a projection that returns the seven
+matching files, and only those, can. Pasting wins where an artifact fits in a
+window and the question is a lookup. It loses where the question is an
+\emph{aggregate over structure}, and no amount of context repairs that: the
+context was never the missing thing.
 
-\paragraph{The receipt as a control, not a diagnostic.} \emph{waggle+gate}
-changes exactly one thing: before accepting an answer, the orchestrator reads
-the coverage receipt and declines any claim the consumer's own trail does not
-support---without reading the answer, and without naming the region. It merely
-refuses a conclusion that is not backed. We expected a null result, and on the
-easy shapes we got one: once the protocol stops inviting a bluff, there is
-little left to catch. On the \emph{hard} shapes it bites---the chain rises
-from 79\,\% to 89\,\%, the reasoning task from 73\,\% to 78\,\%---because those
-are precisely where an agent is tempted to conclude from a partial read. And
-the receipt remains an oracle in the direction that matters: of the runs whose
-coverage showed the required region \emph{unconsumed}, \textbf{none} were
-correct. The orchestrator never had to grade an answer to know it should not
-trust it. That is the property a path cannot have, a copy cannot have, and no
-quantity of context can buy: not a cheaper handoff, but an \emph{accountable}
-one.
+\paragraph{The receipt as an oracle.} The strongest result in the sweep is not an
+arm's score. Of the 822 runs whose coverage receipt showed the author's required
+regions \emph{consumed}, \textbf{98\,\% were correct}. Of the 29 whose receipt
+showed them \emph{unconsumed}, \textbf{28\,\%} were---a collapse of seventy
+points, visible to an orchestrator that never read the answer, never read the
+region, and never graded anything. That is the property a path cannot have, a
+copy cannot have, and no quantity of context can buy: not a cheaper handoff, but
+an \emph{accountable} one.
+
+\paragraph{The gate helps where the failure is retrieval, and hurts where it is
+reasoning.} \emph{waggle+gate} changes exactly one thing: before accepting an
+answer, the orchestrator reads the coverage receipt and declines any claim the
+consumer's own trail does not support---without reading the answer, and without
+naming the region. Where an agent's failure mode is \emph{concluding from too
+little}, it works: the tree count rises from 89\,\% to 97\,\%, the multi-hop
+chain from 83\,\% to 88\,\%, the large source file from 89\,\% to 97\,\%. On the
+\emph{reasoning} task it does the opposite, and we report it rather than bury it:
+\textbf{84\,\% ungated falls to 78\,\% gated}. The mechanism is visible in the
+traces. A model reads six of eleven runbooks, answers, and is refused; it reads
+the rest, and \emph{changes its answer}---sometimes from right to wrong. The gate
+cannot distinguish a consumer that concluded too early from one that had already
+seen enough, because a receipt records what was \emph{served}, never what was
+\emph{understood}. Forcing more evidence on a model whose difficulty is judgement
+rather than retrieval gives it room to argue itself out of a correct answer. A
+completeness contract is a check on retrieval, and should be written where
+retrieval is the risk; \S\ref{sec:limits} returns to this.
+
+\paragraph{The benchmark's first job was to find our bugs---and the second was to
+stop needing a model to do it.} It found seven, and every one was ours. A
+zero-match \tok{search} stamped \tok{read} on every file it had swept, so a
+single fruitless grep took a folder's coverage from $0/11$ to $11/11$ and the
+gate certified a tree nobody had opened: bytes touched by a \emph{matcher} and
+content served to a \emph{consumer} are different ledgers, and only the second is
+a receipt. A directory projection truncated at 25 of 180 files while reporting no
+total and no cursor, which reads as a complete table of contents for a tree seen
+at 14\,\%. A lens fanned out across a folder budgeted each file at
+$\texttt{max\_bytes}/6$---a hardcoded six-file assumption---and so served nine of
+eleven runbooks and silently dropped two, which made a \texttt{files:all} contract
+\emph{unsatisfiable in one call by construction}: the one move that closes a
+completeness contract could not close it, every consumer fell back to fetching
+children one at a time, and the weakest of them exhausted their turns and
+answered nothing at all while the gate, correctly and uselessly, refused to
+believe them. And a fan-out that overran the caller's byte budget by 15\,\% was
+worse still: the client showed its model the first 4{,}500 bytes and dropped the
+rest, while our receipt certified all ten files as read---a receipt attesting to
+bytes the consumer never received. \textbf{A byte budget is a contract with the
+caller, and a receipt may only attest to what the consumer got.}
+
+We found these one at a time, each costing a sweep, because we were using a
+language model as a bug detector. Every one of them was deterministic. The
+correction is a \emph{conformance suite}: a scripted consumer, no model, no
+tokens, that drives the substrate and asserts these invariants in seconds. It
+simulates two consumers, and both matter. The \textbf{oracle} plays perfectly,
+using the affordances the substrate advertises in the order it advertises them;
+if the oracle cannot close a contract in a handful of calls, no model will, and
+\emph{the contract is a trap rather than a check}. The \textbf{lazy} consumer
+answers having read nothing, and the gate must refuse it; a gate that passes this
+is not a gate. Twenty-nine checks now gate the build. We report this because it
+is the methodological lesson of the work and it generalises past this system: an
+evaluation that looks only at answers will mark the model down and ship the
+defect.
 
 \subsection{Interrogation versus lexical search}
 For a code artifact crossing a delegation boundary, the token's structural
@@ -885,22 +986,36 @@ intermediate rewards help little while outcome supervision
 drives gains~\citep{jin2025}. Fourth, the substrate earns its keep only for
 \emph{produced artifacts that cross a delegation boundary}; for
 shared-workspace exploration the filesystem is already the reference and
-the substrate should stay out of the way. Fifth---and \S\ref{sec:tier3}
-says it in numbers---\textbf{pasting is still the accuracy ceiling}. Across
-ten shapes a copy answers 99.2\,\% and the gated token 95.8\,\%. The gap is no
-longer everywhere: on all six text-and-media modalities the token now matches
-the paste exactly, at 650 ingested bytes against 24{,}000. But it survives
-where the task is hardest---the multi-hop chain (89\,\%) and the reasoning
-task (78\,\%)---and those two shapes are the entire remainder. Nor does the
-token always cost less: on a small local text file a \tok{grep} is cheaper
-than a token, and the substrate's case was never that it beats \tok{grep} at
-\tok{grep}'s own game. The substrate's case rests on the artifact
-growing, the holders multiplying, the modality ceasing to be text, and the
-answer needing to be \emph{audited}---not on winning a contest that pasting
-already wins. Finally, our cross-modality corpus plants a known needle in
-each artifact: that makes correctness and coverage exactly gradable, but it
-is a retrieval task, not a reasoning one, and a harder task would compress
-the arms' differences.
+the substrate should stay out of the way. Fifth---and \S\ref{sec:tier3} says it
+in numbers---\textbf{the token does not beat the paste on accuracy; it ties
+it}, 95.3\,\% against 95.6\,\%, 18 paired wins to 19. We report the gated arm's
+96.7\,\% and decline to claim it: 19 discordant pairs to 14 is $p=0.49$, and a
+one-point lead that survives no test is not a result. What the substrate buys is
+not correctness but \emph{cost and accountability}---a twenty-fifth of the
+context, a ninth of the money, and a receipt---and it is worth saying that
+plainly rather than dressing parity as a win. Nor does the token always cost
+less: on a small local text file a \tok{grep} is cheaper, and the substrate's
+case was never that it beats \tok{grep} at \tok{grep}'s own game.
+
+Sixth, and most uncomfortably: \textbf{the gate made one shape worse}. On the
+reasoning task, refusing answers the receipt did not back drove accuracy
+\emph{down}, from 84\,\% to 78\,\%. The traces show why. A model reads six of
+eleven runbooks, answers correctly, is refused, reads the rest, and changes its
+answer to a wrong one. A receipt records what was \emph{served}, never what was
+\emph{understood}, so the gate cannot tell a consumer that concluded too early
+from one that had already seen enough---and forcing more evidence on a model
+whose difficulty is judgement rather than retrieval gives it room to argue
+itself out of a correct answer. The lesson is not that completeness contracts
+fail; it is that they are a check on \emph{retrieval} and belong where retrieval
+is the risk. Where it is---counting across a large tree, following a multi-hop
+chain---the same gate is worth eight and five points respectively. An
+orchestrator should write the contract it can defend, and not one it cannot.
+
+Finally, our corpus plants a known needle in most artifacts: that makes
+correctness and coverage exactly gradable, but it is largely a retrieval task,
+and the two shapes that are not---the chain and the reasoning judgement---are
+precisely where the arms diverge and where our own mechanism misfires. A harder
+corpus is the obvious next measurement, and we expect it to be less flattering.
 
 The outlook follows from the three-radii result. As harnesses routinely
 fan work across machines and across vendors, the copy discipline's costs
