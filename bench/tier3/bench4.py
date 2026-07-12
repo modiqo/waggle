@@ -47,8 +47,22 @@ OUT = os.environ.get("TIER3_OUT4", "/tmp/tier3/out4")
 MAX_TURNS = 10
 MAX_TOK = 900
 ARMS = ("copy", "reference", "waggle", "waggle+gate")
+
+# The binary UNDER TEST, pinned. Never `waggle` off PATH: a `cargo build` during
+# a sweep would swap the substrate mid-experiment and blend two builds into one
+# result set, with no record of which run got which. Freeze it, hash it, report it.
+WAGGLE_BIN = os.environ.get("WAGGLE_BIN", "waggle")
 BINARY = ("pdf", "voice", "video")
-TREE = ("folder", "reasoning")          # minted --tree; a tree carries no contract
+TREE = ("folder", "reasoning", "bigtree_find", "bigtree_count")
+
+# `files:all` means the consumer was SERVED every file. That is the honest
+# contract for `reasoning` — you cannot know which runbook breaks the ceiling
+# without reading them all. It is the WRONG contract for a question a filter can
+# answer: the right way to count the files mentioning X is to search, which
+# serves you only the ones that matched. Demanding files:all there would force
+# the agent to ingest all 180 files — turning waggle into copy. So the bigtree
+# shapes carry no contract, and the gate is inert on them BY DESIGN.
+CONTRACT_ALL = ("reasoning",)
 
 PRICING = {
     "claude-opus-4-1-20250805": (15.0, 75.0),
@@ -97,7 +111,7 @@ def wag(args: list[str]) -> dict:
     lens out by hand across ten child tokens because nothing told it the parent
     could do it in one call.
     """
-    p = subprocess.run(["waggle", *args], capture_output=True, text=True, timeout=240)
+    p = subprocess.run([WAGGLE_BIN, *args], capture_output=True, text=True, timeout=240)
     try:
         env = json.loads(p.stdout)
         res = env.get("result") or {}
@@ -142,7 +156,7 @@ def contract_for(it: dict) -> list[str]:
 def mint(it: dict) -> str:
     if it["modality"] in TREE:
         a = ["mint", "--target", it["path"], "--tree"]
-        if it["modality"] == "reasoning":
+        if it["modality"] in CONTRACT_ALL:
             # This delegation genuinely needs every file: the answer is the
             # relation between the policy and ALL the runbooks. The author says
             # so at mint; the receipt then refuses to call it met while any file
@@ -168,6 +182,16 @@ def question(it: dict) -> str:
                 "may declare. Exactly one runbook VIOLATES it. Read the policy, read "
                 "the runbooks, and report which runbook violates the ceiling. Answer "
                 "with its number, e.g. {\"cmd\":\"answer\",\"code\":\"runbook_07\"}.")
+    if m == "bigtree_find":
+        return ("Somewhere in this large tree of files, exactly ONE file states a "
+                "teardown reconciliation code, of the form three alphanumeric "
+                "characters, a hyphen, four digits. Find it and report it exactly. "
+                "The tree is far too large to read in full — narrow it.")
+    if m == "bigtree_count":
+        return ("Some files in this tree still call the DEPRECATED `legacy_reconcile()` "
+                "entry point. Report HOW MANY files mention it — a single integer, e.g. "
+                "{\"cmd\":\"answer\",\"code\":\"4\"}. The tree is far too large to "
+                "read in full; you must narrow it and count what you find.")
     if m == "multihop":
         return (f"The recovery key is assembled from THREE fragments held in three "
                 f"different runbooks, forming a chain. Start at the runbook named "
@@ -185,6 +209,7 @@ You may batch independent lookups into one turn:
 {"cmd":"batch","ops":[{...},{...}]}"""
 
 TOOL_REF = """You have a path and ordinary file tools:
+{"cmd":"ls","path":"<p>"}                               -> list a directory (recursive)
 {"cmd":"open","path":"<p>"}                             -> the file's bytes as text
 {"cmd":"grep","path":"<p>","pattern":"<re>"}            -> matching lines (recurses a directory)
 Binary files (pdf/audio/video) read as raw bytes; ordinary tools cannot
@@ -211,6 +236,10 @@ def ref_exec(cmd: dict, it: dict) -> tuple[str, int]:
     c = cmd.get("cmd")
     p = cmd.get("path") or it["path"]
     is_bin = it["modality"] in BINARY
+    if c == "ls":
+        names = [f[len(it["path"]):].lstrip("/") for f in files_of(p)] if os.path.isdir(p) else [p]
+        body = "\n".join(names[:300]) or "(not a directory)"
+        return body, len(body)
     if c == "grep":
         if is_bin:
             return "(binary file; grep finds no text lines)", 0
@@ -341,7 +370,7 @@ def receipt_backs_it(it: dict, tok: str) -> bool | None:
         return bool(cov["met"])
     if "read" in cov:                                  # tree, no contract
         unread = {str(u.get("target", "")) for u in (cov.get("unread") or [])}
-        if it["modality"] == "reasoning":
+        if it["modality"] in CONTRACT_ALL:
             # Governance: the policy is a PREREQUISITE, not the answer.
             return not any("escalation_policy" in u for u in unread)
         served = int(str(cov["read"]).split("/")[0] or 0)
@@ -354,6 +383,9 @@ def norm(s: str) -> str:
 
 
 def graded(it: dict, answered: str) -> bool:
+    if it["modality"] == "bigtree_count":
+        nums = [int(x) for x in re.findall(r"\d+", answered or "")]
+        return len(nums) == 1 and nums[0] == int(it["answer"])
     if it["modality"] == "reasoning":
         # "runbook_07", "Runbook 7", "7" all name the same runbook. Compare the
         # NUMBER on both sides — the expected answer is itself "runbook_NN".
@@ -434,7 +466,7 @@ def run_one(it: dict, model: str, arm: str) -> Run:
             # turn 0 and reported it as {"AUDIT_CODE": "..."} — the right answer
             # in the wrong shape — and the old error taught it nothing, so it
             # repeated itself to the turn cap. A dead end again; a fork now.
-            known = {"copy": set(), "reference": {"open", "grep"}}.get(
+            known = {"copy": set(), "reference": {"open", "grep", "ls"}}.get(
                 arm, {"overview", "outline", "section", "symbol", "lines", "search"})
             if obj.get("cmd") not in known | {"answer", "batch"}:
                 convo += ('\n\nThat is not a valid command. To report the value you have '
@@ -459,8 +491,16 @@ def run_one(it: dict, model: str, arm: str) -> Run:
         if is_wag and tok:
             r.coverage_met = receipt_backs_it(it, tok)
     except RuntimeError as e:
-        r.transport_error = True
-        r.error = str(e)[:140]
+        msg = str(e)
+        overflow = any(k in msg.lower() for k in
+                       ("context_length", "context length", "too long", "maximum context",
+                        "prompt is too long", "max_tokens_to_sample", "string too long",
+                        "invalid_request_error"))
+        # Copy cannot fit a 450 KB tree. That is a real, attributable defeat for
+        # the strategy — record it as a wrong answer, not as a transport error to
+        # be excluded. Excluding it would hide precisely what we set out to show.
+        r.transport_error = not overflow
+        r.error = ("context_overflow: " if overflow else "") + msg[:120]
     except Exception as e:
         r.error = f"{type(e).__name__}: {e}"[:140]
     return r
@@ -469,12 +509,17 @@ def run_one(it: dict, model: str, arm: str) -> Run:
 def main() -> int:
     items = []
     for c in (os.environ.get("TIER3_CORPUS", "/tmp/tier3/corpus"),
-              os.environ.get("TIER3_CORPUS2", "/tmp/tier3/corpus2")):
+              os.environ.get("TIER3_CORPUS2", "/tmp/tier3/corpus2"),
+              os.environ.get("TIER3_CORPUS3", "/tmp/tier3/corpus3")):
         f = f"{c}/manifest.json"
         if os.path.isfile(f):
             items += json.load(open(f))
     models = os.environ.get("TIER3_MODELS", ",".join(PRICING)).split(",")
     arms = os.environ.get("TIER3_ARMS", ",".join(ARMS)).split(",")
+    shapes = os.environ.get("TIER3_SHAPES", "")
+    if shapes:
+        keep = set(shapes.split(","))
+        items = [it for it in items if it["modality"] in keep]
     os.makedirs(OUT, exist_ok=True)
 
     jobs = [(it, m, a) for it in items for m in models for a in arms]

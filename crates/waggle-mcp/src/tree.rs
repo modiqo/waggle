@@ -52,14 +52,31 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         let lens = ["section", "symbol", "lines"]
             .into_iter()
             .find_map(|k| arg_str(args, k).map(|val| (k, val.to_owned())));
-        Some(match lens {
-            Some((kind, value)) => {
-                let from = args.get("from").and_then(Value::as_u64);
-                self.read_tree_lens(token, kind, &value, max_bytes, from, now)
-                    .await
-            }
-            None => self.read_tree(token, max_bytes).await,
+        let from = args.get("from").and_then(Value::as_u64);
+        Some(if let Some((kind, value)) = lens {
+            self.read_tree_lens(token, kind, &value, max_bytes, from, now)
+                .await
+        } else {
+            self.read_tree(token, max_bytes, from).await
         })
+    }
+
+    /// Every file token under a tree, in a stable order. `mint --tree` flattens,
+    /// so this is usually one hop — but it walks, so a nested lineage yields the
+    /// same list, and the projection and the fan-out can never disagree about
+    /// what "all the files" means.
+    pub(crate) async fn tree_files(&self, root: waggle_core::Token) -> Vec<waggle_core::Token> {
+        let mut out = Vec::new();
+        let mut queue: std::collections::VecDeque<_> =
+            self.store.children(root).await.unwrap_or_default().into();
+        while let Some(child) = queue.pop_front() {
+            if out.len() >= 200 {
+                break;
+            }
+            queue.extend(self.store.children(child).await.unwrap_or_default());
+            out.push(child);
+        }
+        out
     }
 
     /// One child's row in the directory projection: its path relative to the
@@ -146,7 +163,20 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
     /// Listing is *not* consumption: no `read` stage is stamped for the
     /// children here. A table of contents tells you what exists; it does not
     /// serve you the bytes, and the receipts must not pretend it did.
-    async fn read_tree(&self, root: waggle_core::Token, max_bytes: usize) -> Envelope {
+    ///
+    /// A big tree does not fit in one projection, and a projection that stops
+    /// at 25 of 180 files without saying so is the worst possible answer: the
+    /// consumer reads a complete-looking table of contents and concludes the
+    /// tree contains nothing else. So the count is taken BEFORE the budget is
+    /// spent, `complete` is stated outright, and truncation hands back both
+    /// ways out — resume at the cursor, or stop listing and `search`, which
+    /// returns only the files that matched and never pays for the rest.
+    async fn read_tree(
+        &self,
+        root: waggle_core::Token,
+        max_bytes: usize,
+        from: Option<u64>,
+    ) -> Envelope {
         // The folder's own directory, so children can be named by their path
         // RELATIVE to it. A basename is not an identity: a repository is full
         // of `mod.py` and `index.ts`, and a consumer handed six of them cannot
@@ -157,57 +187,88 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             _ => None,
         };
 
-        let mut queue: std::collections::VecDeque<_> =
-            self.store.children(root).await.unwrap_or_default().into();
+        // The denominator first. Knowing there are 180 files is what makes a
+        // 25-file answer honest, and it costs one walk of the lineage — no
+        // manifests, no blobs, no budget.
+        let all = self.tree_files(root).await;
+        let total_files = all.len() as u64;
+        let start = usize::try_from(from.unwrap_or(0)).unwrap_or(0);
+
         let mut files = Vec::new();
         let mut total_bytes: u64 = 0;
-        let mut visited = 0usize;
         let mut budget = 0usize;
         let mut truncated = false;
 
-        while let Some(child) = queue.pop_front() {
-            visited += 1;
-            if visited > 200 || budget > max_bytes {
+        for child in all.iter().skip(start) {
+            if budget > max_bytes {
                 truncated = true;
                 break;
             }
-            queue.extend(self.store.children(child).await.unwrap_or_default());
-            let Ok(Some(v)) = self.store.manifest(child).await else {
+            let Ok(Some(v)) = self.store.manifest(*child).await else {
                 continue;
             };
             let entry = self
-                .tree_entry(child, &v, base.as_deref(), max_bytes, &mut total_bytes)
+                .tree_entry(*child, &v, base.as_deref(), max_bytes, &mut total_bytes)
                 .await;
             budget += entry.to_string().len();
             files.push(entry);
         }
 
         let n = files.len();
-        let result = json!({
+        let listed = start + n;
+        let complete = !truncated && listed as u64 >= total_files;
+        let mut result = json!({
             "kind": "tree",
             "files": n,
+            "total_files": total_files,
+            "listed": format!("{}/{}", listed, total_files),
+            "complete": complete,
             "total_bytes": total_bytes,
             "truncated": truncated,
             "children": files,
         });
-        let next = vec![
-            NextCall {
-                tool: "read".into(),
-                args: json!({ "token": root.as_str(), "section": "<a heading from the outlines above>" }),
-                why: "that section from EVERY file in ONE call — do not fetch them one at a time"
-                    .into(),
-            },
-            NextCall {
+
+        let mut next = Vec::new();
+        if !complete {
+            // Loud. The consumer has seen a fraction of the tree, and the one
+            // thing it must not do is reason as though it has seen all of it.
+            result["hint"] = json!(format!(
+                "INCOMPLETE LISTING: {listed} of {total_files} files. The rest are NOT \
+                 shown and you have NOT seen them. Do not conclude anything about the \
+                 tree from this page. Either narrow with `search` — which returns only \
+                 the files that match, and never pays for the others — or page on with \
+                 `from: {listed}`."
+            ));
+            next.push(NextCall {
                 tool: "search".into(),
                 args: json!({ "token": root.as_str(), "pattern": "<regex>" }),
-                why: "grep every file in the tree at once; matches come back per file".into(),
-            },
-            NextCall {
+                why: "PREFERRED at this size: grep the whole tree and get back ONLY the \
+                      matching files, each with its own token — a filtered listing that \
+                      costs a fraction of the full one"
+                    .into(),
+            });
+            next.push(NextCall {
                 tool: "read".into(),
-                args: json!({ "token": "<a child's token above>" }),
-                why: "open a single file — the listing gave you its token".into(),
-            },
-        ];
+                args: json!({ "token": root.as_str(), "from": listed }),
+                why: "continue the listing from where it stopped".into(),
+            });
+        }
+        next.push(NextCall {
+            tool: "read".into(),
+            args: json!({ "token": root.as_str(), "section": "<a heading from the outlines above>" }),
+            why: "that section from EVERY file in ONE call — do not fetch them one at a time"
+                .into(),
+        });
+        next.push(NextCall {
+            tool: "search".into(),
+            args: json!({ "token": root.as_str(), "pattern": "<regex>" }),
+            why: "grep every file in the tree at once; matches come back per file".into(),
+        });
+        next.push(NextCall {
+            tool: "read".into(),
+            args: json!({ "token": "<a child's token above>" }),
+            why: "open a single file — the listing gave you its token".into(),
+        });
         Envelope::ok(result, next).with_stats(Stats {
             records: Some(n as u64),
             seq: None,
@@ -259,7 +320,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         args_from: Option<u64>,
         now: Timestamp,
     ) -> Envelope {
-        let all: Vec<_> = self.store.children(root).await.unwrap_or_default();
+        let all = self.tree_files(root).await;
         let total_files = all.len() as u64;
         // `from` continues a fan-out that ran out of budget. A tree-lens that
         // truncates in silence is worse than a slow one: we watched an agent
