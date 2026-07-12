@@ -71,6 +71,24 @@ Misses are **named**. A subagent that claims to have followed the plan
 with `met: false` gets caught before its answer is trusted — check the
 receipt, then record your verdict.
 
+A folder takes the same contract at tree scale. `--require files:all`
+says *every file in this tree must be read* — the completeness demand
+you can't make of a filesystem path:
+
+```bash
+waggle mint --target file://$PWD/src --tree --require files:all   # → PxL8mQ2v
+waggle read --token PxL8mQ2v                        # the projection: one child token per file
+waggle read --token PxL8mQ2v --section Retry        # fan the lens out over every child
+waggle search --token PxL8mQ2v --pattern "def retry"  # or grep the tree; hits stamp their file
+waggle coverage --token PxL8mQ2v
+# → { "read": "3/4", "met": false, "requires": "files:all" }
+```
+
+`read` is the **consumer's** ledger, not the reader's: a search that
+sweeps a file's bytes and returns nothing from it does not stamp that
+file read. The receipt records what was *served*, so a broad grep
+can't forge coverage of a tree nobody looked at.
+
 ## Correcting the record: supersede and revoke
 
 Handoffs go stale. The report gets corrected. Two lifecycle moves, both

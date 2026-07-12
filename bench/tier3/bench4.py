@@ -141,7 +141,15 @@ def contract_for(it: dict) -> list[str]:
 
 def mint(it: dict) -> str:
     if it["modality"] in TREE:
-        return wag(["mint", "--target", it["path"], "--tree"]).get("token", "")
+        a = ["mint", "--target", it["path"], "--tree"]
+        if it["modality"] == "reasoning":
+            # This delegation genuinely needs every file: the answer is the
+            # relation between the policy and ALL the runbooks. The author says
+            # so at mint; the receipt then refuses to call it met while any file
+            # is unread. Not circular — "read everything" is a completeness
+            # requirement, not the answer.
+            a += ["--require", "files:all"]
+        return wag(a).get("token", "")
     args = ["mint", "--target", it["path"], *contract_for(it)]
     if it.get("content"):
         args += ["--content", it["content"]]
@@ -300,6 +308,19 @@ def wag_exec(cmd: dict, parent: str) -> tuple[str, int]:
     return out, len(out)
 
 
+def receipt_gap(it: dict, tok: str) -> list[str]:
+    """Which files the receipt says the consumer has NOT been served.
+
+    A refusal without a path is a dead end, and we have now made that mistake
+    three times. The gate must not merely decline; it must hand back the way to
+    satisfy it. Naming the unread files is not leaking the answer — it is
+    exactly what a completeness contract is FOR.
+    """
+    cov = wag(["coverage", "--token", tok])
+    return [str(u.get("target", "")).rsplit("/", 1)[-1]
+            for u in (cov.get("unread") or [])] if cov else []
+
+
 def receipt_backs_it(it: dict, tok: str) -> bool | None:
     """Does the consumer's own receipt support a claim of completion?
 
@@ -316,9 +337,9 @@ def receipt_backs_it(it: dict, tok: str) -> bool | None:
     cov = wag(["coverage", "--token", tok])
     if not cov:
         return None
-    if "met" in cov:                                   # region contract
+    if "met" in cov:            # region contract, or a tree with files:all
         return bool(cov["met"])
-    if "read" in cov:                                  # tree
+    if "read" in cov:                                  # tree, no contract
         unread = {str(u.get("target", "")) for u in (cov.get("unread") or [])}
         if it["modality"] == "reasoning":
             # Governance: the policy is a PREREQUISITE, not the answer.
@@ -396,9 +417,13 @@ def run_one(it: dict, model: str, arm: str) -> Run:
                     backed = receipt_backs_it(it, tok)
                     if backed is False:
                         r.gate_rejections += 1
+                        gap = receipt_gap(it, tok)
+                        where = (" You have NOT been served these files: "
+                                 + ", ".join(gap[:8]) + ". Read them.") if gap else ""
                         convo += ("\n\nREJECTED: your receipt shows you have not consumed what "
-                                  "the author requires. Do not answer yet — keep interrogating "
-                                  "until you have SEEN the value.")
+                                  "the author requires, so this answer is not yet supported by "
+                                  "your own trail." + where +
+                                  " Do not answer again until you have SEEN what you need.")
                         continue
                 r.answered = ans
                 r.correct = graded(it, ans)

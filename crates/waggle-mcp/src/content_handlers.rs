@@ -493,25 +493,31 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             let Ok(found) =
                 crate::content::search(&text, pattern, context, per_file, max_bytes / 4)
             else {
-                // Honest telemetry: the deep search DID read this file's
-                // bytes even though the regex failed once, below.
-                self.record_read(child, now, None).await;
-                continue;
+                continue; // the regex did not compile against this file
             };
-            // Honest telemetry: the deep search DID read this file's
-            // bytes — the child's funnel says so (coverage's 'read' bar).
+            let file_total = found["total_matches"].as_u64().unwrap_or(0);
+            if file_total == 0 {
+                // The grep touched this file's bytes; the CONSUMER received
+                // nothing from it. Those are different ledgers, and `read` is
+                // the consumer's: it means content was *served*. Stamping it
+                // here would let one zero-match search over a folder mark every
+                // file consumed — we tried it, and `read` went 0/11 to 11/11
+                // having shown the consumer not one byte. A receipt that can be
+                // satisfied without seeing anything is not a receipt.
+                continue;
+            }
+            // Bytes reached the consumer: the child's funnel says so, and a hit
+            // inside a required region is a touch (19 §4.2) — the grep IS the
+            // evidence.
             let touched = crate::contract_args::match_bits(child_contract.as_ref(), &found);
             self.record_read(child, now, touched).await;
-            let file_total = found["total_matches"].as_u64().unwrap_or(0);
-            if file_total > 0 {
-                total += file_total;
-                files.push(json!({
-                    "token": child.as_str(),
-                    "target": view.manifest.target.as_str(),
-                    "total_matches": file_total,
-                    "matches": found["matches"],
-                }));
-            }
+            total += file_total;
+            files.push(json!({
+                "token": child.as_str(),
+                "target": view.manifest.target.as_str(),
+                "total_matches": file_total,
+                "matches": found["matches"],
+            }));
         }
         // Regex sanity: if nothing was searchable the pattern never ran.
         if searched == 0 {

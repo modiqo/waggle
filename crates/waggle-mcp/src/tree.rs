@@ -61,6 +61,80 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             None => self.read_tree(token, max_bytes).await,
         })
     }
+
+    /// One child's row in the directory projection: its path relative to the
+    /// folder, its own token, and the structure it affords — the SYMBOLS a
+    /// source file already carries, or the headings of a document. A folder of
+    /// code that lists no symbols presents as structureless, which is the one
+    /// shape where knowing what is inside each file matters most.
+    async fn tree_entry(
+        &self,
+        child: waggle_core::Token,
+        v: &waggle_store::ManifestView,
+        base: Option<&str>,
+        max_bytes: usize,
+        total_bytes: &mut u64,
+    ) -> Value {
+        let target = v.manifest.target.as_str().to_owned();
+        // A basename is not an identity: a repository is full of `mod.py` and
+        // `index.ts`, and a consumer handed six of them cannot tell which is
+        // which, nor reason about where anything sits.
+        let name = crate::content_handlers::local_path(&target).map_or_else(
+            || target.clone(),
+            |p| match base {
+                Some(b) => p.strip_prefix(b).unwrap_or(&p).to_owned(),
+                None => p.clone(),
+            },
+        );
+        let mut entry = json!({ "name": name, "token": child.as_str() });
+
+        let Ok(cv) = self.content_of(child).await else {
+            return entry;
+        };
+        *total_bytes += cv.text.len() as u64;
+        entry["bytes"] = json!(cv.text.len());
+        entry["lines"] = json!(cv.text.lines().count());
+        entry["content_type"] = json!(cv.content_type);
+
+        if let Some(media) = &v.manifest.outline {
+            if let Ok(blob) = self.blobs.get(media).await {
+                if let Some(sym) = crate::outline_wire::render(&blob, max_bytes / 4) {
+                    let names: Vec<Value> = sym
+                        .get("symbols")
+                        .and_then(Value::as_array)
+                        .map(|rows| {
+                            rows.iter()
+                                .take(8)
+                                .filter_map(|r| r.get("name").cloned())
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    if !names.is_empty() {
+                        entry["symbols"] = Value::Array(names);
+                        entry["lenses"] = json!(["symbol", "lines", "search"]);
+                        return entry;
+                    }
+                }
+            }
+        }
+        let o = if cv.content_type == "text/markdown" {
+            crate::content::outline(&cv.text)
+        } else {
+            crate::content::outline_plain(&cv.text)
+        };
+        if let Value::Array(items) = o {
+            let heads: Vec<Value> = items
+                .into_iter()
+                .take(6)
+                .filter_map(|h| h.get("heading").cloned())
+                .collect();
+            if !heads.is_empty() {
+                entry["outline"] = Value::Array(heads);
+            }
+        }
+        entry
+    }
+
     /// The **directory projection**: what `read` returns for a tree.
     ///
     /// Each child by name, with its own token (so the consumer can address it
@@ -73,6 +147,16 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
     /// children here. A table of contents tells you what exists; it does not
     /// serve you the bytes, and the receipts must not pretend it did.
     async fn read_tree(&self, root: waggle_core::Token, max_bytes: usize) -> Envelope {
+        // The folder's own directory, so children can be named by their path
+        // RELATIVE to it. A basename is not an identity: a repository is full
+        // of `mod.py` and `index.ts`, and a consumer handed six of them cannot
+        // tell which is which, nor reason about where anything sits.
+        let base = match self.store.manifest(root).await {
+            Ok(Some(v)) => crate::content_handlers::local_path(v.manifest.target.as_str())
+                .map(|p| format!("{}/", p.trim_end_matches('/'))),
+            _ => None,
+        };
+
         let mut queue: std::collections::VecDeque<_> =
             self.store.children(root).await.unwrap_or_default().into();
         let mut files = Vec::new();
@@ -91,36 +175,9 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             let Ok(Some(v)) = self.store.manifest(child).await else {
                 continue;
             };
-            let target = v.manifest.target.as_str().to_owned();
-            let name = target
-                .rsplit('/')
-                .next()
-                .unwrap_or(target.as_str())
-                .to_owned();
-            let mut entry = json!({ "name": name, "token": child.as_str() });
-
-            if let Ok(cv) = self.content_of(child).await {
-                total_bytes += cv.text.len() as u64;
-                entry["bytes"] = json!(cv.text.len());
-                entry["lines"] = json!(cv.text.lines().count());
-                entry["content_type"] = json!(cv.content_type);
-                // The folder's table of contents, a few headings deep.
-                let o = if cv.content_type == "text/markdown" {
-                    crate::content::outline(&cv.text)
-                } else {
-                    crate::content::outline_plain(&cv.text)
-                };
-                if let Value::Array(items) = o {
-                    let heads: Vec<Value> = items
-                        .into_iter()
-                        .take(6)
-                        .filter_map(|h| h.get("heading").cloned())
-                        .collect();
-                    if !heads.is_empty() {
-                        entry["outline"] = Value::Array(heads);
-                    }
-                }
-            }
+            let entry = self
+                .tree_entry(child, &v, base.as_deref(), max_bytes, &mut total_bytes)
+                .await;
             budget += entry.to_string().len();
             files.push(entry);
         }

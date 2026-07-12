@@ -112,7 +112,7 @@ pub const MINT: OperationSpec = OperationSpec {
         ArgSpec { name: "content", required: false, doc: "Path to extracted text for a BINARY target (you extracted it with your own abilities): becomes the searchable content while the target stays the original. Mutually exclusive with snapshot." },
         ArgSpec { name: "attach", required: false, doc: "Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all." },
         ArgSpec { name: "attach-type", required: false, doc: "Content type of the attachment; inferred from the extension when omitted." },
-        ArgSpec { name: "require", required: false, doc: "Consumption contract region (repeatable, max 8): lines:START-END, section:HEADING (markdown), or symbol:NAME (code — resolved against the symbol outline at mint). `coverage` then reports met/unmet with untouched regions NAMED. Signed with the core — a contract is not renegotiable." },
+        ArgSpec { name: "require", required: false, doc: "Consumption contract region (repeatable, max 8): lines:START-END, section:HEADING (markdown), symbol:NAME (code — resolved against the symbol outline at mint), or files:all (folder — every file in the tree must be read). `coverage` then reports met/unmet with untouched regions NAMED. Signed with the core — a contract is not renegotiable." },
         ArgSpec { name: "min-coverage", required: false, doc: "Fraction (0-1] of required regions a consumer must touch for the contract to be met; default 1.0 (every region)." },
     ],
     forward: &[

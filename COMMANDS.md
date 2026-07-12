@@ -19,7 +19,7 @@ Create an attributed reference (a waggle token) for an artifact instead of pasti
 | `--content` | false | Path to extracted text for a BINARY target (you extracted it with your own abilities): becomes the searchable content while the target stays the original. Mutually exclusive with snapshot. |
 | `--attach` | false | Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all. |
 | `--attach-type` | false | Content type of the attachment; inferred from the extension when omitted. |
-| `--require` | false | Consumption contract region (repeatable, max 8): lines:START-END, section:HEADING (markdown), or symbol:NAME (code — resolved against the symbol outline at mint). `coverage` then reports met/unmet with untouched regions NAMED. Signed with the core — a contract is not renegotiable. |
+| `--require` | false | Consumption contract region (repeatable, max 8): lines:START-END, section:HEADING (markdown), symbol:NAME (code — resolved against the symbol outline at mint), or files:all (folder — every file in the tree must be read). `coverage` then reports met/unmet with untouched regions NAMED. Signed with the core — a contract is not renegotiable. |
 | `--min-coverage` | false | Fraction (0-1] of required regions a consumer must touch for the contract to be met; default 1.0 (every region). |
 
 - forward → `resolve`: self-check the projection each consumer will receive

@@ -12,7 +12,31 @@ use crate::envelope::{Envelope, NextCall, Stats};
 use crate::handlers::{parse_token_arg, store_err, Handler};
 use crate::map::handoff_line;
 
+/// Was this folder minted `--require files:all`? Then the delegation needs the
+/// WHOLE tree, and `coverage` answers with a verdict, not merely a fact.
+fn requires_all_files(view: Option<&waggle_store::ManifestView>) -> bool {
+    view.and_then(|v| v.manifest.contract.as_ref())
+        .is_some_and(|c| {
+            c.regions()
+                .iter()
+                .any(|r| r.label() == Some(crate::contract_args::TREE_ALL))
+        })
+}
+
 impl<S: Store, B: BlobSink> Handler<S, B> {
+    /// Did the consumer actually receive this file's content, and did it run on
+    /// it? Read off the child's funnel — the receipt, not a projection.
+    async fn child_consumption(&self, child: waggle_core::Token) -> (bool, bool) {
+        let funnel = self.store.funnel(child).await.unwrap_or_default();
+        let count = |stage: &str| {
+            funnel
+                .iter()
+                .find(|(s, _)| s.as_str() == stage)
+                .map_or(0, |(_, n)| *n)
+        };
+        (count("read") + count("resolve") > 0, count("run") > 0)
+    }
+
     /// `mint --tree`: the folder pattern as one call. The root token is
     /// already minted; every file inside (recursive, sorted, dotfiles
     /// skipped, capped) becomes a snapshot-pinned CHILD — one revocation
@@ -254,18 +278,11 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 continue;
             };
             files += 1;
-            let funnel = self.store.funnel(child).await.unwrap_or_default();
-            let count = |stage: &str| {
-                funnel
-                    .iter()
-                    .find(|(s, _)| s.as_str() == stage)
-                    .map_or(0, |(_, n)| *n)
-            };
-            let touched = count("read") + count("resolve");
-            if count("run") > 0 {
+            let (was_read, was_run) = self.child_consumption(child).await;
+            if was_run {
                 run += 1;
                 read += 1;
-            } else if touched > 0 {
+            } else if was_read {
                 read += 1;
             } else {
                 unread_total += 1;
@@ -287,6 +304,11 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             );
         }
         let complete = unread_total == 0;
+        // A folder minted `--require files:all` carries a COMPLETENESS
+        // contract: this delegation needs the whole tree, and the receipt says
+        // so. Without it, `complete` is a fact the orchestrator may consult;
+        // with it, `met` is a verdict it can refuse an answer on.
+        let requires_all = requires_all_files(view.as_ref());
         let next = if let Some(first) = unread.first() {
             vec![NextCall {
                 tool: "read".into(),
@@ -300,19 +322,23 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 why: "full coverage — the rollup has the totals".into(),
             }]
         };
-        Envelope::ok(
-            json!({
-                "token": root.as_str(),
-                "files": files,
-                "read": format!("{read}/{files}"),
-                "run": format!("{run}/{files}"),
-                "complete": complete,
-                "unread": unread,
-                "unread_total": unread_total,
-            }),
-            next,
-        )
-        .with_stats(Stats {
+        let mut result = json!({
+            "token": root.as_str(),
+            "files": files,
+            "read": format!("{read}/{files}"),
+            "run": format!("{run}/{files}"),
+            "complete": complete,
+            "unread": unread,
+            "unread_total": unread_total,
+        });
+        if requires_all {
+            // The folder was minted `--require files:all`: this delegation needs
+            // the WHOLE tree. `complete` was a fact an orchestrator could
+            // consult; `met` is a verdict it can refuse an answer on.
+            result["met"] = json!(complete);
+            result["requires"] = json!(crate::contract_args::TREE_ALL);
+        }
+        Envelope::ok(result, next).with_stats(Stats {
             records: Some(files),
             seq: None,
         })

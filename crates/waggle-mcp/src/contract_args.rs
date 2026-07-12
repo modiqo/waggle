@@ -19,6 +19,10 @@ use waggle_core::{Change, Contract, Region, Timestamp, Token, FULL_COVERAGE_PERM
 
 use crate::envelope::Envelope;
 
+/// The label a `files:all` requirement carries. A tree's contract is read by
+/// this label, because a folder's unit of consumption is a file, not a line.
+pub(crate) const TREE_ALL: &str = "files:all";
+
 /// Parse the contract args off a mint call, if any. `text` loads the
 /// target's content lazily — only a `section:` requirement needs it.
 pub(crate) fn parse_contract(
@@ -63,6 +67,24 @@ pub(crate) fn parse_contract(
             let (start, end) = resolve_symbol_requirement(args, name, &mut text)
                 .map_err(|e| Envelope::err(format!("require: {e}"), vec![]))?;
             Region::new(Some(name.to_owned()), start, end, i)
+        } else if let Some(which) = spec.strip_prefix("files:") {
+            // A FOLDER's unit of consumption is a file, not a line. The
+            // benchmark's reasoning failures were all the same shape: an agent
+            // concluding about a folder it had not finished reading — it read
+            // less than the ones that got it right, and it did not run out of
+            // turns, it simply stopped early. `files:all` lets the author
+            // declare that this delegation requires the WHOLE folder, and the
+            // receipt then refuses to call it met while any file is unread.
+            // The line range is a placeholder: a tree has no lines, and
+            // `coverage` reads this region by its label.
+            let which = which.trim();
+            if which != "all" {
+                return Err(Envelope::err(
+                    format!("require `files:{which}` — only `files:all` is supported (every file in the tree must be served)"),
+                    vec![],
+                ));
+            }
+            Region::new(Some(TREE_ALL.to_owned()), 1, 1, i)
         } else {
             return Err(Envelope::err(bad_require(spec), vec![]));
         };
@@ -114,7 +136,7 @@ fn parse_range(range: &str) -> Option<(u32, u32)> {
 
 fn bad_require(spec: &str) -> String {
     format!(
-        "require `{spec}` — expected lines:START-END (1-based inclusive), section:HEADING, or symbol:NAME"
+        "require `{spec}` — expected lines:START-END (1-based inclusive), section:HEADING, symbol:NAME, or files:all (a folder: every file must be served)"
     )
 }
 
