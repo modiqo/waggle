@@ -208,6 +208,7 @@ pub const READ: OperationSpec = OperationSpec {
         ArgSpec { name: "section", required: false, doc: "Markdown heading whose section to read (text/markdown lens)." },
         ArgSpec { name: "symbol", required: false, doc: "Code symbol whose definition to read (symbol lens — tokens minted with a snapshot of source code); the overview's `symbols` lists what exists." },
         ArgSpec { name: "path", required: false, doc: "JSON pointer into parsed content (application/json lens), e.g. /dependencies/react." },
+        ArgSpec { name: "from", required: false, doc: "For a FOLDER token with a lens: continue the fan-out from this file index. A truncated tree-lens names the cursor to resume from — a partial folder read that looks like a whole one is how a confident wrong answer gets made." },
         ArgSpec { name: "max-bytes", required: false, doc: "Response budget in bytes (default 4096, floor 64)." },
     ],
     forward: &[

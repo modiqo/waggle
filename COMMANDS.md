@@ -89,6 +89,7 @@ Read the token's CONTENT surgically: a line window, a markdown section, a code s
 | `--section` | false | Markdown heading whose section to read (text/markdown lens). |
 | `--symbol` | false | Code symbol whose definition to read (symbol lens — tokens minted with a snapshot of source code); the overview's `symbols` lists what exists. |
 | `--path` | false | JSON pointer into parsed content (application/json lens), e.g. /dependencies/react. |
+| `--from` | false | For a FOLDER token with a lens: continue the fan-out from this file index. A truncated tree-lens names the cursor to resume from — a partial folder read that looks like a whole one is how a confident wrong answer gets made. |
 | `--max-bytes` | false | Response budget in bytes (default 4096, floor 64). |
 
 - forward → `read`: continue the window or follow the outline deeper

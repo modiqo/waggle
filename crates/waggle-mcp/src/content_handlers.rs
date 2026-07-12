@@ -103,7 +103,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
     /// the live local target. The contract and outline pointer ride along
     /// so serves can stamp region touches (19 §4.2) and offer the symbol
     /// lens (20 §5.6) without a second manifest read.
-    async fn content_of(&self, token: Token) -> Result<ContentView, Envelope> {
+    pub(crate) async fn content_of(&self, token: Token) -> Result<ContentView, Envelope> {
         let view = match self.store.manifest(token).await {
             Ok(Some(v)) => v,
             Ok(None) => return Err(store_err(&StoreError::UnknownToken(token))),
@@ -165,7 +165,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
     /// Resolve `--symbol NAME` against the token's outline blob
     /// (20 §5.6). Every refusal names its fix: no outline, no such
     /// symbol (candidates shown), or an ambiguous name (locations shown).
-    async fn resolve_symbol(
+    pub(crate) async fn resolve_symbol(
         &self,
         token: Token,
         outline: Option<&waggle_core::MediaRef>,
@@ -211,7 +211,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
     /// Record the `read` stage, stamping which contract regions the
     /// served bytes touched (`None` when contract-free or untouched —
     /// the field never appears for ordinary traffic).
-    async fn record_read(&self, token: Token, now: Timestamp, regions: Option<u8>) {
+    pub(crate) async fn record_read(&self, token: Token, now: Timestamp, regions: Option<u8>) {
         let _ = self
             .store
             .append(AppendIntent::Event {
@@ -232,16 +232,26 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             Ok(t) => t,
             Err(e) => return e,
         };
-        let view = match self.content_of(token).await {
-            Ok(x) => x,
-            Err(e) => return e,
-        };
-        let (text, content_type, contract) = (view.text, view.content_type, view.contract);
         let max_bytes = args
             .get("max-bytes")
             .and_then(Value::as_u64)
             .and_then(|v| usize::try_from(v).ok())
             .unwrap_or(crate::query::DEFAULT_MAX_BYTES);
+
+        // A lineage root with no content of its own IS a tree — describe it.
+        // `search` has always grepped a folder; `read` used to answer null,
+        // so a folder could be searched but never *described*. The first move
+        // an agent makes with a shared directory is to ask what is in it, and
+        // a consumer that cannot see the vocabulary can only guess a regex.
+        if let Some(env) = self.try_tree_read(token, args, max_bytes, now).await {
+            return env;
+        }
+
+        let view = match self.content_of(token).await {
+            Ok(x) => x,
+            Err(e) => return e,
+        };
+        let (text, content_type, contract) = (view.text, view.content_type, view.contract);
 
         // The symbol lens (20 §5.6): resolve the name against the
         // outline blob and serve the resolved window — region stamping

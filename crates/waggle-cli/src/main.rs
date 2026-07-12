@@ -136,6 +136,9 @@ enum Cmd {
         /// JSON pointer into parsed content (application/json lens), e.g. /dependencies/react.
         #[arg(long)]
         path: Option<String>,
+        /// For a FOLDER token with a lens: continue the fan-out from this file index. A truncated tree-lens names the cursor to resume from — a partial folder read that looks whole is how a confident wrong answer gets made.
+        #[arg(long)]
+        from: Option<u64>,
         /// Response budget in bytes (default 4096, floor 64).
         #[arg(long)]
         max_bytes: Option<u64>,
@@ -300,6 +303,7 @@ fn main() {
             section,
             symbol,
             path,
+            from,
             max_bytes,
         } => run::tool_call(
             "read",
@@ -307,6 +311,7 @@ fn main() {
                 "token": token,
                 "lines": lines,
                 "section": section,
+                "from": from,
                 "symbol": symbol,
                 "path": path,
                 "max-bytes": max_bytes,
