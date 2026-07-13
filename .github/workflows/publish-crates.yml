@@ -1,0 +1,38 @@
+# A dist custom publish job: publishes every public crate to crates.io as part of
+# the same release the binaries and Homebrew formula ship from. dist invokes this
+# in the publish phase (only on a real, non-prerelease tag) and passes the release
+# `plan`. cargo publish --workspace resolves the dependency order itself and skips
+# `publish = false` crates (bench, xtask, edge-worker, tmux).
+#
+# Requires a CARGO_REGISTRY_TOKEN repo secret (a crates.io API token owned by a
+# crate owner). Without it, this job fails while the rest of the release still
+# ships — crates.io simply stays a release behind until the token is present.
+name: Publish to crates.io
+
+on:
+  workflow_call:
+    inputs:
+      plan:
+        required: true
+        type: string
+    secrets:
+      CARGO_REGISTRY_TOKEN:
+        required: true
+
+jobs:
+  crates-io:
+    runs-on: ubuntu-latest
+    # Never push a prerelease tag (v1.2.3-rc.1) to crates.io.
+    if: ${{ !fromJson(inputs.plan).announcement_is_prerelease }}
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Publish public crates (dependency-ordered)
+        # --workspace publishes each publishable crate in topological order,
+        # waiting for the index between crates; --locked pins the resolved graph.
+        run: cargo publish --workspace --locked
