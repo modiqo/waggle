@@ -509,11 +509,11 @@ fn folder_targets_teach_the_lineage_pattern() {
     });
 }
 
-/// The folder story, end to end: --tree mints the files as snapshot
-/// children; the root's funnel ROLLS UP child stages; revoking the root
-/// tombstones every child (resolve AND content refuse through lineage).
+/// The indexed tree, end to end (design doc: tree-scale): --tree mints a
+/// hierarchy of directory NODES; the root projects its table of contents;
+/// revoking the root tombstones every subtree node through lineage.
 #[test]
-fn folder_tree_rollup_and_cascade() {
+fn indexed_tree_projection_and_cascade() {
     pollster::block_on(async {
         let dir = tempfile::tempdir().unwrap();
         let docs = dir.path().join("docs");
@@ -527,65 +527,49 @@ fn folder_tree_rollup_and_cascade() {
         let minted = handler
             .dispatch(
                 "mint",
-                &serde_json::json!({
-                    "target": format!("file://{}", docs.display()),
-                    "tree": true,
-                }),
+                &serde_json::json!({ "target": format!("file://{}", docs.display()), "tree": true }),
                 waggle_core::Timestamp::from_unix_ms(1),
                 &mut e,
             )
             .await;
         assert!(minted.hint.is_none(), "{minted:?}");
         let root = minted.result["token"].as_str().unwrap().to_owned();
-        let children = minted.result["children"].as_array().unwrap();
         assert_eq!(
-            children.len(),
-            2,
-            "recursive, dotfiles skipped: {children:?}"
+            minted.result["tree"]["files"], 2,
+            "dotfile skipped: {minted:?}"
         );
-        let child = children[0]["token"].as_str().unwrap().to_owned();
 
-        // Resolving the ROOT serves the index — how a folder token
-        // works on a machine where the folder never existed.
-        let root_resolved = handler
+        // The projection is the directory's table of contents: one local file,
+        // one subdirectory (its own node token).
+        let toc = handler
             .dispatch(
-                "resolve",
+                "read",
                 &serde_json::json!({ "token": root }),
                 waggle_core::Timestamp::from_unix_ms(2),
                 &mut e,
             )
             .await;
-        let index = root_resolved.result["children"].as_array().unwrap();
-        assert_eq!(index.len(), 2, "the folder's projection is its index");
-        assert!(index[0]["target"].as_str().unwrap().starts_with("file://"));
+        assert!(toc.hint.is_none(), "{toc:?}");
+        assert_eq!(toc.result["files"], 1, "a.md is a local file");
+        assert_eq!(toc.result["subdirs"], 1, "nested is a subtree");
+        assert_eq!(toc.result["total_files"], 2);
+        let sub = toc.result["dirs"][0]["token"].as_str().unwrap().to_owned();
 
-        // Children are real snapshot tokens: grep works.
-        let hit = handler
+        // Read one file back by name — its bytes travel with the tree.
+        let file = handler
             .dispatch(
-                "search",
-                &serde_json::json!({ "token": child, "pattern": "bespoke" }),
-                waggle_core::Timestamp::from_unix_ms(2),
-                &mut e,
-            )
-            .await;
-        assert!(hit.hint.is_none());
-        assert_eq!(hit.result["total_matches"], 1);
-
-        // Rollup: the root's funnel includes the child's read.
-        let funnel = handler
-            .dispatch(
-                "funnel",
-                &serde_json::json!({ "token": root }),
+                "read",
+                &serde_json::json!({ "token": root, "file": "a.md" }),
                 waggle_core::Timestamp::from_unix_ms(3),
                 &mut e,
             )
             .await;
-        assert_eq!(
-            funnel.result["rollup"]["read"], 1,
-            "the folder answers for its tree: {funnel:?}"
+        assert!(
+            file.result["text"].as_str().unwrap().contains("bespoke"),
+            "{file:?}"
         );
 
-        // One revocation, whole tree.
+        // One revocation on the root tombstones every subtree node through lineage.
         let revoked = handler
             .dispatch(
                 "mutate",
@@ -594,38 +578,26 @@ fn folder_tree_rollup_and_cascade() {
                 &mut e,
             )
             .await;
-        assert!(revoked.hint.is_none());
+        assert!(revoked.hint.is_none(), "{revoked:?}");
         let resolved = handler
             .dispatch(
                 "resolve",
-                &serde_json::json!({ "token": child }),
+                &serde_json::json!({ "token": sub }),
                 waggle_core::Timestamp::from_unix_ms(5),
                 &mut e,
             )
             .await;
         assert!(
             resolved.result["disposition"].get("revoked").is_some(),
-            "child tombstoned through lineage: {resolved:?}"
-        );
-        let read = handler
-            .dispatch(
-                "read",
-                &serde_json::json!({ "token": child }),
-                waggle_core::Timestamp::from_unix_ms(6),
-                &mut e,
-            )
-            .await;
-        assert!(
-            read.hint.expect("refusal").contains("revoked"),
-            "content serves nothing through a revoked lineage"
+            "subtree node tombstoned through lineage: {resolved:?}"
         );
     });
 }
 
-/// Deep search: grep the ROOT token and hit every file in the tree —
-/// matches grouped per file, nested files included.
+/// One search over the root spans the whole nested tree, ranked, with paths —
+/// and an absent pattern prunes to zero visited nodes.
 #[test]
-fn deep_search_over_the_root_token() {
+fn indexed_tree_search_spans_the_lineage() {
     pollster::block_on(async {
         let dir = tempfile::tempdir().unwrap();
         let docs = dir.path().join("corpus");
@@ -633,7 +605,7 @@ fn deep_search_over_the_root_token() {
         std::fs::write(docs.join("plan.md"), "the needle sits here\n").unwrap();
         std::fs::write(
             docs.join("deep/notes.md"),
-            "another needle, nested\nno match line\n",
+            "needle needle nested\nno match\n",
         )
         .unwrap();
         std::fs::write(docs.join("blank.md"), "nothing relevant\n").unwrap();
@@ -659,23 +631,40 @@ fn deep_search_over_the_root_token() {
             )
             .await;
         assert!(found.hint.is_none(), "{found:?}");
-        assert_eq!(found.result["total_matches"], 2, "{found:?}");
-        assert_eq!(found.result["tree"]["files_searched"], 3);
-        let files = found.result["files"].as_array().unwrap();
-        assert_eq!(files.len(), 2, "only matching files listed");
-        assert!(
-            files
-                .iter()
-                .any(|f| f["target"].as_str().unwrap().contains("notes.md")), // sep-agnostic (Windows)
-            "nested files are in the tree: {files:?}"
+        assert_eq!(
+            found.result["total_matches"], 2,
+            "two files match: {found:?}"
         );
-        // The grep→open chain points into the first matching file.
+        let matches = found.result["matches"].as_array().unwrap();
+        // Ranked: the file with more matches (deep/notes.md, x2) comes first.
+        assert!(
+            matches[0]["path"].as_str().unwrap().contains("notes.md"),
+            "{matches:?}"
+        );
+        assert!(
+            matches[0]["path"].as_str().unwrap().contains("deep/"),
+            "nested path carried"
+        );
         assert_eq!(found.next[0].tool, "read");
+
+        // An absent literal prunes the whole tree from the root Bloom — 0 visited.
+        let none = handler
+            .dispatch(
+                "search",
+                &serde_json::json!({ "token": root, "pattern": "wholly_absent_zzz" }),
+                waggle_core::Timestamp::from_unix_ms(3),
+                &mut e,
+            )
+            .await;
+        assert_eq!(none.result["total_matches"], 0);
+        assert_eq!(
+            none.result["nodes_visited"], 0,
+            "pruned at the root: {none:?}"
+        );
     });
 }
 
-/// Tags at mint + find: discovery by what humans remember — ranked
-/// candidates with disposition, never name-as-identity.
+/// Tags at mint on a tree root + find: discovery by what humans remember.
 #[test]
 fn tags_and_find_discovery() {
     pollster::block_on(async {
@@ -713,7 +702,7 @@ fn tags_and_find_discovery() {
             .await;
         let plan_token = plan.result["token"].as_str().unwrap().to_owned();
 
-        // Find by TAG (bare tag became name=design_docs).
+        // Find by TAG (the tree root carries it).
         let by_tag = handler
             .dispatch(
                 "find",
@@ -728,7 +717,7 @@ fn tags_and_find_discovery() {
             "design_docs"
         );
 
-        // Find by BASENAME; newest-first ranking; executable next.
+        // Find by BASENAME; newest-first; executable next.
         let by_name = handler
             .dispatch(
                 "find",
@@ -740,7 +729,7 @@ fn tags_and_find_discovery() {
         assert_eq!(by_name.result["candidates"][0]["token"], plan_token);
         assert_eq!(by_name.next[0].tool, "resolve");
 
-        // Disposition is visible: a revoked candidate says so.
+        // A revoked candidate is VISIBLY dead.
         handler
             .dispatch(
                 "mutate",
@@ -759,23 +748,22 @@ fn tags_and_find_discovery() {
             .await;
         assert_eq!(
             after.result["candidates"][0]["disposition"], "revoked",
-            "a dead name is VISIBLY dead: {after:?}"
+            "{after:?}"
         );
     });
 }
 
-/// The folder-review proof: coverage on a tree names exactly which
-/// files a review MISSED — and a root deep-search honestly counts as
-/// reading every file it scanned.
+/// Node-granular coverage on a tree: reading one subtree's file marks that node
+/// read; a search across the tree marks every node it served.
 #[test]
-fn coverage_proves_the_folder_was_read_or_names_the_gaps() {
+fn coverage_is_node_granular_over_a_tree() {
     pollster::block_on(async {
         let dir = tempfile::tempdir().unwrap();
         let docs = dir.path().join("review_me");
-        std::fs::create_dir_all(&docs).unwrap();
-        for name in ["a.md", "b.md", "c.md"] {
-            std::fs::write(docs.join(name), format!("content of {name}\n")).unwrap();
-        }
+        std::fs::create_dir_all(docs.join("x")).unwrap();
+        std::fs::create_dir_all(docs.join("y")).unwrap();
+        std::fs::write(docs.join("x/a.md"), "content alpha\n").unwrap();
+        std::fs::write(docs.join("y/b.md"), "content beta\n").unwrap();
         let handler = handler_with_blobs(dir.path());
         let mut e = entropy();
         let minted = handler
@@ -787,46 +775,53 @@ fn coverage_proves_the_folder_was_read_or_names_the_gaps() {
             )
             .await;
         let root = minted.result["token"].as_str().unwrap().to_owned();
-        let children = minted.result["children"].as_array().unwrap().clone();
-
-        // A lazy review: reads a.md and b.md, never opens c.md.
-        for child in children.iter().take(2) {
-            let token = child["token"].as_str().unwrap();
-            handler
-                .dispatch(
-                    "read",
-                    &serde_json::json!({ "token": token }),
-                    waggle_core::Timestamp::from_unix_ms(2),
-                    &mut e,
-                )
-                .await;
-        }
-        let audit = handler
+        let toc = handler
             .dispatch(
-                "coverage",
+                "read",
                 &serde_json::json!({ "token": root }),
+                waggle_core::Timestamp::from_unix_ms(2),
+                &mut e,
+            )
+            .await;
+        let x = toc.result["dirs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|d| d["name"] == "x")
+            .unwrap()["token"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+
+        // Read x's file only. Coverage: some nodes read, not all → incomplete.
+        handler
+            .dispatch(
+                "read",
+                &serde_json::json!({ "token": x, "file": "a.md" }),
                 waggle_core::Timestamp::from_unix_ms(3),
                 &mut e,
             )
             .await;
+        let audit = handler
+            .dispatch(
+                "coverage",
+                &serde_json::json!({ "token": root }),
+                waggle_core::Timestamp::from_unix_ms(4),
+                &mut e,
+            )
+            .await;
         assert!(audit.hint.is_none(), "{audit:?}");
-        assert_eq!(audit.result["read"], "2/3", "{audit:?}");
-        assert_eq!(audit.result["complete"], false);
-        assert!(
-            audit.result["unread"][0]["target"]
-                .as_str()
-                .unwrap()
-                .ends_with("c.md"),
-            "the miss is NAMED: {audit:?}"
-        );
-        assert_eq!(audit.next[0].tool, "read", "next closes the gap");
+        assert_eq!(audit.result["kind"], "tree");
+        assert_eq!(audit.result["total_files"], 2);
+        assert_eq!(audit.result["complete"], false, "y not read yet: {audit:?}");
+        assert!(!audit.result["unread_nodes"].as_array().unwrap().is_empty());
 
-        // A root deep-search touches every file — honest per-child reads.
+        // A search across the tree serves both files → every node read.
         handler
             .dispatch(
                 "search",
                 &serde_json::json!({ "token": root, "pattern": "content" }),
-                waggle_core::Timestamp::from_unix_ms(4),
+                waggle_core::Timestamp::from_unix_ms(5),
                 &mut e,
             )
             .await;
@@ -834,32 +829,13 @@ fn coverage_proves_the_folder_was_read_or_names_the_gaps() {
             .dispatch(
                 "coverage",
                 &serde_json::json!({ "token": root }),
-                waggle_core::Timestamp::from_unix_ms(5),
-                &mut e,
-            )
-            .await;
-        assert_eq!(after.result["read"], "3/3", "{after:?}");
-        assert_eq!(after.result["complete"], true);
-
-        // The STRONG bar: run stays honest — nothing recorded use yet.
-        assert_eq!(after.result["run"], "0/3");
-        let child0 = children[0]["token"].as_str().unwrap();
-        handler
-            .dispatch(
-                "record",
-                &serde_json::json!({ "token": child0, "stage": "run" }),
                 waggle_core::Timestamp::from_unix_ms(6),
                 &mut e,
             )
             .await;
-        let strong = handler
-            .dispatch(
-                "coverage",
-                &serde_json::json!({ "token": root }),
-                waggle_core::Timestamp::from_unix_ms(7),
-                &mut e,
-            )
-            .await;
-        assert_eq!(strong.result["run"], "1/3");
+        assert_eq!(
+            after.result["complete"], true,
+            "search touched every node: {after:?}"
+        );
     });
 }

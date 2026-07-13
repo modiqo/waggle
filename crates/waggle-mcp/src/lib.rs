@@ -32,8 +32,8 @@ pub mod query;
 mod record;
 mod resources;
 mod rpc;
-mod tree;
 mod tree_mint;
+mod tree_read;
 
 pub use envelope::{validate_next, Envelope, NextCall, Stats};
 pub use handlers::Handler;

@@ -99,6 +99,15 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             Ok(v) => v,
             Err(e) => return store_err(&e),
         };
+        // An indexed tree (design doc: tree-scale) is a hierarchy of directory
+        // NODES, not per-file tokens, so its coverage is node-granular: how many
+        // directory nodes were touched, out of the total, plus the true file count
+        // from the root's index. (Per-file `files:all` coverage needs a served-set
+        // the payload-free log cannot express in an 8-bit region mask — a
+        // documented follow-up.)
+        if view.as_ref().is_some_and(|v| v.manifest.tree.is_some()) {
+            return self.tree_node_coverage(root, view.as_ref().unwrap()).await;
+        }
         let mut queue: std::collections::VecDeque<_> = match self.store.children(root).await {
             Ok(c) => c.into(),
             Err(e) => return store_err(&e),
@@ -180,6 +189,89 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             records: Some(files),
             seq: None,
         })
+    }
+
+    /// Node-granular coverage for an indexed tree: walk the directory-node
+    /// lineage and report how many nodes have been read, the total node count, and
+    /// the true file/byte totals from the root's index. A node is "read" once any
+    /// of its files was served (search hit or `read --file`).
+    async fn tree_node_coverage(
+        &self,
+        root: waggle_core::Token,
+        view: &waggle_store::ManifestView,
+    ) -> Envelope {
+        let (total_files, total_bytes) = view
+            .manifest
+            .tree
+            .as_ref()
+            .map_or((0, 0), |t| (t.files, t.bytes));
+        let mut queue: std::collections::VecDeque<_> = [root]
+            .into_iter()
+            .collect::<std::collections::VecDeque<_>>();
+        let (mut nodes, mut read, mut visited) = (0u64, 0u64, 0);
+        let mut unread: Vec<Value> = Vec::new();
+        while let Some(node) = queue.pop_front() {
+            visited += 1;
+            if visited > 5000 {
+                break; // runaway-lineage backstop
+            }
+            if let Ok(more) = self.store.children(node).await {
+                queue.extend(more);
+            }
+            let Ok(Some(v)) = self.store.manifest(node).await else {
+                continue;
+            };
+            let Some(tn) = v.manifest.tree.as_ref() else {
+                continue;
+            };
+            // Only file-bearing nodes count: a pure container (subdirs only) has
+            // nothing of its own to read, so it can neither be read nor block
+            // completeness — it is covered when its children are.
+            if !self.node_has_local_files(tn).await {
+                continue;
+            }
+            nodes += 1;
+            let (was_read, _) = self.child_consumption(node).await;
+            if was_read {
+                read += 1;
+            } else if unread.len() < 20 {
+                unread.push(json!({
+                    "token": node.as_str(),
+                    "target": v.manifest.target.as_str(),
+                }));
+            }
+        }
+        Envelope::ok(
+            json!({
+                "token": root.as_str(),
+                "kind": "tree",
+                "nodes": format!("{read}/{nodes}"),
+                "total_files": total_files,
+                "total_bytes": total_bytes,
+                "complete": unread.is_empty(),
+                "unread_nodes": unread,
+            }),
+            vec![NextCall {
+                tool: "search".into(),
+                args: json!({ "token": root.as_str(), "pattern": "<regex>" }),
+                why: "reading through search stamps the nodes it serves".into(),
+            }],
+        )
+        .with_stats(Stats {
+            records: Some(nodes),
+            seq: None,
+        })
+    }
+
+    /// Does this node have files of its own (not just subdirectories)? Reads the
+    /// node's directory index; a fetch failure conservatively counts as "yes" so a
+    /// node is never silently dropped from coverage.
+    async fn node_has_local_files(&self, node: &waggle_core::TreeNode) -> bool {
+        match self.blobs.get(&node.index).await {
+            Ok(bytes) => serde_json::from_slice::<waggle_tree::DirIndex>(&bytes)
+                .map_or(true, |idx| idx.files().next().is_some()),
+            Err(_) => true,
+        }
     }
 
     /// Single-token contract coverage (19 §4.2): fold the region-touch
