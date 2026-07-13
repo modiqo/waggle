@@ -67,6 +67,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
     /// Mint a directory as an indexed Merkle tree. Returns the root token's
     /// envelope. Called by the `mint --tree` path in place of the old flat
     /// per-file minting.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn mint_tree_indexed<E>(
         &self,
         dir: &str,
@@ -74,20 +75,18 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         channel: &str,
         parent: Option<Token>,
         budget: u64,
+        args: &Map<String, Value>,
         now: Timestamp,
         entropy: &mut E,
     ) -> Envelope
     where
         E: FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError>,
     {
-        let path = match local_path(dir) {
-            Some(p) => p,
-            None => {
-                return Envelope::err(
-                    format!("tree: `{dir}` is not a local directory — --tree walks the filesystem"),
-                    vec![],
-                )
-            }
+        let Some(path) = local_path(dir) else {
+            return Envelope::err(
+                format!("tree: `{dir}` is not a local directory — --tree walks the filesystem"),
+                vec![],
+            );
         };
         // Phase one: compute the whole tree bottom-up — pin blobs, build indexes,
         // pre-generate tokens. No manifests yet.
@@ -107,7 +106,8 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         // Phase two: mint manifests top-down, so each parent exists before its
         // children link to it.
         if let Err(e) =
-            Box::pin(self.mint_nodes(&root, sharer, channel, parent, now, entropy)).await
+            Box::pin(self.mint_nodes(&root, sharer, channel, parent, true, args, now, entropy))
+                .await
         {
             return e;
         }
@@ -235,23 +235,38 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
 
     /// Phase two — mint manifests top-down, so a parent is in the store before its
     /// children link to it.
+    #[allow(clippy::too_many_arguments)]
     async fn mint_nodes<E>(
         &self,
         node: &NodeData,
         sharer: &str,
         channel: &str,
         parent: Option<Token>,
+        is_root: bool,
+        args: &Map<String, Value>,
         now: Timestamp,
         entropy: &mut E,
     ) -> Result<(), Envelope>
     where
         E: FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError>,
     {
-        self.mint_node_manifest(node, sharer, channel, parent, now, entropy)
+        // Tags (and any root-only mint options) land on the root node, so `find`
+        // recovers the tree by the name a human remembers.
+        let root_args = is_root.then_some(args);
+        self.mint_node_manifest(node, sharer, channel, parent, root_args, now, entropy)
             .await?;
         for child in &node.children {
-            Box::pin(self.mint_nodes(child, sharer, channel, Some(node.token), now, entropy))
-                .await?;
+            Box::pin(self.mint_nodes(
+                child,
+                sharer,
+                channel,
+                Some(node.token),
+                false,
+                args,
+                now,
+                entropy,
+            ))
+            .await?;
         }
         Ok(())
     }
@@ -295,12 +310,14 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
 
     /// Mint (and sign, and persist) one directory node's manifest under its
     /// pre-generated token, carrying its `tree` field.
+    #[allow(clippy::too_many_arguments)]
     async fn mint_node_manifest<E>(
         &self,
         node: &NodeData,
         sharer: &str,
         channel: &str,
         parent: Option<Token>,
+        root_args: Option<&Map<String, Value>>,
         now: Timestamp,
         entropy: &mut E,
     ) -> Result<(), Envelope>
@@ -318,6 +335,9 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             .tree(node.tree_node.clone());
         if let Some(p) = parent {
             spec = spec.child_of(p);
+        }
+        if let Some(args) = root_args {
+            spec = crate::discovery::apply_tags(spec, args);
         }
         let mut manifest = waggle_core::mint(spec, &MintOptions::default(), &mut *entropy, now)
             .map_err(|e| Envelope::err(e.to_string(), vec![]))?;
@@ -395,6 +415,12 @@ fn is_ignored(name: &str) -> bool {
         name,
         ".git" | ".hg" | ".svn" | "node_modules" | "target" | ".venv" | "__pycache__" | ".DS_Store"
     ) || name.starts_with('.')
+}
+
+/// Did the caller ask for a tree mint?
+pub(crate) fn wants_tree(args: &Map<String, Value>) -> bool {
+    args.get("tree").and_then(Value::as_bool).unwrap_or(false)
+        || args.get("tree").and_then(Value::as_str) == Some("true")
 }
 
 /// The byte budget for a tree mint: `max-bytes` if the caller set one, else

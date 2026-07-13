@@ -90,13 +90,27 @@ fn tree_mint_denies_generated_and_vendored_dirs() {
             )
             .await;
         assert!(minted.hint.is_none(), "{minted:?}");
-        let children = minted.result["children"].as_array().unwrap();
-        assert_eq!(children.len(), 1, "only src/lib.rs survives: {children:?}");
-        // Separator-agnostic: Windows targets carry backslashes.
-        assert!(children[0]["target"]
-            .as_str()
+        // node_modules/ and target/ are denied — only src/lib.rs survives.
+        assert_eq!(
+            minted.result["tree"]["files"], 1,
+            "only src/lib.rs: {minted:?}"
+        );
+        let root = minted.result["token"].as_str().unwrap().to_owned();
+        let toc = h
+            .dispatch(
+                "read",
+                &json!({ "token": root }),
+                Timestamp::from_unix_ms(2),
+                &mut e,
+            )
+            .await;
+        // The one surviving file lives under src/, reachable through the projection.
+        assert_eq!(toc.result["total_files"], 1);
+        let src = toc.result["dirs"]
+            .as_array()
             .unwrap()
-            .replace('\\', "/")
-            .ends_with("src/lib.rs"));
+            .iter()
+            .find(|d| d["name"] == "src");
+        assert!(src.is_some(), "src/ is the only subdir: {toc:?}");
     });
 }

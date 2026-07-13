@@ -183,9 +183,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         };
         // A tree mint builds the whole hierarchy under its own node tokens, so it
         // routes here directly — minting a plain root first would orphan a token.
-        let is_tree = args.get("tree").and_then(Value::as_bool).unwrap_or(false)
-            || arg_str(args, "tree") == Some("true");
-        if is_tree {
+        if crate::tree_mint::wants_tree(args) {
             let parent = arg_str(args, "parent").and_then(|p| Token::parse(p).ok());
             return self
                 .mint_tree_indexed(
@@ -194,6 +192,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                     channel.as_str(),
                     parent,
                     crate::tree_mint::tree_budget(args),
+                    args,
                     now,
                     entropy,
                 )
