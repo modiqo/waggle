@@ -64,6 +64,7 @@ pub struct MintSpec {
     outline: Option<crate::MediaRef>,
     extraction: Option<crate::Extraction>,
     tree: Option<crate::TreeNode>,
+    token: Option<Token>,
     labels: std::collections::BTreeMap<String, String>,
     ttl_ms: Option<u64>,
 }
@@ -85,6 +86,7 @@ impl MintSpec {
             outline: None,
             extraction: None,
             tree: None,
+            token: None,
             labels: std::collections::BTreeMap::new(),
             ttl_ms: None,
         }
@@ -191,6 +193,16 @@ impl MintSpec {
         self
     }
 
+    /// Mint under a **pre-generated** token instead of generating one. A tree mint
+    /// needs each directory node's token *before* its children (so children can
+    /// point their `parent` link at it) while the node's Bloom is only known
+    /// *after* its children — pre-generating the token breaks that cycle.
+    #[must_use]
+    pub fn with_token(mut self, token: Token) -> Self {
+        self.token = Some(token);
+        self
+    }
+
     /// Expire the token `ttl_ms` after mint.
     #[must_use]
     pub fn ttl_ms(mut self, ttl_ms: u64) -> Self {
@@ -228,7 +240,10 @@ pub fn mint(
     let token_len = if spec.private { 16 } else { opts.token_len };
     let manifest = AttributionManifest {
         schema: MANIFEST_SCHEMA_VERSION,
-        token: Token::generate(token_len, entropy)?,
+        token: match spec.token {
+            Some(t) => t,
+            None => Token::generate(token_len, entropy)?,
+        },
         target: spec.target,
         sharer: spec.sharer,
         channel: spec.channel,
