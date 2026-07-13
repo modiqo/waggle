@@ -206,6 +206,7 @@ pub const READ: OperationSpec = OperationSpec {
         ArgSpec { name: "token", required: true, doc: "The waggle token whose content to read." },
         ArgSpec { name: "lines", required: false, doc: "Line window, 1-based inclusive (e.g. 120-180)." },
         ArgSpec { name: "section", required: false, doc: "Markdown heading whose section to read (text/markdown lens)." },
+        ArgSpec { name: "file", required: false, doc: "For a FOLDER token (minted --tree): read ONE file by name, fetched from the content-addressed blob and stamped as a per-file read. The folder's `read` (no address) lists the file names." },
         ArgSpec { name: "symbol", required: false, doc: "Code symbol whose definition to read (symbol lens — tokens minted with a snapshot of source code); the overview's `symbols` lists what exists." },
         ArgSpec { name: "path", required: false, doc: "JSON pointer into parsed content (application/json lens), e.g. /dependencies/react." },
         ArgSpec { name: "from", required: false, doc: "For a FOLDER token with a lens: continue the fan-out from this file index. A truncated tree-lens names the cursor to resume from — a partial folder read that looks like a whole one is how a confident wrong answer gets made." },
