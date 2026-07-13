@@ -8,6 +8,14 @@ dev-install:
     cargo install --path crates/waggle-cli --locked --force
     -waggle daemon restart
 
+# Publish every public crate to crates.io in dependency order. This is the manual
+# equivalent of what CI does automatically: pushing a version tag (`v0.5.0`) runs
+# the release pipeline, which ships the binaries, the Homebrew formula, AND these
+# crates in one go. Needs a crates.io token (`cargo login`) locally; CI uses the
+# CARGO_REGISTRY_TOKEN secret.
+publish:
+    cargo publish --workspace --locked
+
 # Run the full-lifecycle demo (docs/guide/06) against a throwaway store
 demo:
     bash scripts/demo.sh
