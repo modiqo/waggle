@@ -252,3 +252,24 @@ pre .m { color: #d98070; }
   .step { grid-template-columns: 26px 1fr; gap: 12px; }
   .step .n { width: 26px; height: 26px; font-size: 12px; }
 }
+
+/* The waggle animation: a file resolving into a live 30-byte link. The token
+   shimmers character by character and re-rolls with a pulse — the "waggle" is the
+   motion. On-brand honey, monospace, and it holds still for reduced-motion. */
+.waggle-anim { display:flex; align-items:center; justify-content:center; gap:14px;
+  margin:26px auto 4px; font-family:var(--mono); font-size:14px; color:var(--faint); }
+.wa-src { letter-spacing:-0.01em; }
+.wa-arrow { color:var(--line-mid); }
+.wa-chip { display:inline-flex; align-items:center; gap:8px; padding:6px 12px;
+  border:1px solid #e7d7b4; background:var(--accent-bg); border-radius:6px;
+  transition:box-shadow .35s ease, transform .35s ease; }
+.wa-chip.wa-pulse { box-shadow:0 0 0 4px rgba(184,121,26,0.12); transform:scale(1.035); }
+.wa-token { color:#8a5a10; font-weight:600; font-size:15px; letter-spacing:2px;
+  font-variant-numeric:tabular-nums; }
+.wa-dot { width:7px; height:7px; border-radius:50%; background:var(--honey);
+  animation:wa-blink 1.6s ease-in-out infinite; }
+@keyframes wa-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+@media (max-width:520px){ .waggle-anim{ font-size:12px; gap:10px } .wa-token{ font-size:13px } }
+@media (prefers-reduced-motion: reduce){
+  .wa-dot{ animation:none } .wa-chip{ transition:none }
+}
