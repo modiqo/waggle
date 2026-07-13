@@ -82,6 +82,22 @@ code, pre { font-family: var(--mono); }
 .btn-ghost { background: #fff; color: var(--ink); }
 .btn-ghost:hover { background: var(--bg-soft); text-decoration: none; }
 .hero-visual { max-width: 940px; margin: 0 auto; }
+/* The hero terminal: four commands, real output. The last one is the point —
+   an orchestrator learns the subagent skipped the policy BEFORE reading a word
+   of its answer. No other handoff can answer that question. */
+.hero-term { max-width: 860px; margin: 44px auto 0; text-align: left; }
+.term-bar { font-family: var(--mono); font-size: 12px; color: var(--faint);
+  border: 1px solid var(--line-mid); border-bottom: none; border-radius: 4px 4px 0 0;
+  padding: 9px 16px; background: var(--bg-soft); }
+.hero-term pre { margin: 0; border-radius: 0 0 4px 4px; font-size: 12.5px;
+  line-height: 1.75; }
+pre .p { color: #6f6f68; }
+pre .o { color: #b9b9b2; }
+pre .tok { color: #d99a3a; font-weight: 600; }
+.term-punch { font-family: var(--sans); font-size: 16px; color: var(--muted);
+  max-width: 640px; margin: 20px auto 0; text-align: center; line-height: 1.55; }
+.term-punch strong { color: var(--ink); font-weight: 600; }
+@media (max-width: 820px) { .hero-term pre { font-size: 10.5px; } }
 .hero-visual img { width: 100%; height: auto; border: 1px solid var(--line-mid); border-radius: 4px; display: block; }
 
 /* ---------- sections ---------- */

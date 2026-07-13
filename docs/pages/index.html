@@ -54,8 +54,30 @@
           <li>it skipped &rarr; <strong>28%</strong></li>
           <li><strong>1,705</strong> measured runs</li>
         </ul>
-        <div class="hero-visual">
-          <img src="./assets/hero.svg" alt="One token travels; each consumer resolves its own projection — a digest, an image, a transcript, fail-closed CI — where the bytes live">
+        <div class="hero-term">
+          <div class="term-bar"><span>a real folder &mdash; 11 runbooks, 20,825 bytes</span></div>
+<pre><code><span class="c">&#8212;&#8212; you: name the folder, and say what must be read</span>
+<span class="p">$</span> <span class="k">waggle</span> mint <span class="k">--target</span> ./runbooks <span class="k">--tree</span> <span class="k">--require</span> <span class="s">files:all</span>
+<span class="o">  token: </span><span class="tok">4x82KC93</span><span class="o">   files: 11</span>   <span class="c"># 30 bytes. hand THIS to the subagent.</span>
+
+<span class="c">&#8212;&#8212; the subagent: what is in here? (it never receives the folder)</span>
+<span class="p">$</span> <span class="k">waggle</span> read <span class="k">--token</span> <span class="tok">4x82KC93</span>
+<span class="o">  00_escalation_policy.md  WgcYKCba  [Escalation Policy, Ceiling]</span>
+<span class="o">  runbook_01.md            2UbiByHs  [Retry Policy, Stage 2]</span>
+<span class="o">  runbook_02.md            DvnUKymY  [Retry Policy, Stage 2]      &#8230; 11 files</span>
+
+<span class="c">&#8212;&#8212; one lens, across every file, in ONE call</span>
+<span class="p">$</span> <span class="k">waggle</span> read <span class="k">--token</span> <span class="tok">4x82KC93</span> <span class="k">--section</span> <span class="s">"Retry Policy"</span>
+<span class="o">  runbook_01.md  L3-8  &#8220;&#8230;a retry budget of 2 attempts&#8230;&#8221;</span>
+<span class="o">  runbook_02.md  L3-8  &#8220;&#8230;a retry budget of 4 attempts&#8230;&#8221;</span>
+<span class="o">  8 files served, 6,616 bytes.</span>   <span class="c"># not 20,825. only what it asked for.</span>
+
+<span class="c">&#8212;&#8212; you, before you trust a word of its answer:</span>
+<span class="p">$</span> <span class="k">waggle</span> coverage <span class="k">--token</span> <span class="tok">4x82KC93</span>
+<span class="o">  read: </span><span class="m">8/11</span><span class="o">   met: </span><span class="m">false</span>
+<span class="o">  unread: [</span><span class="m">00_escalation_policy.md</span><span class="o">, runbook_09.md, runbook_10.md]</span></code></pre>
+          <p class="term-punch">It never opened the escalation policy &mdash; and it was about to
+          answer anyway. <strong>You know that before you read a word of its answer.</strong></p>
         </div>
       </section>
 
