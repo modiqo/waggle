@@ -2142,7 +2142,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "waggle"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "waggle-core",
  "waggle-ops",
@@ -2150,7 +2150,7 @@ dependencies = [
 
 [[package]]
 name = "waggle-agent"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -2159,7 +2159,7 @@ dependencies = [
 
 [[package]]
 name = "waggle-bench"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "serde_json",
  "waggle-core",
@@ -2167,7 +2167,7 @@ dependencies = [
 
 [[package]]
 name = "waggle-cli"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "base64",
  "clap",
@@ -2186,7 +2186,7 @@ dependencies = [
 
 [[package]]
 name = "waggle-core"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "criterion",
  "ed25519-dalek",
@@ -2198,7 +2198,7 @@ dependencies = [
 
 [[package]]
 name = "waggle-edge-worker"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "base64",
  "console_error_panic_hook",
@@ -2220,7 +2220,7 @@ dependencies = [
 
 [[package]]
 name = "waggle-lens-code"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "criterion",
  "serde",
@@ -2237,7 +2237,7 @@ dependencies = [
 
 [[package]]
 name = "waggle-mcp"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "criterion",
  "ed25519-dalek",
@@ -2259,14 +2259,14 @@ dependencies = [
 
 [[package]]
 name = "waggle-ops"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "waggle-social"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "qrcodegen",
  "serde",
@@ -2275,7 +2275,7 @@ dependencies = [
 
 [[package]]
 name = "waggle-store"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "pollster",
  "serde",
@@ -2286,7 +2286,7 @@ dependencies = [
 
 [[package]]
 name = "waggle-store-cloudflare"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "pollster",
  "serde",
@@ -2298,7 +2298,7 @@ dependencies = [
 
 [[package]]
 name = "waggle-store-fs-jsonl"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "pollster",
  "serde_json",
@@ -2309,7 +2309,7 @@ dependencies = [
 
 [[package]]
 name = "waggle-store-sqlite"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "criterion",
  "loom",
@@ -2324,7 +2324,7 @@ dependencies = [
 
 [[package]]
 name = "waggle-tmux"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "clap",
  "pollster",
@@ -2340,7 +2340,7 @@ dependencies = [
 
 [[package]]
 name = "waggle-tree"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -2671,7 +2671,7 @@ checksum = "1ffae5123b2d3fc086436f8834ae3ab053a283cfac8fe0a0b8eaae044768a4c4"
 
 [[package]]
 name = "xtask"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "ed25519-dalek",
  "serde_json",
