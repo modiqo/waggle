@@ -171,10 +171,21 @@ blobs (audio segments, resumable pulls — ranges, never decoding).
 
 ## 9 · The directory affordances (added; see doc 22 §4)
 
-A token may name a **folder** (`mint --tree`: one parent, every file a child).
-These three affordances were not designed at a whiteboard — each exists
-because the cross-modality benchmark caught an agent needing it and not
-having it, and the traces name the failure exactly.
+> **Superseded in part (design doc: `waggle-tree-scale`).** This section records
+> the *original* flat tree — one token per file, and a lens that *fanned out*
+> across a folder with a `--from` cursor (§9.2–9.3). That model capped a folder at
+> a few hundred files. It was later replaced by an **indexed directory tree** — one
+> content-addressed node per folder (trigram + Bloom), thousands of files in one
+> mint. In the current model: `read` a folder for its table of contents,
+> `read --file <name>` for one file, and `search` to span the whole tree in one
+> call (there is no lens fan-out and no `--from`). Coverage is per-file. The
+> *reasons* below still hold — each affordance answered a real failure — but the
+> mechanics are as described in the tree-scale design doc.
+
+A token may name a **folder** (`mint --tree`). These three affordances were not
+designed at a whiteboard — each exists because the cross-modality benchmark
+caught an agent needing it and not having it, and the traces name the failure
+exactly.
 
 ### 9.1 Describe (`read` on a tree)
 
@@ -184,10 +195,12 @@ makes with a shared directory is to ask what is in it. Both models we traced
 opened with an overview call and received 83 bytes of nulls, then had to
 guess a regex blind; one guessed wrong and got zero matches.
 
-`read` on a tree now returns **the tree**: each file, its own token, size,
-content type, and outline. The folder's table of contents. Listing is *not*
-consumption — no `read` stage is stamped for the children, because a table of
-contents tells you what exists and does not serve you the bytes.
+`read` on a tree returns **the tree's table of contents**: its files by name
+(size, content type, outline) and its subdirectories, each with a token to
+descend. (Original design: each file its own token; the indexed tree addresses
+a file by name via `read --file` instead.) Listing is *not* consumption — no
+`read` stage is stamped, because a table of contents tells you what exists and
+does not serve you the bytes.
 
 ### 9.2 Lens (`read --section/--symbol/--lines` on a tree)
 

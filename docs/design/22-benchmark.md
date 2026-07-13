@@ -364,6 +364,14 @@ recorded consumers guessing, and that is what sent us to the traces. An
 evaluation that looked only at answers would have scored the model down and
 shipped the defect.
 
+> **Note (design doc: `waggle-tree-scale`).** The last two rows describe the
+> original *lens fan-out* over a folder and its `complete`/`examined`/`from`
+> truncation. The indexed directory tree later replaced the fan-out: to read
+> across a tree you now use `search` (one call, Bloom-pruned and ranked) or
+> `read --file <name>`, and coverage is per-file — there is no fan-out cursor.
+> The failures the rows name were real; the mechanics are now as in the
+> tree-scale design doc.
+
 ### 10.1 A harness failure worth naming
 
 The harness was **dropping waggle's `next` hints** — the substrate's

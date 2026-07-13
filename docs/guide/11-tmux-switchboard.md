@@ -174,21 +174,20 @@ standing):
 > Put your outputs in `handoff/` — the diff, the test log, notes. When
 > done: `waggle mint --target handoff --snapshot --channel tmux/claude-code`
 
-A directory target mints as a **tree**: the folder token is the root,
-and every file inside becomes a snapshot-pinned CHILD. One token
-travels; behind it:
+A directory target mints as an **indexed tree**: the folder token is the
+root of a content-addressed tree — one node per folder, snapshot-pinned,
+thousands of files in one mint. One token travels; behind it:
 
 ```sh
-waggle resolve --token b2uQyZUC        # the root serves its INDEX:
-#   children: [ {qR8s → handoff/diff.patch},
-#               {wN2k → handoff/test.log},
-#               {pV5m → handoff/notes.md} ]
+waggle read --token b2uQyZUC           # the root's table of contents:
+#   files: [ handoff/diff.patch, handoff/test.log, handoff/notes.md ]
+#   (subdirectories, if any, each carry a token to descend)
 
-waggle search --token b2uQyZUC --pattern "FAILED"   # DEEP search: greps
-#   every file in the tree, matches grouped per file, with a
-#   read-this-next chain into the first hit
+waggle search --token b2uQyZUC --pattern "FAILED"   # ONE call greps the
+#   whole tree — Bloom-pruned, ranked — each match naming its file path
+#   and owning node token, with a read-this-next chain into the first hit
 
-waggle read --token wN2k --lines 40-80              # one file, one window
+waggle read --token b2uQyZUC --file test.log        # open one file by name
 ```
 
 **Step 3 — lineage.** `waggle-tmux mint` chains each outcome to the
