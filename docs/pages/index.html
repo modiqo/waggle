@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./assets/styles.css?v=2">
+    <link rel="stylesheet" href="./assets/styles.css?v=4">
   </head>
   <body>
     <header class="site-header">
@@ -54,31 +54,81 @@
           <li>it skipped &rarr; <strong>28%</strong></li>
           <li><strong>1,705</strong> measured runs</li>
         </ul>
-        <div class="hero-term">
-          <div class="term-bar"><span>a real folder &mdash; 11 runbooks, 20,825 bytes</span></div>
-<pre><code><span class="c">&#8212;&#8212; you: name the folder, and say what must be read</span>
-<span class="p">$</span> <span class="k">waggle</span> mint <span class="k">--target</span> ./runbooks <span class="k">--tree</span> <span class="k">--require</span> <span class="s">files:all</span>
-<span class="o">  token: </span><span class="tok">4x82KC93</span><span class="o">   files: 11</span>   <span class="c"># 30 bytes. hand THIS to the subagent.</span>
+        <ol class="tut">
 
-<span class="c">&#8212;&#8212; the subagent: what is in here? (it never receives the folder)</span>
-<span class="p">$</span> <span class="k">waggle</span> read <span class="k">--token</span> <span class="tok">4x82KC93</span>
-<span class="o">  00_escalation_policy.md  WgcYKCba  [Escalation Policy, Ceiling]</span>
-<span class="o">  runbook_01.md            2UbiByHs  [Retry Policy, Stage 2]</span>
-<span class="o">  runbook_02.md            DvnUKymY  [Retry Policy, Stage 2]      &#8230; 11 files</span>
+          <li>
+            <span class="tut-n">1</span>
+            <div class="tut-c">
+              <h3>Name it. The folder never moves.</h3>
+              <pre class="cmd"><span class="p">$</span> <span class="k">waggle</span> mint <span class="k">--target</span> ./runbooks <span class="k">--tree</span> <span class="k">--require</span> <span class="s">files:all</span></pre>
+              <div class="out">
+                <span class="ol">token</span> <span class="tok">4x82KC93</span>
+                <span class="ol">&middot; 11 files &middot; 20,825 bytes, still on disk</span>
+              </div>
+              <p class="say">Thirty bytes. <strong>That token is the entire handoff</strong> &mdash;
+              it is what the subagent receives, and it is not the folder.
+              <code>--require files:all</code> is you saying, on the record, what must be read.</p>
+            </div>
+          </li>
 
-<span class="c">&#8212;&#8212; one lens, across every file, in ONE call</span>
-<span class="p">$</span> <span class="k">waggle</span> read <span class="k">--token</span> <span class="tok">4x82KC93</span> <span class="k">--section</span> <span class="s">"Retry Policy"</span>
-<span class="o">  runbook_01.md  L3-8  &#8220;&#8230;a retry budget of 2 attempts&#8230;&#8221;</span>
-<span class="o">  runbook_02.md  L3-8  &#8220;&#8230;a retry budget of 4 attempts&#8230;&#8221;</span>
-<span class="o">  8 files served, 6,616 bytes.</span>   <span class="c"># not 20,825. only what it asked for.</span>
+          <li>
+            <span class="tut-n">2</span>
+            <div class="tut-c">
+              <h3>The subagent resolves it &mdash; and sees a map, not 20&nbsp;KB.</h3>
+              <pre class="cmd"><span class="p">$</span> <span class="k">waggle</span> read <span class="k">--token</span> <span class="tokd">4x82KC93</span></pre>
+              <div class="out">
+                <table class="proj">
+                  <tr><td>00_escalation_policy.md</td><td><span class="tok sm">WgcYKCba</span></td><td class="ol">Escalation Policy &middot; Ceiling</td></tr>
+                  <tr><td>runbook_01.md</td><td><span class="tok sm">2UbiByHs</span></td><td class="ol">Retry Policy &middot; Stage 2</td></tr>
+                  <tr><td>runbook_02.md</td><td><span class="tok sm">DvnUKymY</span></td><td class="ol">Retry Policy &middot; Stage 2</td></tr>
+                  <tr><td class="ol" colspan="3">&#8230; 11 files</td></tr>
+                </table>
+              </div>
+              <p class="say">A table of contents, with headings. <strong>Every file gets its own
+              token too</strong> &mdash; so the agent can address one file directly, without ever
+              pulling the other ten.</p>
+            </div>
+          </li>
 
-<span class="c">&#8212;&#8212; you, before you trust a word of its answer:</span>
-<span class="p">$</span> <span class="k">waggle</span> coverage <span class="k">--token</span> <span class="tok">4x82KC93</span>
-<span class="o">  read: </span><span class="m">8/11</span><span class="o">   met: </span><span class="m">false</span>
-<span class="o">  unread: [</span><span class="m">00_escalation_policy.md</span><span class="o">, runbook_09.md, runbook_10.md]</span></code></pre>
-          <p class="term-punch">It never opened the escalation policy &mdash; and it was about to
-          answer anyway. <strong>You know that before you read a word of its answer.</strong></p>
-        </div>
+          <li>
+            <span class="tut-n">3</span>
+            <div class="tut-c">
+              <h3>Now query <em>through</em> the token.</h3>
+              <pre class="cmd"><span class="p">$</span> <span class="k">waggle</span> read <span class="k">--token</span> <span class="tokd">4x82KC93</span> <span class="k">--section</span> <span class="s">"Retry Policy"</span></pre>
+              <div class="out">
+                <table class="proj">
+                  <tr><td>runbook_01.md</td><td class="ol">L3-8</td><td>&ldquo;&#8230;a retry budget of <b>2</b> attempts&#8230;&rdquo;</td></tr>
+                  <tr><td>runbook_02.md</td><td class="ol">L3-8</td><td>&ldquo;&#8230;a retry budget of <b>4</b> attempts&#8230;&rdquo;</td></tr>
+                </table>
+                <div class="tally"><span class="good">8 files served &middot; 6,616 bytes</span>
+                  <span class="ol">of 20,825 &mdash; only what it asked for</span></div>
+              </div>
+              <p class="say">One question, asked of <strong>every file at once</strong>. Not eleven
+              calls &mdash; one. The same works with <code>--symbol</code> for code,
+              <code>--lines</code> for a window, or <code>search</code> for a pattern across the
+              whole tree.</p>
+            </div>
+          </li>
+
+          <li class="last">
+            <span class="tut-n">4</span>
+            <div class="tut-c">
+              <h3>And then the line no other handoff can produce.</h3>
+              <pre class="cmd"><span class="p">$</span> <span class="k">waggle</span> coverage <span class="k">--token</span> <span class="tokd">4x82KC93</span></pre>
+              <div class="out alarm">
+                <div class="cov"><span class="ol">read</span> <b class="miss">8/11</b>
+                  <span class="ol">&nbsp;&nbsp;met</span> <b class="miss">false</b></div>
+                <div class="cov"><span class="ol">unread</span>
+                  <span class="miss">00_escalation_policy.md</span>
+                  <span class="ol">&nbsp;runbook_09.md&nbsp; runbook_10.md</span></div>
+              </div>
+              <p class="say"><strong>It never opened the escalation policy.</strong> And it was
+              about to answer anyway. You know that <em>before</em> you read a word of its answer,
+              and without knowing the right answer yourself.</p>
+            </div>
+          </li>
+
+        </ol>
       </section>
 
       <!-- ================= THE UNLOCK ================= -->
