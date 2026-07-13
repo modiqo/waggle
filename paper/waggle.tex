@@ -926,6 +926,29 @@ other direction: on a small local text file a \tok{grep} is still cheaper than a
 token, and the substrate's case was never that it beats \tok{grep} at \tok{grep}'s
 own game.
 
+\paragraph{But my agents share a filesystem.} The sharpest objection to the whole
+premise, and the \emph{reference} arm is precisely it: subagents on one machine,
+handed a path, free to \tok{ls}, \tok{grep}, \tok{open}, and \tok{pdftotext}. A path
+is not a copy---both agents point at the same inode---so a shared filesystem
+\emph{is} pass-by-reference for the bytes, and the 90\,\% the arm scores says so.
+The distinction the substrate rests on is not copy-versus-reference; it is that a
+path is a \emph{location}, and a location cannot answer three questions a handoff
+eventually must. \textbf{Was it read, and which parts?} \tok{cat} and \tok{grep}
+leave no trace an orchestrator can query, so the receipt result of this section
+(\S\ref{sec:tier2} and above)---99\,\% correct when the required regions were
+consumed, 20\,\% when not---is not merely hard to reproduce with a filesystem; it is
+\emph{impossible in principle}, because reading a file records nothing. \textbf{Which
+version?} A path names mutable bytes: correct the file mid-task and one agent read
+the old copy, another the new, with no lineage to tell them apart---the divergent-copy
+failure the introduction quantified, occurring \emph{with} a shared filesystem, not
+only with pasting. \textbf{Reachable from where?} \texttt{file:///…} means nothing to
+an agent in another container or at the network edge, while the same token resolves
+unchanged (\S\ref{sec:radii}). Where none of these bind---one machine, a short task,
+a disciplined agent doing ranged reads, and nothing to audit---a path is the right
+tool and the substrate is overhead, exactly as the fourth limitation of
+\S\ref{sec:limits} states. The case for name semantics is accountability,
+versioning, and reach; it was never that the filesystem duplicates bytes.
+
 \paragraph{Where the paste collapses.} It collapses exactly once, and the shape
 is worth stating plainly, because it is the one place the ceiling is not a
 ceiling. Asked how many files in a 180-file tree mention a deprecated call,

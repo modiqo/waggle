@@ -63,6 +63,35 @@ artifact never auto-expands; `resolve`, `read`, and `search` return only the
 projection or slice the consumer asked for, under byte budgets. Cheap like a
 path — but the reference answers back.
 
+## "But my subagents share a filesystem — that's already share-by-reference"
+
+It is, and that's the smartest thing you can do without waggle. A path isn't a
+copy; both agents point at the same bytes. Our benchmark's `reference` arm is
+*exactly* this — a local path plus `ls`, `grep`, `open`, `pdftotext` — and with a
+fair toolset it scores **90%**, competitive with waggle's 96%. If your agents are
+local, the task is short, and you never need to audit anything, **use the path** —
+waggle is overhead.
+
+The distinction isn't copy-vs-reference. It's that a path is a *location*, and a
+location can't answer three questions a handoff eventually has to:
+
+- **Was it read — and which parts?** `cat` and `grep` leave no trace you can query.
+  The entire "did your subagent actually read it?" check is *impossible* with a bare
+  path, not just inconvenient — reading a file records nothing. Our sharpest result
+  (regions read → 99% correct; skipped → 20%) exists only because reads go through
+  the token.
+- **Which version?** A path names *mutable* bytes. Correct the file mid-task and
+  agent A read the old copy, B the new, with nothing to tell them apart — the
+  divergent-copy failure, happening *with* a shared filesystem. Waggle snapshots at
+  mint (content-addressed, immutable) and gives `supersede`/`revoke` with lineage.
+- **Reachable from where?** `file:///…` means nothing to an agent in another
+  container or at the edge. The same token resolves unchanged across all three radii.
+
+The case for waggle is **accountability, versioning, and reach** — never that the
+filesystem duplicates bytes. The moment you need to *prove* what an agent read,
+survive the file changing, or hand off to something not on this box, a path runs out
+and a name doesn't.
+
 ## How it works
 
 A **token** is a ~30-byte attributed name for an artifact, minted in one

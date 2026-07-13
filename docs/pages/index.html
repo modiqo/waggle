@@ -172,6 +172,23 @@
               <p>Send a small, immutable, attributed claim. Resolution is computed per consumer, at the data, on demand. The bee's discipline, made durable.</p>
             </div>
           </div>
+
+          <div class="callout" id="filesystem">
+            <p><strong>&ldquo;But my subagents share a filesystem &mdash; that&rsquo;s already
+            share-by-reference.&rdquo;</strong> It is, and it&rsquo;s the smart move without
+            waggle: a path isn&rsquo;t a copy. In our tests a local path with proper tools
+            scores <strong>90%</strong> &mdash; close to waggle&rsquo;s 96%. If your agents are
+            local, the task is short, and you never need to audit anything, use the path.</p>
+            <p style="margin-top:12px">But a path is a <em>location</em>, and a location
+            can&rsquo;t tell you three things a filesystem never records: <strong>did it read
+            it, and which parts</strong> (<code>cat</code> and <code>grep</code> leave no
+            trace &mdash; the whole &ldquo;did it read it?&rdquo; check is impossible with a
+            bare path); <strong>which version</strong> (the file can change under you, and no
+            two agents can tell whether they read the same one); and <strong>reachable from
+            where</strong> (a path breaks the moment one agent isn&rsquo;t on this box). The
+            value turns on when you need to <em>prove</em> what happened, survive the file
+            changing, or reach an agent that isn&rsquo;t local.</p>
+          </div>
         </div>
       </section>
 
