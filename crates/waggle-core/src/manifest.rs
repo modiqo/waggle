@@ -232,6 +232,35 @@ pub struct Extraction {
     pub deterministic: bool,
 }
 
+/// A directory node of a tree mint (design doc: tree-scale). When a token names
+/// a directory minted `--tree`, it carries one of these instead of a flat list of
+/// per-file child tokens: the directory's **index** (files pinned by hash, subdirs
+/// addressed by their own subtree token), the **trigram index** over its files,
+/// and a **Bloom summary** of every trigram beneath it, inlined so a search can
+/// prune the subtree from the manifest alone. Files pin their bytes eagerly (so a
+/// deleted file still reads — C-1); a per-file token is minted only lazily, when a
+/// consumer needs a standalone reference to one file.
+///
+/// The `bloom` is the lowercase-hex wire form of a fixed-size filter (parsed into
+/// the typed structure by the consumer, `waggle-tree::Bloom`); keeping it a string
+/// here preserves this crate's dependency-free leaf position. Immutable core —
+/// signed; absent for non-tree mints, so their manifests keep their exact bytes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TreeNode {
+    /// Content-addressed directory index for THIS node (its direct entries).
+    pub index: MediaRef,
+    /// Content-addressed trigram index over this node's own files; absent when the
+    /// node has no indexable text of its own (e.g. only subdirectories).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigram: Option<MediaRef>,
+    /// Hex Bloom summary of every trigram in this subtree — inlined for prune.
+    pub bloom: String,
+    /// Files anywhere beneath this node (recursive).
+    pub files: u64,
+    /// Bytes anywhere beneath this node (recursive).
+    pub bytes: u64,
+}
+
 /// One projection of the artifact for a class of consumers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Variant {
@@ -322,6 +351,12 @@ pub struct AttributionManifest {
     /// their exact canonical bytes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extraction: Option<Extraction>,
+    /// A directory node of a tree mint (design doc: tree-scale): the node's index,
+    /// trigram index, and inlined Bloom summary. Present when this token is a
+    /// directory minted `--tree`; absent otherwise, so non-tree manifests keep
+    /// their exact bytes. Immutable core — signed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tree: Option<TreeNode>,
     /// Author signature over the immutable core (CP-11); set at mint by
     /// hosts that hold an identity. NOT itself part of the signed bytes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
