@@ -50,6 +50,10 @@ pub struct Hit {
     /// The token of the subtree node that directly contains the file — the
     /// handle a consumer resolves to read more.
     pub token: String,
+    /// The file's ordinal in its node's `DirIndex.files()` order — a stable
+    /// position into the signed directory index. Carried so the caller can
+    /// stamp a per-file read (I-1-safe like a region touch) on the owning node.
+    pub entry: u32,
     /// 1-based line number of the first match in the file.
     pub line: u32,
     /// The matching line's text (already budget-trimmed by the caller).
@@ -91,6 +95,7 @@ mod tests {
         Hit {
             path: path.into(),
             token: "t".into(),
+            entry: 0,
             line: 1,
             text: "x".into(),
             matches,

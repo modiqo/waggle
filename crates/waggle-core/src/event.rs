@@ -146,6 +146,14 @@ pub struct Event {
     /// contract-free tokens and on pre-contract logs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub regions: Option<u8>,
+    /// For a `read` of one file inside an indexed tree node: the ordinal of
+    /// that file in the node's signed [`crate::TreeNode`] directory index
+    /// (`DirIndex.files()` order). Manifest-referencing exactly like
+    /// [`Self::regions`] — a *position* into a signed, immutable declaration,
+    /// never bytes — so it stays I-1-compatible while giving per-file coverage.
+    /// Absent on non-tree traffic and on pre-tree logs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entry: Option<u32>,
 }
 
 #[cfg(test)]
@@ -212,6 +220,7 @@ mod tests {
             seq: Seq(4),
             variant: Some(2),
             regions: Some(0b101),
+            entry: Some(7),
         };
         let json = serde_json::to_string(&e).unwrap();
         let back: Event = serde_json::from_str(&json).unwrap();

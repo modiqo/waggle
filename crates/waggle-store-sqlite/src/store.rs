@@ -170,8 +170,9 @@ impl AppendStore for SqliteStore {
                 actor,
                 variant,
                 regions,
+                entry,
                 at,
-            } => event_tx(&tx, token, &stage, actor, variant, regions, at)?,
+            } => event_tx(&tx, token, &stage, actor, variant, regions, entry, at)?,
         };
         tx.commit().map_err(sql)?;
         // Cache maintenance strictly after commit: never serve uncommitted.
@@ -324,6 +325,9 @@ fn mutate_tx(
     ))
 }
 
+// The args mirror the `AppendIntent::Event` variant's fields 1:1; bundling them
+// into a throwaway struct would only relocate the same fields.
+#[allow(clippy::too_many_arguments)]
 fn event_tx(
     tx: &Connection,
     token: Token,
@@ -331,6 +335,7 @@ fn event_tx(
     actor: waggle_core::ActorClass,
     variant: Option<u8>,
     regions: Option<u8>,
+    entry: Option<u32>,
     at: waggle_core::Timestamp,
 ) -> Result<(Appended, Touched), StoreError> {
     if load_manifest(tx, token)?.is_none() {
@@ -353,6 +358,7 @@ fn event_tx(
             seq,
             variant,
             regions,
+            entry,
         }),
     )?;
     Ok((Appended::Event { seq }, Vec::new()))

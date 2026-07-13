@@ -34,6 +34,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 actor: ActorClass::from_context(&ResolverContext::anonymous_agent()),
                 variant: None,
                 regions: None,
+                entry: None,
                 at: now,
             })
             .await;

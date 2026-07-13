@@ -146,6 +146,7 @@ mod tests {
             seq: Seq(seq),
             variant: if seq % 2 == 0 { Some(1) } else { None },
             regions: None,
+            entry: None,
         }
     }
 

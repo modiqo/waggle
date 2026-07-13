@@ -64,6 +64,7 @@ fn crash_child_workload() {
             actor,
             variant: None,
             regions: None,
+            entry: None,
             at: waggle_core::Timestamp::from_unix_ms(2),
         }))
         .unwrap();
@@ -149,6 +150,7 @@ fn killed_writers_never_lose_an_acked_write() {
             ),
             variant: None,
             regions: None,
+            entry: None,
             at: waggle_core::Timestamp::from_unix_ms(3),
         }))
         .unwrap();

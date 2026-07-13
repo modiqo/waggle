@@ -96,7 +96,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             Ok(i) => i,
             Err(e) => return e,
         };
-        let Some(entry) = index.files().find(|f| f.name == name) else {
+        let Some((ordinal, entry)) = index.files().enumerate().find(|(_, f)| f.name == name) else {
             let names: Vec<&str> = index.files().map(|f| f.name.as_str()).take(20).collect();
             return Envelope::err(
                 format!("tree: no file `{name}` in this directory — files: {names:?}"),
@@ -111,9 +111,16 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             Ok(b) => b,
             Err(e) => return Envelope::err(e.to_string(), vec![]),
         };
-        // A file read is real consumption — stamp it against this node so a
-        // files:all coverage can roll it up.
-        self.record_read(token, now, None).await;
+        // A file read is real consumption — stamp it against this node WITH the
+        // file's ordinal, so per-file coverage rolls it up (a position into the
+        // signed directory index, not a payload — I-1-safe).
+        self.record_read_entry(
+            token,
+            now,
+            None,
+            Some(u32::try_from(ordinal).unwrap_or(u32::MAX)),
+        )
+        .await;
         let text = String::from_utf8_lossy(&bytes);
         Envelope::ok(
             json!({
@@ -151,10 +158,12 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         let mut visited = 0usize;
         Box::pin(self.search_node(root, "", pattern, &re, &mut hits, &mut visited)).await;
         let ranked = tsearch::rank(hits, limit);
-        // Each confirmed match served that file's bytes — record it once.
+        // Each confirmed match served that file's bytes — record it once, with
+        // the file's ordinal in its node's directory index so per-file coverage
+        // rolls it up.
         for h in &ranked {
             if let Ok(t) = Token::parse(&h.token) {
-                self.record_read(t, now, None).await;
+                self.record_read_entry(t, now, None, Some(h.entry)).await;
             }
         }
         let matches: Vec<Value> = ranked
@@ -242,6 +251,9 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             hits.push(Hit {
                 path: format!("{prefix}{}", entry.name),
                 token: token.as_str().to_owned(),
+                // `i` is the file's position in this node's `DirIndex.files()`
+                // order — the same ordinal per-file coverage counts against.
+                entry: u32::try_from(i).unwrap_or(u32::MAX),
                 line: line_no,
                 text: line_text,
                 matches: count,

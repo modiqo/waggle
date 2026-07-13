@@ -413,8 +413,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         let variant_index = resolution.variant.as_ref().map(|s| s.index);
         let body = resolution.variant.as_ref().map(|s| &s.variant.body);
 
-        // Record the resolve — the host's separate act (I-4), done here at
-        // the transport layer, never inside core resolve().
+        // Record the resolve — the host's separate act (I-4), at the transport layer.
         let recorded = self
             .store
             .append(AppendIntent::Event {
@@ -423,6 +422,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 actor: ActorClass::from_context(&ctx),
                 variant: variant_index,
                 regions: None,
+                entry: None,
                 at: now,
             })
             .await;

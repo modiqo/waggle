@@ -4,7 +4,7 @@
 //! pass** over the log; adding an analytic is a new `Fold` impl, never a
 //! new scan.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::log::LogRecord;
 use crate::manifest::AttributionManifest;
@@ -141,6 +141,28 @@ impl Fold for RegionTouchFold {
     }
 }
 
+/// Accumulates the set of tree-node file ordinals a token's reads have
+/// touched: the UNION of every event's [`crate::Event::entry`]. Union is
+/// commutative and idempotent — like the OR in [`RegionTouchFold`] — so
+/// R-1/R-3 (order- and duplicate-tolerance) and C-8 hold for free. Tree
+/// coverage evaluates `|touched ∩ [0, node.files)|` against each node's
+/// signed directory index for a true per-file receipt.
+#[derive(Debug, Default)]
+pub struct EntryTouchFold {
+    /// Token → the set of `DirIndex` file ordinals its reads have reached.
+    pub per_token: BTreeMap<Token, BTreeSet<u32>>,
+}
+
+impl Fold for EntryTouchFold {
+    fn apply(&mut self, record: &LogRecord) {
+        if let LogRecord::Event(e) = record {
+            if let Some(ordinal) = e.entry {
+                self.per_token.entry(e.token).or_default().insert(ordinal);
+            }
+        }
+    }
+}
+
 /// The delegation forest: parent → children, from `Minted` records
 /// (doc `06 §4` — coordination trace, attribution roll-up, cascade path).
 #[derive(Debug, Default)]
@@ -200,6 +222,7 @@ mod tests {
             seq: Seq(seq),
             variant: None,
             regions: None,
+            entry: None,
         })
     }
 
@@ -308,6 +331,7 @@ mod tests {
                 seq: Seq(seq),
                 variant: None,
                 regions: Some(bits),
+                entry: None,
             })
         };
         let records = vec![
@@ -322,6 +346,35 @@ mod tests {
         let b = replay(shuffled, RegionTouchFold::default());
         assert_eq!(a.per_token[&m.token], 0b101);
         assert_eq!(a.per_token, b.per_token, "OR is commutative — R-1");
+    }
+
+    #[test]
+    fn entry_touches_union_together_shuffle_and_duplicate_immune() {
+        let m = minted(9, None);
+        let touch = |ordinal: u32, seq: u32| {
+            LogRecord::Event(Event {
+                token: m.token,
+                stage: Stage::read(),
+                actor: ActorClass::from_context(&ResolverContext::anonymous_agent()),
+                at: Timestamp::from_unix_ms(2),
+                seq: Seq(seq),
+                variant: None,
+                regions: None,
+                entry: Some(ordinal),
+            })
+        };
+        let records = vec![
+            touch(2, 1),
+            event(m.token, Stage::read(), 2), // no entry: whole-node access
+            touch(0, 3),
+            touch(2, 1), // duplicate record — the set absorbs it (R-3)
+        ];
+        let mut shuffled = records.clone();
+        shuffled.reverse();
+        let a = replay(records, EntryTouchFold::default());
+        let b = replay(shuffled, EntryTouchFold::default());
+        assert_eq!(a.per_token[&m.token], BTreeSet::from([0, 2]));
+        assert_eq!(a.per_token, b.per_token, "union is commutative — R-1");
     }
 
     #[test]

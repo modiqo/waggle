@@ -160,6 +160,7 @@ impl Inner {
             actor,
             variant,
             regions,
+            entry,
             at,
         } = intent
         else {
@@ -186,6 +187,7 @@ impl Inner {
             seq,
             variant: *variant,
             regions: *regions,
+            entry: *entry,
         }));
         Ok(Appended::Event { seq })
     }

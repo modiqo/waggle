@@ -111,6 +111,7 @@ fn permille_for(contract: &Contract, bits: u8, token: Token) -> u16 {
                 seq: Seq(1),
                 variant: None,
                 regions: Some(1u8 << i),
+                entry: None,
             })
         })
         .collect();

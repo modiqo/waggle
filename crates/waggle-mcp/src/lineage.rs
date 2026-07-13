@@ -100,11 +100,10 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             Err(e) => return store_err(&e),
         };
         // An indexed tree (design doc: tree-scale) is a hierarchy of directory
-        // NODES, not per-file tokens, so its coverage is node-granular: how many
-        // directory nodes were touched, out of the total, plus the true file count
-        // from the root's index. (Per-file `files:all` coverage needs a served-set
-        // the payload-free log cannot express in an 8-bit region mask — a
-        // documented follow-up.)
+        // NODES, not per-file tokens. Coverage is nonetheless PER-FILE: each read
+        // stamps the file's ordinal in its node's signed directory index
+        // (`Event.entry` — a position, not a payload, so I-1-safe), and the rollup
+        // unions those ordinals per node and sums across the lineage.
         if view.as_ref().is_some_and(|v| v.manifest.tree.is_some()) {
             return self.tree_node_coverage(root, view.as_ref().unwrap()).await;
         }
@@ -191,10 +190,12 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         })
     }
 
-    /// Node-granular coverage for an indexed tree: walk the directory-node
-    /// lineage and report how many nodes have been read, the total node count, and
-    /// the true file/byte totals from the root's index. A node is "read" once any
-    /// of its files was served (search hit or `read --file`).
+    /// Per-file coverage for an indexed tree: walk the directory-node lineage and,
+    /// for each node, union the file ordinals its reads have touched
+    /// (`EntryTouchFold` over the node's records) against its signed directory
+    /// index. Sum across the lineage for a true `files read / total` receipt, with
+    /// per-node unread counts and the first missing file names. Pure-container
+    /// nodes (subdirs only) hold nothing of their own to read and are skipped.
     async fn tree_node_coverage(
         &self,
         root: waggle_core::Token,
@@ -208,7 +209,9 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         let mut queue: std::collections::VecDeque<_> = [root]
             .into_iter()
             .collect::<std::collections::VecDeque<_>>();
-        let (mut nodes, mut read, mut visited) = (0u64, 0u64, 0);
+        // nodes/read_nodes count file-bearing NODES; files/read count FILES.
+        let (mut nodes, mut read_nodes, mut visited) = (0u64, 0u64, 0);
+        let (mut files, mut read) = (0u64, 0u64);
         let mut unread: Vec<Value> = Vec::new();
         while let Some(node) = queue.pop_front() {
             visited += 1;
@@ -221,57 +224,88 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             let Ok(Some(v)) = self.store.manifest(node).await else {
                 continue;
             };
-            let Some(tn) = v.manifest.tree.as_ref() else {
-                continue;
-            };
-            // Only file-bearing nodes count: a pure container (subdirs only) has
-            // nothing of its own to read, so it can neither be read nor block
-            // completeness — it is covered when its children are.
-            if !self.node_has_local_files(tn).await {
+            if v.manifest.tree.is_none() {
                 continue;
             }
+            let Some(index) = self.load_dir_index(&v.manifest).await else {
+                continue;
+            };
+            let names: Vec<&str> = index.files().map(|f| f.name.as_str()).collect();
+            if names.is_empty() {
+                continue; // pure container — covered when its children are
+            }
             nodes += 1;
-            let (was_read, _) = self.child_consumption(node).await;
-            if was_read {
-                read += 1;
-            } else if unread.len() < 20 {
+            files += names.len() as u64;
+            let touched = self.entries_touched(node).await;
+            let here = touched
+                .iter()
+                .filter(|&&e| (e as usize) < names.len())
+                .count() as u64;
+            read += here;
+            if here > 0 {
+                read_nodes += 1;
+            }
+            if here < names.len() as u64 && unread.len() < 20 {
+                let missing: Vec<&str> = names
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, _)| !touched.contains(&u32::try_from(*i).unwrap_or(u32::MAX)))
+                    .map(|(_, n)| *n)
+                    .take(8)
+                    .collect();
                 unread.push(json!({
                     "token": node.as_str(),
                     "target": v.manifest.target.as_str(),
+                    "unread_files": names.len() as u64 - here,
+                    "first_missing": missing,
                 }));
             }
         }
+        let complete = files > 0 && read == files;
         Envelope::ok(
             json!({
                 "token": root.as_str(),
                 "kind": "tree",
-                "nodes": format!("{read}/{nodes}"),
+                "files": format!("{read}/{files}"),
+                "nodes": format!("{read_nodes}/{nodes}"),
                 "total_files": total_files,
                 "total_bytes": total_bytes,
-                "complete": unread.is_empty(),
-                "unread_nodes": unread,
+                "complete": complete,
+                "unread": unread,
             }),
             vec![NextCall {
                 tool: "search".into(),
                 args: json!({ "token": root.as_str(), "pattern": "<regex>" }),
-                why: "reading through search stamps the nodes it serves".into(),
+                why: "reading files (search hits or read --file) stamps per-file coverage".into(),
             }],
         )
         .with_stats(Stats {
-            records: Some(nodes),
+            records: Some(files),
             seq: None,
         })
     }
 
-    /// Does this node have files of its own (not just subdirectories)? Reads the
-    /// node's directory index; a fetch failure conservatively counts as "yes" so a
-    /// node is never silently dropped from coverage.
-    async fn node_has_local_files(&self, node: &waggle_core::TreeNode) -> bool {
-        match self.blobs.get(&node.index).await {
-            Ok(bytes) => serde_json::from_slice::<waggle_tree::DirIndex>(&bytes)
-                .map_or(true, |idx| idx.files().next().is_some()),
-            Err(_) => true,
-        }
+    /// Fetch and decode a tree node's signed directory index, if it is a tree
+    /// node whose index blob is present.
+    async fn load_dir_index(
+        &self,
+        manifest: &waggle_core::AttributionManifest,
+    ) -> Option<waggle_tree::DirIndex> {
+        let node = manifest.tree.as_ref()?;
+        let bytes = self.blobs.get(&node.index).await.ok()?;
+        serde_json::from_slice::<waggle_tree::DirIndex>(&bytes).ok()
+    }
+
+    /// The set of file ordinals a node's reads have touched — the union fold of
+    /// `Event.entry` over the node's own records (I-1-safe positions, not bytes).
+    async fn entries_touched(&self, node: waggle_core::Token) -> std::collections::BTreeSet<u32> {
+        let Ok(records) = self.store.scan_token(node, waggle_core::Seq(0)).await else {
+            return std::collections::BTreeSet::new();
+        };
+        waggle_core::replay(records, waggle_core::EntryTouchFold::default())
+            .per_token
+            .remove(&node)
+            .unwrap_or_default()
     }
 
     /// Single-token contract coverage (19 §4.2): fold the region-touch

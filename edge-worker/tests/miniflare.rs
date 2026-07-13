@@ -621,6 +621,7 @@ fn seed_local_store() -> (Vec<waggle_core::LogRecord>, String) {
                     ),
                     variant: None,
                     regions: None,
+                    entry: None,
                     at: waggle_core::Timestamp::from_unix_ms(2),
                 })
                 .await
