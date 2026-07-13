@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 610" width="1120" height="610" font-family="'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace">
+  <style>
+    text { font-family: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; }
+    .ink{fill:#141414} .muted{fill:#6a6b70} .faint{fill:#9b9ca1}
+    .red{fill:#b23b30} .honey{fill:#b8791a} .green{fill:#1f7a3f}
+    .b{font-weight:600}
+  </style>
+
+  <rect x="0" y="0" width="1120" height="610" fill="#ffffff"/>
+
+  <text x="560" y="56" text-anchor="middle" font-size="30" class="ink b" letter-spacing="-0.5">You can tell if the answer is trustworthy</text>
+  <text x="560" y="90" text-anchor="middle" font-size="16" class="muted">without reading the answer, and without knowing what&#8217;s correct</text>
+
+  <!-- the question -->
+  <rect x="230" y="126" width="660" height="58" rx="5" fill="#f6f6f4"/>
+  <text x="560" y="163" text-anchor="middle" font-size="16" class="ink">Did the agent actually read the part that mattered?</text>
+
+  <!-- arrows -->
+  <path d="M 460 190 L 300 232" stroke="#d3d3ce" stroke-width="1.5" fill="none"/>
+  <path d="M 660 190 L 820 232" stroke="#d3d3ce" stroke-width="1.5" fill="none"/>
+  <text x="330" y="216" text-anchor="middle" font-size="13" class="green b">YES</text>
+  <text x="790" y="216" text-anchor="middle" font-size="13" class="red b">NO</text>
+
+  <!-- LEFT: read it -->
+  <rect x="60" y="240" width="440" height="248" rx="5" fill="#eef6f0" stroke="#cfe4d6" stroke-width="1.5"/>
+  <text x="280" y="286" text-anchor="middle" font-size="15" class="muted">It read what it was asked to read</text>
+  <text x="280" y="378" text-anchor="middle" font-size="78" class="green b">98%</text>
+  <text x="280" y="416" text-anchor="middle" font-size="17" class="ink b">of its answers were right</text>
+  <text x="280" y="456" text-anchor="middle" font-size="14" class="muted">822 runs</text>
+
+  <!-- RIGHT: skipped it -->
+  <rect x="620" y="240" width="440" height="248" rx="5" fill="#fbefed" stroke="#f0d9d6" stroke-width="1.5"/>
+  <text x="840" y="286" text-anchor="middle" font-size="15" class="muted">It skipped it, and answered anyway</text>
+  <text x="840" y="378" text-anchor="middle" font-size="78" class="red b">28%</text>
+  <text x="840" y="416" text-anchor="middle" font-size="17" class="ink b">of its answers were right</text>
+  <text x="840" y="456" text-anchor="middle" font-size="14" class="muted">29 runs</text>
+
+  <!-- verdict -->
+  <line x1="60" y1="524" x2="1060" y2="524" stroke="#141414" stroke-width="1.5"/>
+  <text x="60" y="562" font-size="21" class="ink b">A 70-point drop &#8212; visible before anyone checks the work.</text>
+  <text x="60" y="590" font-size="15" class="muted">Every read leaves a receipt. So you know which answers to trust, and which to send back.</text>
+  <text x="1060" y="590" text-anchor="end" font-size="13" class="faint">waggle.sh</text>
+</svg>

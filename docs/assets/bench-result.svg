@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 610" width="1120" height="610" font-family="'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace">
+  <style>
+    text { font-family: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; }
+    .ink{fill:#141414} .muted{fill:#6a6b70} .faint{fill:#9b9ca1}
+    .red{fill:#b23b30} .honey{fill:#b8791a} .green{fill:#1f7a3f}
+    .b{font-weight:600}
+  </style>
+
+  <rect x="0" y="0" width="1120" height="610" fill="#ffffff"/>
+
+  <text x="560" y="56" text-anchor="middle" font-size="30" class="ink b" letter-spacing="-0.5">We tested it 1,705 times</text>
+  <text x="560" y="90" text-anchor="middle" font-size="16" class="muted">9 different AI models. 12 kinds of document. Same question every time.</text>
+
+  <!-- column headers -->
+  <text x="60"  y="152" font-size="13" class="faint b" letter-spacing="1.4">HOW THE WORK WAS PASSED ON</text>
+  <text x="620" y="152" font-size="13" class="faint b" letter-spacing="1.4">GOT IT RIGHT</text>
+  <text x="830" y="152" font-size="13" class="faint b" letter-spacing="1.4">HAD TO READ</text>
+  <line x1="60" y1="166" x2="1060" y2="166" stroke="#141414" stroke-width="1.5"/>
+
+  <!-- row 1: paste -->
+  <text x="60" y="212" font-size="17" class="ink b">Paste the whole document</text>
+  <text x="60" y="236" font-size="14" class="muted">the way agents do it today</text>
+  <rect x="620" y="192" width="152" height="26" rx="3" fill="#f0f0ee"/>
+  <rect x="620" y="192" width="146" height="26" rx="3" fill="#e8e3dd"/>
+  <text x="782" y="211" font-size="18" class="ink b">96%</text>
+  <text x="830" y="211" font-size="18" class="red b">83,284</text>
+  <text x="830" y="236" font-size="13" class="faint">characters, every turn</text>
+  <line x1="60" y1="262" x2="1060" y2="262" stroke="#e6e6e2" stroke-width="1"/>
+
+  <!-- row 2: path -->
+  <text x="60" y="308" font-size="17" class="ink b">Send a file path</text>
+  <text x="60" y="332" font-size="14" class="muted">&#8220;it&#8217;s in /reports/q3.pdf&#8221;</text>
+  <rect x="620" y="288" width="152" height="26" rx="3" fill="#f0f0ee"/>
+  <rect x="620" y="288" width="103" height="26" rx="3" fill="#f0d9d6"/>
+  <text x="782" y="307" font-size="18" class="red b">68%</text>
+  <text x="830" y="307" font-size="18" class="muted b">5,465</text>
+  <text x="830" y="332" font-size="13" class="faint">but it can&#8217;t open a PDF at all</text>
+  <line x1="60" y1="358" x2="1060" y2="358" stroke="#e6e6e2" stroke-width="1"/>
+
+  <!-- row 3: waggle -->
+  <rect x="44" y="374" width="1032" height="86" rx="5" fill="#faf3e6"/>
+  <text x="60" y="404" font-size="17" class="ink b">Send a waggle link</text>
+  <text x="60" y="428" font-size="14" class="muted">30 bytes &#8212; the agent opens only the part it needs</text>
+  <rect x="620" y="384" width="152" height="26" rx="3" fill="#ffffff"/>
+  <rect x="620" y="384" width="145" height="26" rx="3" fill="#b8791a"/>
+  <text x="782" y="403" font-size="18" class="ink b">95%</text>
+  <text x="830" y="403" font-size="18" class="green b">2,627</text>
+  <text x="830" y="428" font-size="13" class="green">25&#215; less to read</text>
+
+  <!-- verdict -->
+  <line x1="60" y1="496" x2="1060" y2="496" stroke="#141414" stroke-width="1.5"/>
+  <text x="60" y="536" font-size="21" class="ink b">Same score as pasting. A twenty-fifth of the reading.</text>
+  <text x="60" y="566" font-size="15" class="muted">Pasting was never wrong. It was just expensive &#8212; and it left no record of what was read.</text>
+  <text x="1060" y="566" text-anchor="end" font-size="13" class="faint">waggle.sh</text>
+</svg>

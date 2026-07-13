@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 610" width="1120" height="610" font-family="'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace">
+  <style>
+    text { font-family: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; }
+    .ink{fill:#141414} .muted{fill:#6a6b70} .faint{fill:#9b9ca1}
+    .red{fill:#b23b30} .honey{fill:#b8791a} .green{fill:#1f7a3f}
+    .b{font-weight:600}
+  </style>
+
+  <rect x="0" y="0" width="1120" height="610" fill="#ffffff"/>
+
+  <text x="560" y="56" text-anchor="middle" font-size="30" class="ink b" letter-spacing="-0.5">180 files. One question.</text>
+  <text x="560" y="90" text-anchor="middle" font-size="16" class="muted">&#8220;How many of these files still call the old function?&#8221;  (the answer is 7)</text>
+
+  <!-- ============ LEFT : paste ============ -->
+  <rect x="40" y="130" width="500" height="368" rx="5" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <text x="64" y="166" font-size="15" class="red b">Paste all 180 files</text>
+  <line x1="40" y1="184" x2="540" y2="184" stroke="#f0d9d6" stroke-width="1.5"/>
+
+  <!-- a wall of files -->
+  <g fill="#e8e3dd">
+    <rect x="64" y="206" width="26" height="34" rx="2"/><rect x="98" y="206" width="26" height="34" rx="2"/>
+    <rect x="132" y="206" width="26" height="34" rx="2"/><rect x="166" y="206" width="26" height="34" rx="2"/>
+    <rect x="200" y="206" width="26" height="34" rx="2"/><rect x="234" y="206" width="26" height="34" rx="2"/>
+    <rect x="268" y="206" width="26" height="34" rx="2"/><rect x="302" y="206" width="26" height="34" rx="2"/>
+    <rect x="336" y="206" width="26" height="34" rx="2"/><rect x="370" y="206" width="26" height="34" rx="2"/>
+    <rect x="404" y="206" width="26" height="34" rx="2"/><rect x="438" y="206" width="26" height="34" rx="2"/>
+    <rect x="472" y="206" width="26" height="34" rx="2"/>
+    <rect x="64" y="248" width="26" height="34" rx="2"/><rect x="98" y="248" width="26" height="34" rx="2"/>
+    <rect x="132" y="248" width="26" height="34" rx="2"/><rect x="166" y="248" width="26" height="34" rx="2"/>
+    <rect x="200" y="248" width="26" height="34" rx="2"/><rect x="234" y="248" width="26" height="34" rx="2"/>
+    <rect x="268" y="248" width="26" height="34" rx="2"/><rect x="302" y="248" width="26" height="34" rx="2"/>
+    <rect x="336" y="248" width="26" height="34" rx="2"/><rect x="370" y="248" width="26" height="34" rx="2"/>
+    <rect x="404" y="248" width="26" height="34" rx="2"/><rect x="438" y="248" width="26" height="34" rx="2"/>
+    <rect x="472" y="248" width="26" height="34" rx="2"/>
+    <rect x="64" y="290" width="26" height="34" rx="2"/><rect x="98" y="290" width="26" height="34" rx="2"/>
+    <rect x="132" y="290" width="26" height="34" rx="2"/><rect x="166" y="290" width="26" height="34" rx="2"/>
+    <rect x="200" y="290" width="26" height="34" rx="2"/><rect x="234" y="290" width="26" height="34" rx="2"/>
+    <rect x="268" y="290" width="26" height="34" rx="2"/><rect x="302" y="290" width="26" height="34" rx="2"/>
+    <rect x="336" y="290" width="26" height="34" rx="2"/><rect x="370" y="290" width="26" height="34" rx="2"/>
+    <rect x="404" y="290" width="26" height="34" rx="2"/><rect x="438" y="290" width="26" height="34" rx="2"/>
+    <rect x="472" y="290" width="26" height="34" rx="2"/>
+  </g>
+  <text x="64" y="352" font-size="13.5" class="faint">310,000 characters &#8212; every word, in memory</text>
+
+  <text x="64" y="404" font-size="52" class="red b">53%</text>
+  <text x="64" y="434" font-size="15" class="muted b">right</text>
+  <text x="64" y="470" font-size="14" class="muted">It held every word&#8230; and still</text>
+  <text x="64" y="490" font-size="14" class="muted">couldn&#8217;t count them.</text>
+
+  <!-- ============ RIGHT : waggle ============ -->
+  <rect x="580" y="130" width="500" height="368" rx="5" fill="#faf3e6" stroke="#e7d7b4" stroke-width="1.5"/>
+  <text x="604" y="166" font-size="15" class="honey b">Send a waggle link, then search it</text>
+  <line x1="580" y1="184" x2="1080" y2="184" stroke="#e7d7b4" stroke-width="1.5"/>
+
+  <g fill="#efe6d2">
+    <rect x="604" y="206" width="26" height="34" rx="2"/><rect x="638" y="206" width="26" height="34" rx="2"/>
+    <rect x="672" y="206" width="26" height="34" rx="2"/><rect x="706" y="206" width="26" height="34" rx="2"/>
+    <rect x="740" y="206" width="26" height="34" rx="2"/><rect x="774" y="206" width="26" height="34" rx="2"/>
+    <rect x="808" y="206" width="26" height="34" rx="2"/><rect x="842" y="206" width="26" height="34" rx="2"/>
+    <rect x="876" y="206" width="26" height="34" rx="2"/><rect x="910" y="206" width="26" height="34" rx="2"/>
+    <rect x="944" y="206" width="26" height="34" rx="2"/><rect x="978" y="206" width="26" height="34" rx="2"/>
+    <rect x="1012" y="206" width="26" height="34" rx="2"/>
+  </g>
+  <!-- the 7 that matched -->
+  <g fill="#b8791a">
+    <rect x="604" y="248" width="26" height="34" rx="2"/><rect x="638" y="248" width="26" height="34" rx="2"/>
+    <rect x="672" y="248" width="26" height="34" rx="2"/><rect x="706" y="248" width="26" height="34" rx="2"/>
+    <rect x="740" y="248" width="26" height="34" rx="2"/><rect x="774" y="248" width="26" height="34" rx="2"/>
+    <rect x="808" y="248" width="26" height="34" rx="2"/>
+  </g>
+  <g fill="#efe6d2">
+    <rect x="842" y="248" width="26" height="34" rx="2"/><rect x="876" y="248" width="26" height="34" rx="2"/>
+    <rect x="910" y="248" width="26" height="34" rx="2"/><rect x="944" y="248" width="26" height="34" rx="2"/>
+    <rect x="978" y="248" width="26" height="34" rx="2"/><rect x="1012" y="248" width="26" height="34" rx="2"/>
+    <rect x="604" y="290" width="26" height="34" rx="2"/><rect x="638" y="290" width="26" height="34" rx="2"/>
+    <rect x="672" y="290" width="26" height="34" rx="2"/><rect x="706" y="290" width="26" height="34" rx="2"/>
+    <rect x="740" y="290" width="26" height="34" rx="2"/><rect x="774" y="290" width="26" height="34" rx="2"/>
+    <rect x="808" y="290" width="26" height="34" rx="2"/><rect x="842" y="290" width="26" height="34" rx="2"/>
+    <rect x="876" y="290" width="26" height="34" rx="2"/><rect x="910" y="290" width="26" height="34" rx="2"/>
+    <rect x="944" y="290" width="26" height="34" rx="2"/><rect x="978" y="290" width="26" height="34" rx="2"/>
+    <rect x="1012" y="290" width="26" height="34" rx="2"/>
+  </g>
+  <text x="604" y="352" font-size="13.5" class="honey">the 7 that matched come back &#8212; and only those</text>
+
+  <text x="604" y="404" font-size="52" class="green b">97%</text>
+  <text x="604" y="434" font-size="15" class="muted b">right</text>
+  <text x="604" y="470" font-size="14" class="muted">Counting 7 things is a different</text>
+  <text x="604" y="490" font-size="14" class="muted">job from scanning 180.</text>
+
+  <!-- verdict -->
+  <text x="560" y="556" text-anchor="middle" font-size="21" class="ink b">More context didn&#8217;t help. It was never the missing thing.</text>
+  <text x="1080" y="590" text-anchor="end" font-size="13" class="faint">waggle.sh</text>
+</svg>
