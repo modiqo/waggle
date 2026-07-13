@@ -14,7 +14,7 @@ Create an attributed reference (a waggle token) for an artifact instead of pasti
 | `--parent` | false | Parent token: forms the delegation tree at mint; revoking the parent tombstones this child. |
 | `--snapshot` | false | Pin the target's bytes content-addressed at mint: read/search then work anywhere the blobs replicate, immutable by hash. If the target is a PDF or HTML document, its text layer is extracted here too (deterministically, provenance recorded) so read/search work over the artifact itself. Audio/video carry no text layer: their bytes are pinned and read tells the consumer to perceive them with its own model. |
 | `--private` | false | Mint a capability URL: a 16-char unguessable token (possession IS the credential); public unfurls and social renders refuse it. |
-| `--tree` | false | For a DIRECTORY target: also mint every file inside (recursive, snapshot-pinned) as children of this token — one revocation covers the whole tree, and the folder's funnel rolls its children up. |
+| `--tree` | false | For a DIRECTORY target: build an INDEXED directory tree — one content-addressed node per folder, each carrying a trigram index and a Bloom summary, snapshot-pinned. Thousands of files mint in one call. `read` a folder token for its table of contents, `read --file <name>` for one file, `search` to span the whole tree in one call, `coverage` for a per-file receipt. One revocation covers the whole tree. |
 | `--tag` | false | Name the token for humans (repeatable, k=v or a bare name): cosmetic labels that `find` matches on. A tag is a convenience, never identity — resolution stays token-only. |
 | `--content` | false | Path to text you extracted yourself for a binary target — becomes the searchable content while the target stays the original. Rarely needed: `snapshot` now extracts PDF and HTML text layers automatically. Use this only for a format the substrate does not read, or to override its extraction. Mutually exclusive with snapshot. |
 | `--attach` | false | Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all. |
@@ -80,26 +80,26 @@ A token's funnel: stage counts (impression → resolve → run → repeat) plus 
 
 ## `read` — CLI + MCP tool
 
-Read the token's CONTENT surgically: a line window, a markdown section, a code symbol, or a JSON pointer path — never the whole artifact. With no address: the overview (size, content type, available lenses, outline; source code carries its symbol table of contents). If the token names a FOLDER (minted --tree), read DESCRIBES it — every file, its own token, size, type and outline: the folder's table of contents — and a lens applied to the folder token FANS OUT across every file at once, so you ask once, not once per file. A fan-out that exhausts its budget reports complete=false with examined/total_files and a `from` cursor to resume: never conclude anything about a tree you have not finished reading. Every response fits max-bytes and names the bytes you avoided.
+Read the token's CONTENT surgically: a line window, a markdown section, a code symbol, or a JSON pointer path — never the whole artifact. With no address: the overview (size, content type, available lenses, outline; source code carries its symbol table of contents). If the token names a FOLDER (minted --tree), read with no address returns its table of contents — the folder's own files by name (size, type) and its subdirectories, each with a token to descend — and `read --file <name>` serves one of those files. To grep a folder, use `search`: it spans the whole tree in one call. Coverage stays per-file. Every response fits max-bytes and names the bytes you avoided.
 
 | arg | required | doc |
 |---|---|---|
 | `--token` | true | The waggle token whose content to read. |
 | `--lines` | false | Line window, 1-based inclusive (e.g. 120-180). |
 | `--section` | false | Markdown heading whose section to read (text/markdown lens). |
+| `--file` | false | For a FOLDER token (minted --tree): read ONE file by name, fetched from the content-addressed blob and stamped as a per-file read. The folder's `read` (no address) lists the file names. |
 | `--symbol` | false | Code symbol whose definition to read (symbol lens — tokens minted with a snapshot of source code); the overview's `symbols` lists what exists. |
 | `--path` | false | JSON pointer into parsed content (application/json lens), e.g. /dependencies/react. |
-| `--from` | false | For a FOLDER token with a lens: continue the fan-out from this file index. A truncated tree-lens names the cursor to resume from — a partial folder read that looks like a whole one is how a confident wrong answer gets made. |
 | `--max-bytes` | false | Response budget in bytes (default 4096, floor 64). |
 
-- forward → `read`: continue the window, follow the outline deeper, or resume a truncated folder fan-out from its `from` cursor
-- forward → `search`: grep the artifact — or, on a folder token, every file in the tree at once
+- forward → `read`: continue the window, follow the outline deeper, or open a folder's file by name with --file
+- forward → `search`: grep the artifact — or, on a folder token, the whole tree in one call
 - forward → `coverage`: on a folder: which files you have actually been served, and which you have not
 - forward → `record`: report run when the content did its job
 
 ## `search` — CLI + MCP tool
 
-Grep the token's CONTENT: regex matches with line numbers and context, capped and budgeted — the matches travel, the artifact stays put. total_matches is counted in full even when the list is truncated. A FOLDER token (minted --tree) greps as a TREE: every file is searched and matches come back grouped per file, each with that file's own token so you can open it surgically. Works wherever the content's blobs replicate.
+Grep the token's CONTENT: regex matches with line numbers and context, capped and budgeted — the matches travel, the artifact stays put. total_matches is counted in full even when the list is truncated. A FOLDER token (minted --tree) greps as a TREE in ONE call: Bloom-pruned and trigram-narrowed across the whole lineage, then ranked, each match naming its file path and the node token that owns it, so you can open it with read --file. Works wherever the content's blobs replicate.
 
 | arg | required | doc |
 |---|---|---|
@@ -135,7 +135,7 @@ Find tokens by what humans remember: matches the query against target basenames,
 
 ## `coverage` — CLI + MCP tool
 
-For a lineage root (a folder or bundle): which descendants were actually consumed? Three honest levels per file — unread (never touched), read (bytes served: a resolve, read, or search reached it), run (the consumer recorded using it). For a single token minted with a contract (mint --require): which required regions did the served bytes reach — met/unmet against the declared threshold. Either way, misses are NAMED: the unread list is the proof of what a review skipped.
+For a FOLDER (minted --tree): a PER-FILE receipt — how many of its files were actually served (`files: read/total`, a read or a search hit counts), whether that is `complete`, and the unread files NAMED. A tree minted `--require files:all` also carries a verdict: `met` stays false while any file is unread. For a single token minted with a contract (mint --require lines/section/symbol): which required regions the served bytes reached — met/unmet against the declared threshold. Either way, misses are NAMED: the unread list is the proof of what a review skipped.
 
 | arg | required | doc |
 |---|---|---|
