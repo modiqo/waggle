@@ -26,10 +26,15 @@ ed25519-dalek = { workspace = true }
 # wasm and serves precomputed outlines as data (outline_wire.rs, always
 # compiled). The CLI/daemon turn the feature on.
 waggle-lens-code = { path = "../waggle-lens-code", version = "0.4.0", optional = true }
+# Deterministic PDF text-layer extraction (doc 18 §7). Pure Rust, no C — but a
+# heavy parser, so feature-gated off by default and off for the wasm/edge build.
+# The CLI/daemon turn it on; HTML extraction needs no crate and is always present.
+pdf-extract = { version = "0.12", optional = true }
 
 [features]
 default = []
 code-lens = ["dep:waggle-lens-code"]
+doc-extract = ["dep:pdf-extract"]
 
 [dev-dependencies]
 pollster = { workspace = true }

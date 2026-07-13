@@ -206,6 +206,32 @@ pub enum VariantBody {
     Media(MediaRef),
 }
 
+/// A searchable text extraction of an opaque artifact, plus the provenance a
+/// reader needs to weigh it (doc `18 §7`).
+///
+/// When a snapshot's bytes are a binary the substrate can read *deterministically*
+/// — a PDF's embedded text layer, an HTML document's text — mint extracts them to
+/// this text blob so `read`/`search`/`coverage` work over the artifact directly.
+/// The extraction is signed with the core, so the token *carries* the searchable
+/// text instead of leaving it as a loose file the next agent must locate.
+///
+/// `deterministic` is the load-bearing field. A text-layer extraction is a pure
+/// function of the bytes and reproduces exactly (`true`). A model-produced
+/// transcription — OCR, ASR — is an opinion that drifts (`false`), and stamping it
+/// as such is what lets a coverage receipt over the extraction be read at its true
+/// worth: the substrate refuses to let a hallucinated transcript pass for the
+/// artifact. The substrate never *defaults* to a non-deterministic extractor.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Extraction {
+    /// The extracted text, content-addressed (`text/plain`).
+    pub media: MediaRef,
+    /// Which extractor produced it — e.g. `pdf-textlayer`, `html-strip`.
+    pub extractor: String,
+    /// `true` when the extraction is a pure, reproducible function of the bytes;
+    /// `false` when a model produced it and the text is an opinion.
+    pub deterministic: bool,
+}
+
 /// One projection of the artifact for a class of consumers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Variant {
@@ -288,6 +314,14 @@ pub struct AttributionManifest {
     /// matched, so outline-free manifests keep their exact bytes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub outline: Option<MediaRef>,
+    /// A deterministic text extraction of an opaque artifact (doc `18 §7`):
+    /// the searchable text of a PDF or HTML target, derived at mint and signed
+    /// with the core, with its provenance. A pointer plus provenance — the text
+    /// is content. Immutable core; absent for text artifacts and for opaque
+    /// media the substrate will not read (audio, video), so those manifests keep
+    /// their exact canonical bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extraction: Option<Extraction>,
     /// Author signature over the immutable core (CP-11); set at mint by
     /// hosts that hold an identity. NOT itself part of the signed bytes.
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -27,7 +27,8 @@ artifact gets lens 0; content type adds lens 1. Lenses are discoverable
 | **0 · lines + search** | any text (`text/*`, json, yaml, code, csv, logs) | `lines: "A-B"`, regex `pattern` |
 | **1 · outline/section** | `text/markdown` | `path: "/outline"`, `section: "<heading>"` |
 | **1 · pointer** | `application/json` | `path: "/deps/react/version"` — **reuses the CP-7 `slice_at` engine on parsed content** |
-| media | binary (`image/*`, `audio/*`, docx, pdf) | not line-addressable: `MediaRef` fetch (exists); extract-at-mint variant makes them sliceable |
+| extractable | PDF, HTML (deterministic text layer) | extracted + indexed at mint (§7); read/search work over the text, provenance recorded |
+| media | `image/*`, `audio/*`, `video/*` | no text layer: `MediaRef` fetch; read directs the consumer to its own vision/speech model |
 
 Explicit v1 boundaries (recorded, not hidden): YAML gets lens 0 only
 (no maintained serde-yaml — parser choice deferred); code symbols
@@ -53,7 +54,7 @@ Resolution order, deterministic:
 
 Size cap: 16 MB per read (hint: split or snapshot a subset). Text rule:
 content types `text/*`, `application/json`, `application/yaml` slice;
-anything else is binary → media path, with the extract-at-mint hint.
+a PDF or HTML text layer is extracted at mint (§7); other binary → media path, and read directs the consumer to perceive it.
 
 ## 4 · The operations
 
@@ -92,45 +93,58 @@ Remotely (token-gated TCP, edge) a token becomes a **read capability**
 for its content — scoped to `manifest.content` blobs (never live
 filesystem reads for remote callers), governed by CP-11 signing.
 
-## 7 · The format boundary: who decodes PDF, docx, images, voice
+## 7 · The extraction boundary: determinism, not format
 
-**Waggle does not decode formats. Ever.** The boundary is principled,
-not provisional, and it is division of labor — not delegation:
+The line is **not** "text versus binary." It is **deterministic versus
+model-requiring**, and it runs straight through the binary formats:
 
-- **Extraction is the harness's job, once, at mint.** The minting agent
-  is multimodal — it reads PDFs and images natively, better than any
-  bundled Rust extractor will (tables, layout, scans, accents). It
-  extracts with its own abilities and passes the text to waggle.
-- **Persistence, integrity, serving, and attribution of that extraction
-  are waggle's job, forever.** `mint --content <extracted.txt>` stores
-  the extraction content-addressed and pins it as `manifest.content`;
-  every downstream consumer gets budgeted `read`/`search` against it, on
-  any machine, with `read`-stage receipts.
+- A **PDF's embedded text layer** and an **HTML document's text** are
+  *pure functions of the bytes*. `pdftotext` reads a text stream the file
+  literally stores; stripping tags reads the DOM. Same bytes in, same
+  text out, no model, forever. The substrate does this **at mint**,
+  records the extractor's identity, and signs the result into the core as
+  `manifest.extraction` — so the token *carries* the searchable text and
+  `read`/`search`/`coverage` work over the artifact itself.
+- A **scanned page**, **audio**, or **video** carries no text layer.
+  Recovering its content takes a *model* — OCR, ASR — and a model's output
+  is an opinion that drifts, is worse than the consumer's own perception,
+  and is chosen before the question is known. The substrate refuses. It
+  pins the raw bytes and the projection says so plainly: *"content is
+  audio/mp4 — the substrate does not read this; fetch the bytes and
+  interpret them with your own speech model."*
 
-Why not bundle extractors (rejected explicitly): a format treadmill
-(pdf, docx, pptx, epub, HEIC, …), mediocre quality exactly where it
-matters, binary bloat against the plumbing ethos — and it duplicates a
-capability the models improve at without us shipping a byte.
+**Why determinism is the right boundary, and why it is the same boundary
+as the receipts.** A substrate that transcodes must *read* what it
+carries, and reading content non-deterministically is exactly what I-1
+(payload-free log) and I-2 (sealed, reproducible matcher) forbid. A
+deterministic extraction breaks neither: the log still records only that a
+token was minted, and the matcher over the extracted text reproduces
+exactly. The moment the substrate ran a model, a coverage receipt could
+attest to a transcript nobody can reproduce — so the receipts are
+trustworthy *because* the extractor is deterministic. `manifest.extraction`
+carries a `deterministic` flag for this reason: a text-layer extraction is
+`true`, and a registered model extractor (opt-in, never a default) would be
+`false`, stamping its text as an opinion so a reader weighs the receipt
+accordingly.
 
-Why not leave it wholly to consumers (rejected explicitly): N consumers
-× M machines re-reading a 60-page PDF with vision calls is the
-token-waste problem in its most expensive form. **Extract once at
-check-in; search forever.**
+**Why not leave it wholly to the harness (the old design, now rejected).**
+Passing text via `--content` leaves the extraction as a *loose file the
+next agent must locate*, and the receipt then attests to text the substrate
+never saw come out of the PDF — a different harness, a corrupted
+extraction, or a substituted string all produce the same confident receipt.
+For the token to be a trustworthy reference *to a PDF*, the substrate must
+own the bytes→text relationship. `--content` remains for a format the
+substrate does not read, or to override its extraction, but it is no longer
+the common path.
 
-The three mint shapes, spelled out:
+The mint shapes, spelled out:
 
-| Artifact | Call | `manifest.content` | Variants |
+| Artifact | Call | searchable content | provenance |
 |---|---|---|---|
-| text file | `mint --snapshot` | the target's own bytes | catch-all |
-| PDF/docx | `mint --content extracted.txt` (harness extracted it) | the extraction | `--attach` the original for vision/human consumers |
-| voice memo | `mint --content transcript.txt --attach memo.m4a` | the transcript | audio `MediaRef` for listeners |
-
-`--snapshot` and `--content` are mutually exclusive (both claim
-`manifest.content`); passing both is refused with the distinction named.
-The agent-stub instruction (17, one added sentence): *"when minting a
-binary artifact, extract its text with your own abilities and pass it
-via content."* Every multimodal harness becomes an extraction worker for
-the network — for free.
+| text file | `mint --snapshot` | the target's own bytes | verbatim |
+| PDF / HTML | `mint --snapshot` | the substrate's text-layer extraction | `pdf-textlayer` / `html-strip`, deterministic |
+| voice / video | `mint --snapshot` | none — raw bytes pinned | `read` directs the consumer to its own model |
+| a format we don't read | `mint --content extracted.txt` | your extraction | harness-supplied |
 
 Roadmap here (small, format-agnostic): byte-range reads on `MediaRef`
 blobs (audio segments, resumable pulls — ranges, never decoding).

@@ -54,6 +54,78 @@ fn check_next(env: &waggle_mcp::Envelope) {
     }
 }
 
+/// Doc 18 §7: an opaque artifact the substrate can read deterministically (here
+/// HTML — no feature needed) is extracted at mint, so `read`/`search` work over
+/// its text, and the served projection carries the extraction's provenance. This
+/// is the difference between a capability claim and a binding one: the token
+/// carries the searchable text, not the harness.
+#[test]
+fn opaque_html_is_extracted_and_searchable_with_provenance() {
+    let dir = std::env::temp_dir().join(format!("waggle-extract-{}", std::process::id()));
+    std::fs::remove_dir_all(&dir).ok();
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("briefing.html");
+    std::fs::write(
+        &file,
+        "<html><head><style>b{x}</style></head><body>\
+         <h1>Ops Briefing</h1><p>The retry budget is 3 attempts.</p>\
+         <p>AUDIT CODE: Q2R-9583</p></body></html>",
+    )
+    .unwrap();
+
+    let handler = handler_with_blobs(&dir);
+    let mut e = entropy();
+    pollster::block_on(async {
+        let minted = handler
+            .dispatch(
+                "mint",
+                &json!({ "target": format!("file://{}", file.display()), "snapshot": true }),
+                Timestamp::from_unix_ms(1),
+                &mut e,
+            )
+            .await;
+        assert!(minted.hint.is_none(), "{minted:?}");
+        let token = minted.result["token"].as_str().unwrap().to_owned();
+
+        // read serves the extracted text — content_type is text/plain, and the
+        // projection declares HOW the text was recovered.
+        let over = handler
+            .dispatch(
+                "read",
+                &json!({ "token": token }),
+                Timestamp::from_unix_ms(2),
+                &mut e,
+            )
+            .await;
+        assert!(
+            over.hint.is_none(),
+            "extraction should serve, not refuse: {over:?}"
+        );
+        assert_eq!(over.result["content_type"], "text/plain");
+        assert_eq!(over.result["source"]["extracted_by"], "html-strip");
+        assert_eq!(over.result["source"]["deterministic"], true);
+
+        // search finds the needle in the extracted text — the tags are gone.
+        let found = handler
+            .dispatch(
+                "search",
+                &json!({ "token": token, "pattern": "AUDIT CODE" }),
+                Timestamp::from_unix_ms(3),
+                &mut e,
+            )
+            .await;
+        assert!(found.hint.is_none(), "{found:?}");
+        assert_eq!(found.result["total_matches"], 1);
+        let hit = found.result["matches"][0]["text"].as_str().unwrap();
+        assert!(hit.contains("Q2R-9583"), "got {hit}");
+        assert!(
+            !hit.contains('<'),
+            "extracted text must carry no tags: {hit}"
+        );
+    });
+    std::fs::remove_dir_all(&dir).ok();
+}
+
 #[test]
 fn grep_open_loop_on_a_live_file() {
     let dir = std::env::temp_dir().join(format!("waggle-content-{}", std::process::id()));
@@ -271,7 +343,12 @@ fn json_pointer_lens_and_refusals() {
                 &mut e,
             )
             .await;
-        assert!(refused.hint.as_ref().unwrap().contains("binary"));
+        let h = refused.hint.as_ref().unwrap();
+        assert!(h.contains("image/png"), "hint names the type: {h}");
+        assert!(
+            h.contains("does not read") && h.contains("your own"),
+            "hint tells the consumer to perceive it with its own model: {h}"
+        );
 
         // Content that exists nowhere: the hint names the snapshot fix.
         let ghost = handler

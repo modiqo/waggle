@@ -23,6 +23,7 @@ mod content_handlers;
 mod contract_args;
 mod discovery;
 mod envelope;
+mod extract;
 mod handlers;
 mod lineage;
 mod map;

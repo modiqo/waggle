@@ -19,6 +19,10 @@ pub(crate) struct ContentView {
     pub content_type: String,
     pub contract: Option<waggle_core::Contract>,
     pub outline: Option<waggle_core::MediaRef>,
+    /// When the served text is a deterministic extraction of an opaque artifact
+    /// (a PDF's text layer), its provenance — so the consumer knows it is reading
+    /// an extraction, and how much to trust it.
+    pub extraction: Option<waggle_core::Extraction>,
 }
 
 impl<S: Store, B: BlobSink> Handler<S, B> {
@@ -78,6 +82,34 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         None
     }
 
+    /// Deterministically extract an opaque snapshot's text at mint (doc 18 §7):
+    /// a PDF's embedded text layer, an HTML document's text. Stored as its own
+    /// text blob beside the raw snapshot, with the extractor's identity — the
+    /// token then carries searchable text, and a reader can weigh it by its
+    /// provenance. `None` for text (already searchable) and for opaque media the
+    /// substrate will not guess at (audio, video): those keep their raw bytes and
+    /// the projection tells the consumer to read them itself.
+    pub(crate) async fn extraction_for(
+        &self,
+        content_type: &str,
+        bytes: &[u8],
+    ) -> Option<waggle_core::Extraction> {
+        let ex = crate::extract::deterministic_extract(content_type, bytes)?;
+        let media = self
+            .blobs
+            .put(ex.text.as_bytes(), "text/plain")
+            .await
+            .ok()?;
+        Some(waggle_core::Extraction {
+            media,
+            extractor: ex.extractor.to_owned(),
+            // Everything `deterministic_extract` returns is, by its contract, a
+            // pure function of the bytes. A model-based extractor would be
+            // registered elsewhere and would set this false.
+            deterministic: true,
+        })
+    }
+
     /// Pin a harness-extracted text file as the token's searchable
     /// content (doc 18 §7): the target stays the original binary; this
     /// extraction is what `read`/`search` serve.
@@ -117,7 +149,17 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 vec![],
             ));
         }
-        let (bytes, content_type) = if let Some(media) = &view.manifest.content {
+        // A deterministic extraction is the searchable face of an opaque
+        // artifact (18 §7): serve it, not the PDF's raw bytes. The raw snapshot
+        // stays in `content` for a consumer that wants the original.
+        let (bytes, content_type) = if let Some(ex) = &view.manifest.extraction {
+            let bytes = self
+                .blobs
+                .get(&ex.media)
+                .await
+                .map_err(|e| Envelope::err(e.to_string(), vec![]))?;
+            (bytes, ex.media.content_type.clone())
+        } else if let Some(media) = &view.manifest.content {
             let bytes = self
                 .blobs
                 .get(media)
@@ -142,8 +184,18 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             // doc 20 §5.1): extension-less scripts keep the text loop.
             "text/plain".to_owned()
         } else {
+            // No text layer, and none is coming: this is audio, video, or an
+            // image. The substrate will not guess at it — a model would, worse
+            // than yours and non-deterministically. Fetch the bytes and read
+            // them with your own vision or speech stack.
+            let kind = content_type.split('/').next().unwrap_or("binary");
             return Err(Envelope::err(
-                format!("content is {content_type} (binary) — fetch it via its MediaRef, or mint an extracted-text variant to make it searchable"),
+                format!(
+                    "content is {content_type} — this is {kind} the substrate does not read: \
+                     it carries no text layer, and transcribing it would take a model whose \
+                     output is an opinion, not the artifact. Fetch the bytes via the token's \
+                     content MediaRef and interpret them with your own {kind} model."
+                ),
                 vec![],
             ));
         };
@@ -153,6 +205,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 content_type,
                 contract: view.manifest.contract.clone(),
                 outline: view.manifest.outline.clone(),
+                extraction: view.manifest.extraction.clone(),
             })
             .map_err(|_| {
                 Envelope::err(
@@ -268,7 +321,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             None
         };
 
-        let result = if let Some((from, to)) = symbol_lines {
+        let mut result = if let Some((from, to)) = symbol_lines {
             crate::content::read_lines(&text, from, to, max_bytes)
         } else if let Some(range) = arg_str(args, "lines") {
             let Some((from, to)) = range.split_once('-').and_then(|(a, b)| {
@@ -319,6 +372,21 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             }
             over
         };
+
+        // Provenance rides every serve of an extraction (18 §7): the consumer
+        // is reading text the substrate recovered from a PDF, not the artifact's
+        // own bytes, and it should know that — and know the extraction was
+        // deterministic, so a coverage receipt over it is worth trusting.
+        if let (Value::Object(map), Some(ex)) = (&mut result, &view.extraction) {
+            map.insert(
+                "source".into(),
+                json!({
+                    "extracted_by": ex.extractor,
+                    "deterministic": ex.deterministic,
+                    "note": "text recovered from an opaque artifact; the original bytes are the token's content",
+                }),
+            );
+        }
 
         // The served window (`lines: "A-B"` on line and section lenses)
         // is what touches contract regions — the overview and JSON

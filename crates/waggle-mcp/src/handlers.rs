@@ -279,12 +279,22 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         }
         if snapshot {
             let (media, bytes) = self.snapshot_target(spec.target_str()).await?;
+            let content_type = media.content_type.clone();
             spec = spec.content(media);
             // The symbol lens (20 §5.4): structure computed here, where
             // the artifact is at hand, stored beside the snapshot.
             let target = spec.target_str().to_owned();
             if let Some(outline) = self.outline_for(&target, &bytes).await {
                 spec = spec.outline(outline);
+            }
+            // Opaque-format extraction (18 §7): a PDF's text layer, an HTML
+            // document's text — deterministic, so the token carries the
+            // searchable text and read/search/coverage work over the artifact
+            // itself. Audio and video carry no text layer; they return None
+            // here, keep their raw bytes, and the projection tells the consumer
+            // to perceive them with its own model.
+            if let Some(ex) = self.extraction_for(&content_type, &bytes).await {
+                spec = spec.extraction(ex);
             }
         }
         if let Some(path) = extracted {
@@ -712,10 +722,17 @@ pub(crate) fn infer_content_type(path: &str) -> &'static str {
         Some("jpg" | "jpeg") => "image/jpeg",
         Some("gif") => "image/gif",
         Some("webp") => "image/webp",
+        Some("pdf") => "application/pdf",
+        Some("html" | "htm") => "text/html",
+        Some("xhtml") => "application/xhtml+xml",
         Some("mp3") => "audio/mpeg",
         Some("wav") => "audio/wav",
+        Some("aif" | "aiff") => "audio/aiff",
         Some("ogg" | "oga") => "audio/ogg",
         Some("m4a") => "audio/mp4",
+        Some("mp4" | "m4v") => "video/mp4",
+        Some("mov") => "video/quicktime",
+        Some("webm") => "video/webm",
         _ => "application/octet-stream",
     }
 }

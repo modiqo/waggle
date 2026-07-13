@@ -12,11 +12,11 @@ Create an attributed reference (a waggle token) for an artifact instead of pasti
 | `--sharer` | false | Who is distributing this; defaults to the session identity. |
 | `--channel` | false | Where this share lives (e.g. subagent/researcher); defaults to subagent/general. |
 | `--parent` | false | Parent token: forms the delegation tree at mint; revoking the parent tombstones this child. |
-| `--snapshot` | false | Pin the target's bytes content-addressed at mint: read/search then work anywhere the blobs replicate, immutable by hash. |
+| `--snapshot` | false | Pin the target's bytes content-addressed at mint: read/search then work anywhere the blobs replicate, immutable by hash. If the target is a PDF or HTML document, its text layer is extracted here too (deterministically, provenance recorded) so read/search work over the artifact itself. Audio/video carry no text layer: their bytes are pinned and read tells the consumer to perceive them with its own model. |
 | `--private` | false | Mint a capability URL: a 16-char unguessable token (possession IS the credential); public unfurls and social renders refuse it. |
 | `--tree` | false | For a DIRECTORY target: also mint every file inside (recursive, snapshot-pinned) as children of this token — one revocation covers the whole tree, and the folder's funnel rolls its children up. |
 | `--tag` | false | Name the token for humans (repeatable, k=v or a bare name): cosmetic labels that `find` matches on. A tag is a convenience, never identity — resolution stays token-only. |
-| `--content` | false | Path to extracted text for a BINARY target (you extracted it with your own abilities): becomes the searchable content while the target stays the original. Mutually exclusive with snapshot. |
+| `--content` | false | Path to text you extracted yourself for a binary target — becomes the searchable content while the target stays the original. Rarely needed: `snapshot` now extracts PDF and HTML text layers automatically. Use this only for a format the substrate does not read, or to override its extraction. Mutually exclusive with snapshot. |
 | `--attach` | false | Path to media (image/audio) stored content-addressed; vision/audio consumers receive it, others get the catch-all. |
 | `--attach-type` | false | Content type of the attachment; inferred from the extension when omitted. |
 | `--require` | false | Consumption contract region (repeatable, max 8): lines:START-END, section:HEADING (markdown), symbol:NAME (code — resolved against the symbol outline at mint), or files:all (folder — every file in the tree must be read). `coverage` then reports met/unmet with untouched regions NAMED. Signed with the core — a contract is not renegotiable. |

@@ -62,6 +62,7 @@ pub struct MintSpec {
     private: bool,
     contract: Option<crate::Contract>,
     outline: Option<crate::MediaRef>,
+    extraction: Option<crate::Extraction>,
     labels: std::collections::BTreeMap<String, String>,
     ttl_ms: Option<u64>,
 }
@@ -81,6 +82,7 @@ impl MintSpec {
             private: false,
             contract: None,
             outline: None,
+            extraction: None,
             labels: std::collections::BTreeMap::new(),
             ttl_ms: None,
         }
@@ -169,6 +171,15 @@ impl MintSpec {
         self
     }
 
+    /// Attach a deterministic text extraction of an opaque artifact (doc
+    /// `18 §7`): the searchable text of a PDF or HTML target, derived at mint,
+    /// with its provenance. Signed with the core, so the token carries the text.
+    #[must_use]
+    pub fn extraction(mut self, extraction: crate::Extraction) -> Self {
+        self.extraction = Some(extraction);
+        self
+    }
+
     /// Expire the token `ttl_ms` after mint.
     #[must_use]
     pub fn ttl_ms(mut self, ttl_ms: u64) -> Self {
@@ -217,6 +228,7 @@ pub fn mint(
         private: spec.private,
         contract: spec.contract,
         outline: spec.outline,
+        extraction: spec.extraction,
         signature: None, // hosts with an identity sign after mint (trust)
         variants,
         version: 1,
