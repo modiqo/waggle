@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Agents hand off work by copying whole documents into each other — pass by value. waggle is the missing reference: a 30-byte name. Each agent opens only the part it needs, every read leaves a receipt, and one fix reaches every holder. Same accuracy as pasting, 25x less context.">
+    <meta name="description" content="Your subagent says it read the markdown, the folder, the PDF. Did it? waggle gives every read a receipt, so you can check — without reading its answer. Agents that read what they were given are 98% correct; agents that skipped it, 28%. Measured over 1,705 runs.">
     <meta property="og:title" content="waggle — tracked file paths for agents">
     <meta property="og:description" content="Share names, not payloads. A ~30-byte attributed token replaces context-forwarding between agents and subagents.">
     <meta property="og:type" content="website">
-    <title>waggle — pass by reference, for AI agents</title>
+    <title>waggle — did your subagent actually read it?</title>
     <link rel="icon" href="./assets/logo.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,18 +32,17 @@
     <main>
       <!-- ================= HERO ================= -->
       <section class="hero plain wrap">
-        <div class="kicker">pass by reference, for AI agents</div>
-        <p class="hero-contrast">Your agents pass work by value.</p>
-        <h1>They should pass by reference.</h1>
+        <div class="kicker">verification for multi-agent systems</div>
+        <p class="hero-contrast">Your subagent says it read the markdown. The folder. The PDF.</p>
+        <h1>Did it?</h1>
         <p class="lede">
-          To hand a document to the next agent, today you paste the whole thing in &mdash; and
-          pay for it again on every turn. You can&rsquo;t tell what was read. And if the document
-          was wrong, <strong>every copy is still wrong</strong>.
+          Every read leaves a <strong>receipt</strong> &mdash; so you can check. Without reading
+          its answer, and without knowing the right one yourself.
         </p>
         <p class="lede">
-          waggle is the missing reference: a <strong>30-byte name</strong>. Each agent opens only
-          the part it needs. Every read leaves a receipt. Fix it once &mdash; everyone holding the
-          name gets the fix.
+          It works because agents stop passing <em>copies</em> and start passing a
+          <strong>30-byte reference</strong>. They open only the part they need, and the
+          substrate counts every byte it serves.
         </p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="#install">Install</a>
@@ -51,8 +50,8 @@
           <a class="btn btn-ghost" href="https://github.com/modiqo/waggle">GitHub &#8599;</a>
         </div>
         <ul class="proof">
-          <li><strong>25&times;</strong> less context</li>
-          <li><strong>same</strong> accuracy as pasting</li>
+          <li>it read what it was given &rarr; <strong>98%</strong> right</li>
+          <li>it skipped &rarr; <strong>28%</strong></li>
           <li><strong>1,705</strong> measured runs</li>
         </ul>
         <div class="hero-visual">
