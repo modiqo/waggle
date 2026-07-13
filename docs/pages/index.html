@@ -368,6 +368,14 @@
             a Codex session resolves.</p>
 <pre><span class="k">claude</span> mcp add waggle -- waggle serve --stdio   <span class="c"># same line in Codex &amp; Cursor</span>
 <span class="k">waggle</span> init                                     <span class="c"># installs the agent stub</span></pre>
+            <p><strong>You don&rsquo;t start a server.</strong> <code>waggle serve --stdio</code>
+            <em>is</em> the MCP server; your harness launches it, and it auto-starts a shared
+            background daemon the first time any harness talks to it. Nothing to run, nothing to
+            keep alive. Restart your harness so it picks up the new tools, then confirm:</p>
+<pre><span class="k">waggle</span> daemon status   <span class="c"># → running · uptime · connections · db size</span></pre>
+            <p style="color:var(--muted);font-size:15px">The store lives at
+            <code>~/.waggle/waggle.db</code> (SQLite). To run the daemon in the foreground for
+            debugging instead of letting it auto-start: <code>waggle serve --daemon</code>.</p>
           </div>
         </div>
       </section>

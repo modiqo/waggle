@@ -191,6 +191,20 @@ args = ["serve", "--stdio"]
 { "mcpServers": { "waggle": { "command": "waggle", "args": ["serve", "--stdio"] } } }
 ```
 
+**You don't start a server.** `waggle serve --stdio` *is* the MCP server — your
+harness launches it on demand, and its shim **auto-starts a shared background
+daemon** the first time any harness connects (`connect_or_start`). There is no
+manual daemon step: nothing to run, nothing to keep alive. Restart your harness so
+it picks up the new tools, then confirm:
+
+```bash
+waggle daemon status     # → running · uptime · connections · db size
+```
+
+Prefer to run it in the foreground (for logs / debugging) instead of letting it
+auto-start? `waggle serve --daemon`. Stop or restart the background one with
+`waggle daemon stop` / `waggle daemon restart`.
+
 `waggle init` writes a short stub into `CLAUDE.md`, `AGENTS.md`, and
 `.cursorrules` (idempotent — it manages its own marked block). That stub is
 the **entire** standing instruction; everything else is taught in-band —
