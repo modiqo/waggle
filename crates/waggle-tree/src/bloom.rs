@@ -123,6 +123,25 @@ impl Bloom {
         }
         out
     }
+
+    /// Lowercase-hex of the bit storage — the form inlined in a manifest. Pairs
+    /// with [`Bloom::from_hex`].
+    #[must_use]
+    pub fn to_hex(&self) -> String {
+        to_hex(self.bits.as_ref())
+    }
+
+    /// Parse the hex form back into a filter. Errors if the string is not exactly
+    /// [`Bloom::BYTES`] bytes of hex.
+    pub fn from_hex(hex: &str) -> Result<Self, String> {
+        let bytes = from_hex(hex)?;
+        let arr: [u8; Bloom::BYTES] = bytes.try_into().map_err(|v: Vec<u8>| {
+            format!("bloom: expected {} bytes, got {}", Bloom::BYTES, v.len())
+        })?;
+        Ok(Self {
+            bits: Box::new(arr),
+        })
+    }
 }
 
 impl Default for Bloom {

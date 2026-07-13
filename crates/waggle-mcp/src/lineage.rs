@@ -5,12 +5,10 @@
 //! beneath it — one revocation for the whole tree.
 
 use serde_json::{json, Map, Value};
-use waggle_core::Timestamp;
 use waggle_store::{BlobSink, Store};
 
 use crate::envelope::{Envelope, NextCall, Stats};
 use crate::handlers::{parse_token_arg, store_err, Handler};
-use crate::map::handoff_line;
 
 /// Was this folder minted `--require files:all`? Then the delegation needs the
 /// WHOLE tree, and `coverage` answers with a verdict, not merely a fact.
@@ -35,114 +33,6 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 .map_or(0, |(_, n)| *n)
         };
         (count("read") + count("resolve") > 0, count("run") > 0)
-    }
-
-    /// `mint --tree`: the folder pattern as one call. The root token is
-    /// already minted; every file inside (recursive, sorted, dotfiles
-    /// skipped, capped) becomes a snapshot-pinned CHILD — one revocation
-    /// covers the tree, and the root's funnel rolls the children up.
-    pub(crate) async fn mint_tree<E>(
-        &self,
-        root: &waggle_store::ManifestView,
-        now: Timestamp,
-        entropy: &mut E,
-    ) -> Envelope
-    where
-        E: FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError>,
-    {
-        const CAP: usize = 200;
-        let token = root.manifest.token;
-        let target = root.manifest.target.as_str();
-        let Some(dir) = crate::content_handlers::local_path(target) else {
-            return Envelope::err(
-                format!("tree: `{target}` is not a local directory — --tree walks the filesystem"),
-                vec![],
-            );
-        };
-        let mut files = Vec::new();
-        collect_files(std::path::Path::new(&dir), &mut files);
-        files.sort();
-        if files.len() > CAP {
-            return Envelope::err(
-                format!(
-                    "tree: {} files exceeds the {CAP}-file cap — mint subfolders as their own trees",
-                    files.len()
-                ),
-                vec![],
-            );
-        }
-        let children = match self.mint_children(root, files, now, entropy).await {
-            Ok(c) => c,
-            Err(e) => return e,
-        };
-        let child_count = children.len();
-        Envelope::ok(
-            json!({
-                "token": token.as_str(),
-                "handoff": handoff_line(token.as_str()),
-                "children": children,
-                "tree": { "files": child_count },
-            }),
-            vec![
-                NextCall {
-                    tool: "funnel".into(),
-                    args: json!({ "token": token.as_str() }),
-                    why: "the root's funnel rolls up every child".into(),
-                },
-                NextCall {
-                    tool: "mutate".into(),
-                    args: json!({ "token": token.as_str(), "change": "revoke", "expected-version": 1 }),
-                    why: "one revocation tombstones the whole tree".into(),
-                },
-            ],
-        )
-        .with_stats(Stats {
-            records: Some(1 + child_count as u64),
-            seq: Some(0),
-        })
-    }
-
-    /// The tree's children: each file snapshot-minted under the root.
-    async fn mint_children<E>(
-        &self,
-        root: &waggle_store::ManifestView,
-        files: Vec<std::path::PathBuf>,
-        now: Timestamp,
-        entropy: &mut E,
-    ) -> Result<Vec<Value>, Envelope>
-    where
-        E: FnMut(&mut [u8]) -> Result<(), waggle_core::EntropyError>,
-    {
-        let token = root.manifest.token;
-        let mut children = Vec::new();
-        for file in files {
-            let child_args = json!({
-                "target": format!("file://{}", file.display()),
-                "parent": token.as_str(),
-                "snapshot": true,
-                "sharer": root.manifest.sharer.as_str(),
-                "channel": root.manifest.channel.as_str(),
-            });
-            let child = Box::pin(self.mint(
-                child_args.as_object().expect("literal object"),
-                now,
-                entropy,
-            ))
-            .await;
-            match child.hint {
-                None => children.push(json!({
-                    "token": child.result["token"],
-                    "target": format!("file://{}", file.display()),
-                })),
-                Some(hint) => {
-                    return Err(Envelope::err(
-                        format!("tree: {}: {hint}", file.display()),
-                        vec![],
-                    ))
-                }
-            }
-        }
-        Ok(children)
     }
 
     /// Walk the parent chain: the earliest revocation timestamp among
@@ -194,46 +84,6 @@ pub(crate) fn mint_next(token: &str, target: &str) -> Vec<NextCall> {
         );
     }
     next
-}
-
-/// Directories no source-tree handoff means to include (doc `20 §5.7`):
-/// generated and vendored trees that would blow the file cap or snapshot
-/// junk. Full `.gitignore` fidelity is a planned follow-up; the deny-list
-/// covers the trees that actually bite.
-const DENIED_DIRS: &[&str] = &[
-    "node_modules",
-    "target",
-    "dist",
-    "build",
-    "out",
-    "vendor",
-    "__pycache__",
-    ".venv",
-    "venv",
-];
-
-/// Recursive file collection for `mint --tree`: dotfiles and dot-dirs
-/// skipped, generated/vendored dirs denied, symlinks not followed (walk
-/// what IS the folder).
-fn collect_files(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        if name.starts_with('.') {
-            continue;
-        }
-        let Ok(meta) = entry.metadata() else { continue };
-        if meta.is_dir() {
-            if !DENIED_DIRS.contains(&name) {
-                collect_files(&path, out);
-            }
-        } else if meta.is_file() {
-            out.push(path);
-        }
-    }
 }
 
 impl<S: Store, B: BlobSink> Handler<S, B> {

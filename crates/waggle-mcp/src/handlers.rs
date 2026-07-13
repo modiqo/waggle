@@ -181,6 +181,24 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             },
             None => Channel::subagent_general(),
         };
+        // A tree mint builds the whole hierarchy under its own node tokens, so it
+        // routes here directly — minting a plain root first would orphan a token.
+        let is_tree = args.get("tree").and_then(Value::as_bool).unwrap_or(false)
+            || arg_str(args, "tree") == Some("true");
+        if is_tree {
+            let parent = arg_str(args, "parent").and_then(|p| Token::parse(p).ok());
+            return self
+                .mint_tree_indexed(
+                    target.as_str(),
+                    sharer.as_str(),
+                    channel.as_str(),
+                    parent,
+                    crate::tree_mint::tree_budget(args),
+                    now,
+                    entropy,
+                )
+                .await;
+        }
         let spec = MintSpec::new(target, sharer, channel);
         let spec = match self.mint_extras(spec, args).await {
             Ok(s) => s,
@@ -209,11 +227,6 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         match receipt {
             Ok(Appended::Minted { view, replayed }) => {
                 let token = view.manifest.token;
-                let tree = args.get("tree").and_then(Value::as_bool).unwrap_or(false)
-                    || arg_str(args, "tree") == Some("true");
-                if tree {
-                    return self.mint_tree(&view, now, entropy).await;
-                }
                 let next = crate::lineage::mint_next(token.as_str(), view.manifest.target.as_str());
                 Envelope::ok(
                     json!({
