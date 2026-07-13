@@ -60,6 +60,7 @@ fn bench_append(c: &mut Criterion) {
                 actor,
                 variant: None,
                 regions: None,
+                entry: None,
                 at: waggle_core::Timestamp::from_unix_ms(2),
             }))
             .unwrap()

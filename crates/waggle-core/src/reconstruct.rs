@@ -131,6 +131,7 @@ mod tests {
                 seq: Seq(0), // permissive producer
                 variant: None,
                 regions: None,
+                entry: None,
             }),
             LogRecord::Minted {
                 manifest: Box::new(m),

@@ -49,6 +49,7 @@ fn event(token: waggle_core::Token) -> AppendIntent {
         ),
         variant: None,
         regions: None,
+        entry: None,
         at: waggle_core::Timestamp::from_unix_ms(2),
     }
 }

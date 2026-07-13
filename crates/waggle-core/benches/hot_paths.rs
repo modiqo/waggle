@@ -165,6 +165,7 @@ fn bench_fold_1m(c: &mut Criterion) {
                 seq: Seq(i),
                 variant: None,
                 regions: None,
+                entry: None,
             },
             &mut tables,
         );

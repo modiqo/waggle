@@ -753,16 +753,20 @@ fn tags_and_find_discovery() {
     });
 }
 
-/// Node-granular coverage on a tree: reading one subtree's file marks that node
-/// read; a search across the tree marks every node it served.
+/// Per-file coverage on a tree: a node with two files, only one of which is read,
+/// reports `1/3` — not "the folder was touched" — and NAMES the file nobody
+/// opened. A search that serves every file then closes it to `3/3`.
 #[test]
-fn coverage_is_node_granular_over_a_tree() {
+fn coverage_is_per_file_over_a_tree() {
     pollster::block_on(async {
         let dir = tempfile::tempdir().unwrap();
         let docs = dir.path().join("review_me");
         std::fs::create_dir_all(docs.join("x")).unwrap();
         std::fs::create_dir_all(docs.join("y")).unwrap();
+        // Node x holds TWO files; node y holds one. All share "content" so a
+        // search matches every file; each has a unique word too.
         std::fs::write(docs.join("x/a.md"), "content alpha\n").unwrap();
+        std::fs::write(docs.join("x/c.md"), "content gamma\n").unwrap();
         std::fs::write(docs.join("y/b.md"), "content beta\n").unwrap();
         let handler = handler_with_blobs(dir.path());
         let mut e = entropy();
@@ -793,7 +797,8 @@ fn coverage_is_node_granular_over_a_tree() {
             .unwrap()
             .to_owned();
 
-        // Read x's file only. Coverage: some nodes read, not all → incomplete.
+        // Read ONE of x's two files. Per-file coverage: 1 of 3 read, incomplete,
+        // and the miss is named (c.md in node x, plus y/b.md untouched).
         handler
             .dispatch(
                 "read",
@@ -812,11 +817,23 @@ fn coverage_is_node_granular_over_a_tree() {
             .await;
         assert!(audit.hint.is_none(), "{audit:?}");
         assert_eq!(audit.result["kind"], "tree");
-        assert_eq!(audit.result["total_files"], 2);
-        assert_eq!(audit.result["complete"], false, "y not read yet: {audit:?}");
-        assert!(!audit.result["unread_nodes"].as_array().unwrap().is_empty());
+        assert_eq!(audit.result["total_files"], 3);
+        assert_eq!(audit.result["files"], "1/3", "one file read: {audit:?}");
+        assert_eq!(audit.result["complete"], false);
+        // Node x is partially read: one of its two files is still missing, named.
+        let unread = audit.result["unread"].as_array().unwrap();
+        let x_gap = unread
+            .iter()
+            .find(|u| u["token"] == x)
+            .expect("x is partially read");
+        assert_eq!(x_gap["unread_files"], 1, "c.md still missing: {audit:?}");
+        assert!(x_gap["first_missing"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|n| n == "c.md"));
 
-        // A search across the tree serves both files → every node read.
+        // A search across the tree serves every file → 3/3, complete.
         handler
             .dispatch(
                 "search",
@@ -833,9 +850,7 @@ fn coverage_is_node_granular_over_a_tree() {
                 &mut e,
             )
             .await;
-        assert_eq!(
-            after.result["complete"], true,
-            "search touched every node: {after:?}"
-        );
+        assert_eq!(after.result["files"], "3/3", "search served all: {after:?}");
+        assert_eq!(after.result["complete"], true);
     });
 }

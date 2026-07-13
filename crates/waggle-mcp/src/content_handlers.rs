@@ -265,6 +265,20 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
     /// served bytes touched (`None` when contract-free or untouched —
     /// the field never appears for ordinary traffic).
     pub(crate) async fn record_read(&self, token: Token, now: Timestamp, regions: Option<u8>) {
+        self.record_read_entry(token, now, regions, None).await;
+    }
+
+    /// Record a `read`, additionally stamping the tree-node file ordinal this
+    /// read served (`entry`) so per-file coverage can roll it up. `entry` is a
+    /// position into the node's signed directory index — I-1-safe like
+    /// `regions` — and is `None` for all non-tree traffic.
+    pub(crate) async fn record_read_entry(
+        &self,
+        token: Token,
+        now: Timestamp,
+        regions: Option<u8>,
+        entry: Option<u32>,
+    ) {
         let _ = self
             .store
             .append(AppendIntent::Event {
@@ -273,6 +287,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
                 actor: ActorClass::from_context(&ResolverContext::anonymous_agent()),
                 variant: None,
                 regions,
+                entry,
                 at: now,
             })
             .await;

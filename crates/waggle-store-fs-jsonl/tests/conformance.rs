@@ -61,6 +61,7 @@ fn reopen_replays_the_journal() {
                     ),
                     variant: None,
                     regions: None,
+                    entry: None,
                     at: waggle_core::Timestamp::from_unix_ms(2),
                 })
                 .await

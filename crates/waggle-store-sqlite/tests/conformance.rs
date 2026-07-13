@@ -39,6 +39,7 @@ fn event_intent(token: waggle_core::Token, stage: Stage) -> AppendIntent {
         ),
         variant: None,
         regions: None,
+        entry: None,
         at: waggle_core::Timestamp::from_unix_ms(4),
     }
 }

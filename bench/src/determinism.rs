@@ -76,6 +76,7 @@ fn build_log(k: usize, events_per: usize) -> Vec<LogRecord> {
                 seq: Seq((e + 1) as u32),
                 variant: None,
                 regions: None,
+                entry: None,
             }));
         }
     }

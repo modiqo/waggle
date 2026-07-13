@@ -95,6 +95,7 @@ fn e6_native_edge_equals_local() {
                     ),
                     variant: None,
                     regions: None,
+                    entry: None,
                     at: waggle_core::Timestamp::from_unix_ms(u64::from(step)),
                 };
                 let a = edge.append(mk()).await;
@@ -218,6 +219,7 @@ fn e4_native_replay_migration_rehearsal() {
                     ),
                     variant: None,
                     regions: None,
+                    entry: None,
                     at: waggle_core::Timestamp::from_unix_ms(2),
                 })
                 .await

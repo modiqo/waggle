@@ -56,6 +56,11 @@ pub enum AppendIntent {
         /// frames keep parsing.
         #[serde(default)]
         regions: Option<u8>,
+        /// For a one-file read inside an indexed tree node: the file's ordinal
+        /// in the node's signed directory index (a position, not a payload —
+        /// I-1-safe like `regions`). Defaulted so pre-tree frames keep parsing.
+        #[serde(default)]
+        entry: Option<u32>,
         /// When it happened.
         at: Timestamp,
     },

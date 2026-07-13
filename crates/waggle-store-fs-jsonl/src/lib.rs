@@ -117,6 +117,7 @@ fn record_of(intent: &AppendIntent, receipt: &Appended) -> Option<LogRecord> {
                 actor,
                 variant,
                 regions,
+                entry,
                 at,
             },
             Appended::Event { seq },
@@ -128,6 +129,7 @@ fn record_of(intent: &AppendIntent, receipt: &Appended) -> Option<LogRecord> {
             seq: *seq,
             variant: *variant,
             regions: *regions,
+            entry: *entry,
         })),
         // Mint replays journal nothing (the original line already exists);
         // mismatched intent/receipt pairs cannot occur but journal nothing.
