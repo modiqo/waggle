@@ -130,6 +130,9 @@ enum Cmd {
         /// Markdown heading whose section to read (text/markdown lens).
         #[arg(long)]
         section: Option<String>,
+        /// For a FOLDER token (minted --tree): read ONE file by name, fetched from the content-addressed blob and stamped as a per-file read. The folder's `read` (no address) lists the file names.
+        #[arg(long)]
+        file: Option<String>,
         /// Code symbol whose definition to read (symbol lens — tokens minted with a snapshot of source code); the overview's `symbols` lists what exists.
         #[arg(long)]
         symbol: Option<String>,
@@ -301,6 +304,7 @@ fn main() {
             token,
             lines,
             section,
+            file,
             symbol,
             path,
             from,
@@ -311,6 +315,7 @@ fn main() {
                 "token": token,
                 "lines": lines,
                 "section": section,
+                "file": file,
                 "from": from,
                 "symbol": symbol,
                 "path": path,
