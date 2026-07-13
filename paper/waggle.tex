@@ -1105,6 +1105,23 @@ and the two shapes that are not---the chain and the reasoning judgement---are
 precisely where the arms diverge and where our own mechanism misfires. A harder
 corpus is the obvious next measurement, and we expect it to be less flattering.
 
+A word on scale, and on what measures it. The evaluated system mints one token
+per file. That serves a folder faithfully and makes coverage per file for free---
+each file is its own token---but it bounds the folder: past a few hundred files a
+single mint is impractical. Subsequent work replaces the per-file forest with an
+indexed directory tree, each folder one content-addressed node carrying a trigram
+index and a Bloom summary~\citep{bloom1970}, so a corpus of thousands of files
+mints in one call and a single \tok{search} prunes and ranks across the whole
+lineage. Coverage \emph{stays} per file, now without a token per file: each read
+records the file's position in its node's signed index---a position, not a
+payload, admissible under the same invariant (\S\ref{sec:receipts}) that keeps
+the log free of recipient bytes, exactly as the region-touch field is. We hold
+this to the standard the rest of the substrate is held to before a sweep---the
+conformance suite, extended to the indexed tree's contract, deterministically---
+rather than re-running the answer-quality measurement, which is reported here on
+the per-file system it was collected on. Whether indexing moves those numbers is
+future measurement, not a claim we draw from these.
+
 The outlook follows from the three-radii result. As harnesses routinely
 fan work across machines and across vendors, the copy discipline's costs
 compound superlinearly---more copies, more billing boundaries, more stale
