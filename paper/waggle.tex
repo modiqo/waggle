@@ -85,10 +85,11 @@ socket, a million-event fold in 334\,\textmu{}s) and an evaluation over ten
 artifact shapes---text, markdown, code, PDF, voice, video, a folder of many
 files, a $>$2000-line source, a multi-hop chain, a reasoning task no single line
 answers, and a 180-file tree---in which nine models answer the same question
-under four turn-matched, \emph{paired} handoffs (1705 runs). A raw path collapses
-the moment the bytes stop being text (0\,\% on PDF, voice and video) and again
-when structure must be \emph{traversed} rather than described (33\,\% on the
-chain); against it the token wins 124 paired comparisons and loses 9. Against
+under four turn-matched, \emph{paired} handoffs (1705 runs). A raw path trails the
+token even where it can read the bytes---on a PDF it reaches 72\,\% with
+\texttt{pdftotext} against the token's 100\,\% at a fifteenth of the bytes---and
+collapses where structure must be \emph{traversed} rather than described (33\,\% on
+the chain); against it the token wins 124 paired comparisons and loses 9. Against
 \emph{pasting} the token neither wins nor loses: 95.3\,\% against 95.6\,\%, a
 statistical tie---bought at \textbf{25$\times$ fewer ingested bytes} and
 9$\times$ less money. Pasting was never inaccurate; it was expensive, and it
@@ -356,59 +357,55 @@ admits $c$; an undeclared context value \emph{fails} a constrained
 dimension; modalities match by superset.\;
 \end{algorithm}
 
-\subsection{What the substrate refuses to understand}
+\subsection{The extraction boundary: determinism, not format}
 \label{sec:opaque}
 
 A PDF is a container. So is an MP4, a WAV, a scanned page. Somewhere inside is
-something a consumer needs, and the obvious move---the one every ingestion
-pipeline makes---is to reach in and transcode: OCR the scan, transcribe the
-audio, caption the frames, hand back a clean string. We do not do this. The
-refusal is deliberate, and it is a design commitment rather than an omission.
+something a consumer needs, and the tempting move is to reach in and transcode
+everything to a clean string. The line the substrate actually draws is not
+``text versus binary''---it is \emph{deterministic versus model-requiring}, and it
+runs straight through the binary formats.
 
-The first reason is \emph{competence}, and it is not close. The models on the far
-side of the handoff already see and hear. A frontier model reads a table out of a
-rasterised page, follows the arrows in an architecture diagram, notices that a
-chart's $y$-axis begins at forty, and hears the hesitation in a speaker's voice.
-No extraction pipeline we could ship would match it, and the gap widens with
-every model generation while our pipeline stands still. To OCR a page \emph{for}
-such a model is to demote it: to replace a perceptual system that improves
-without us with a lossy one that does not.
+A PDF's embedded text layer and an HTML document's text are \emph{pure functions of
+the bytes}: \texttt{pdftotext} reads a stream the file literally stores, stripping
+tags reads the DOM, same bytes to same text with no model in the loop. These the
+substrate \emph{does} extract, at mint, recording the extractor's identity and
+signing the result into the core, so a PDF becomes searchable text that travels
+\emph{with} the token and joins the lens stack of \S\ref{sec:lenses}. A scanned page,
+audio, or video carries no text layer; recovering its content takes a \emph{model},
+and there the substrate refuses. It pins the raw bytes and the projection says so:
+\emph{``content is \texttt{audio/mp4}---the substrate does not read this; fetch the
+bytes and interpret them with your own speech model.''}
 
-The second reason is that a transcode is a \emph{projection chosen at the wrong
-time, by the wrong party}. Any extraction we perform is committed in advance, at
-mint, by a substrate that does not know the question. It fixes what counts as
-content---text, and not the layout that gave the text its meaning; words, and not
-the tone that inverted them---and it discards the rest irrecoverably. The
-consumer's own perception is a projection chosen \emph{at the point of use}, by
-the party that knows what it is looking for. Interposing ours substitutes the
-worse instrument for the better one and files the substitution under
-preprocessing. A table's structure survives our OCR only if we guessed that
-structure mattered; the model, holding the question, never has to guess.
+Three reasons put the line exactly at determinism. \textbf{Competence}: the models on
+the far side already see and hear, better than any pipeline we could ship, and the
+gap widens with every generation while ours stands still---to OCR a page \emph{for}
+such a model is to demote it. \textbf{Timing}: a model transcode is a projection
+chosen in advance, at mint, by a substrate that does not know the question; the
+consumer's own perception is a projection chosen \emph{at the point of use}, by the
+party that does. A deterministic text-layer extraction escapes this critique
+precisely because it is not a projection at all---it recovers the one text the format
+already committed to, and discards nothing the layout did not. \textbf{The receipt}:
+a substrate that runs a model must form a non-deterministic \emph{opinion} about the
+bytes, and every receipt downstream inherits the drift---which is exactly what
+invariants~I-1 (payload-free log) and~I-2 (sealed, reproducible matcher) forbid. A
+deterministic extraction breaks neither: the log still records only that a token was
+minted, and the matcher over the extracted text reproduces exactly. The receipts are
+trustworthy \emph{because} the extractor cannot hallucinate. The signed extraction
+therefore carries a \texttt{deterministic} flag---\texttt{true} for a text layer,
+and \texttt{false} for a registered model extractor (opt-in, never a default), so a
+reader weighs a coverage receipt over the extraction at its true worth.
 
-The third reason is the receipt. A substrate that transcodes must \emph{read} the
-content it carries---and reading content is exactly what invariant~I-1 forbids.
-The log stays payload-free, and the matcher stays sealed and deterministic,
-because the substrate never interprets what it holds; the moment it OCRs a page,
-it has an opinion about the bytes, that opinion is non-deterministic, model-shaped
-and drifting, and every receipt downstream inherits it. The receipts are worth
-something precisely \emph{because} the thing issuing them cannot read.
-
-So the token carries the bytes and not a summary of them. What the substrate does
-extract, it extracts for \emph{structure, never content}: an outline, a symbol
-table, a line index---enough to lens, to search, to name a region in a
-consumption contract, and never enough to answer the question. The opaque bytes
-themselves travel with the token, intact, and are handed to the consumer's own
-vision or speech stack at the point of use. The substrate addresses; the model
-perceives. The receipt records that the bytes were served, and takes no view on
-what was in them.
-
-This is also the mechanism behind the sharpest result in \S\ref{sec:tier3}. Given
-a filesystem path to a PDF, a voice memo or a video, an agent with ordinary file
-tools scores \textbf{zero}---not poorly, zero---because a location is not an
-artifact, and \tok{cat} on an MP4 is noise. The bytes must travel \emph{with} the
-reference, and a path cannot carry them. That a token can is not an incidental
-convenience; it is the difference between a name that points at content and a
-name that \emph{delivers} it.
+The corrected claim is sharper than the one an earlier draft made. It is
+\emph{not} that a path ``scores zero'' on a PDF---given \texttt{pdftotext}, an agent
+with a path reaches \textbf{72\%} (\S\ref{sec:tier3}). It is that the extraction must
+travel \emph{with} the reference. A path leaves it as a loose file the next agent
+must locate and the receipt cannot vouch for; a corrupted, stale, or substituted
+extraction produces the same confident receipt. The token instead \emph{delivers} a
+deterministic extraction whose provenance is signed---and does so, on the PDF task,
+at \textbf{583 bytes served against pasting's 23{,}651}, more accurately than the
+path and a fortieth of the copy. That is the difference between a name that points at
+content and one that carries it.
 
 \subsection{The log is the truth}
 Everything downstream of a mint is an \emph{event} in an append-only log,
@@ -540,6 +537,58 @@ reasoners~\citep{lightman2023,jin2025} and lets successful trajectories be
 distilled into scaffolds for weaker consumers~\citep{wang2024awm}.
 
 % ===========================================================================
+\section{The Lens Stack}
+\label{sec:lenses}
+% ===========================================================================
+
+Interrogation needs a \emph{surface to address}. A line window and a regular
+expression treat every artifact as an undifferentiated string; that is the floor,
+and for a log file it is enough. But a consumer handed a token wants to ask the
+question the artifact's own shape invites --- a section of a document, a field of a
+config, a function of a program --- and the shape is a property of the
+\emph{resource type}, not of the consumer. So the substrate selects an addressing
+surface --- a set of \emph{lenses} --- from the content type, and \tok{read} with no
+address returns an overview that \emph{lists} the lenses the artifact affords. The
+consumer discovers what it can ask; it never guesses.
+
+This is a different axis from the \emph{variant} of \S\ref{sec:design}. A variant is
+chosen by the \emph{consumer's} context --- a vision model and a text agent resolve
+the same token differently. A lens is chosen by the \emph{artifact's} type --- and
+every consumer of a markdown token can address it by section. Two projections,
+orthogonal: one over who is asking, one over what is being asked of.
+
+\begin{table}[t]
+\centering\small
+\caption{Lenses by resource type. Every text artifact gets the floor
+(\texttt{lines}, \texttt{search}); the type \emph{adds} to it. Opaque formats join
+the stack through extraction (\S\ref{sec:opaque}) --- a PDF becomes text and inherits
+the text lenses --- while media the substrate will not read deterministically gets no
+lens at all, by design: its bytes are served and the consumer's own model perceives
+them.}
+\label{tab:lenses}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}l l l@{}}
+\toprule
+\textbf{Resource type} & \textbf{Adds} & \textbf{Address by}\\
+\midrule
+any text & --- & \texttt{lines:A-B}, regex\\
+\texttt{text/markdown} & \texttt{outline}, \texttt{section} & \texttt{section:"Pricing"}\\
+\texttt{application/json} & \texttt{path} & \texttt{path:/deps/react}\\
+source code & \texttt{symbol} & \texttt{symbol:resolve}\\
+\midrule
+PDF, HTML & \emph{via extraction} & as extracted text\\
+audio, video, image & \emph{none} & fetch \& perceive\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:lenses} is the whole dispatch. It is deliberately shallow: a lens is
+an \emph{addressing} surface, never an interpretation, so adding one is adding a way
+to name a region, not a way to read meaning --- which is why the same discipline that
+governs a markdown section governs a code symbol, and why the extraction tier can
+join the stack without a new invariant. The rest of this section is the deepest lens
+in the table, worked in full.
+
 \section{A Structural Lens for Code}
 \label{sec:lens}
 % ===========================================================================
@@ -858,11 +907,14 @@ for it in correctness.
 ordinary file tools, which is what an agent is handed today---answers 68.0\,\%,
 and against it the substrate's advantage is not a matter of interpretation:
 \textbf{124 paired wins to 9} ($p<0.05$). The average conceals two distinct
-failures. On \texttt{pdf}, \texttt{voice} and \texttt{video} it scores
-\textbf{zero}, for the reason \S\ref{sec:opaque} sets out: a filesystem location
-conveys nothing to a consumer that cannot decode the bytes, and the extraction
-must travel \emph{with} the reference---which is what a token does and a location
-cannot. And on the multi-hop chain it scores \textbf{33\,\%}, for a second and
+failures. On \texttt{pdf} it reaches only \textbf{72\,\%} \emph{with}
+\texttt{pdftotext} in hand---and pays 8{,}915 bytes to do it, because the tool
+dumps one flat blob and the needle sits past the first window, so the agent
+grep-and-guesses; the token, extracting the same PDF once at mint and serving a
+lensed slice, answers \textbf{100\,\%} at \textbf{583 bytes} (\S\ref{sec:opaque}).
+The extraction must travel \emph{with} the reference, deterministically and signed;
+a path leaves it a loose file the receipt cannot vouch for. And on the multi-hop
+chain the path scores \textbf{33\,\%}, for a second and
 more interesting reason: \tok{grep} cannot search for a section whose name it has
 not read yet. Lexical search is superb at finding what you can already describe;
 it has no answer at all for structure you must \emph{traverse}. We remain equally
