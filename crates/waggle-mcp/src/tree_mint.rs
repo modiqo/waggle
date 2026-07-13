@@ -40,6 +40,10 @@ const DEFAULT_BUDGET: u64 = 256 * 1024 * 1024;
 /// already exist in the store, which post-order minting cannot provide.
 struct NodeData {
     token: Token,
+    /// This directory's own base name (the leaf), taken from the filesystem
+    /// entry — never parsed back out of a URL, so it is correct on every
+    /// platform's path separator.
+    name: String,
     /// `file://` URL of this directory.
     dir_url: String,
     /// The `tree` field this node's manifest will carry.
@@ -200,7 +204,7 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             .collect();
         for sub in &children {
             entries.push(Entry::Dir(SubdirEntry {
-                name: dir_name(&sub.dir_url),
+                name: sub.name.clone(),
                 token: sub.token.as_str().to_owned(),
                 files: sub.files,
                 bytes: sub.bytes,
@@ -218,6 +222,10 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
 
         Ok(NodeData {
             token,
+            name: dir
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default(),
             dir_url: format!("file://{}", dir.display()),
             tree_node: waggle_core::TreeNode {
                 index: index_ref,
@@ -400,17 +408,6 @@ fn index_text(content_type: &str, bytes: &[u8]) -> String {
     crate::extract::deterministic_extract(content_type, bytes)
         .map(|e| e.text)
         .unwrap_or_default()
-}
-
-/// The final path component of a `file://…/dir` URL — a subdir's name within its
-/// parent.
-fn dir_name(dir_url: &str) -> String {
-    dir_url
-        .trim_end_matches('/')
-        .rsplit('/')
-        .next()
-        .unwrap_or(dir_url)
-        .to_owned()
 }
 
 /// Directory entries, sorted by name for deterministic node bytes.
