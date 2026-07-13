@@ -238,8 +238,9 @@ pub struct Extraction {
 /// addressed by their own subtree token), the **trigram index** over its files,
 /// and a **Bloom summary** of every trigram beneath it, inlined so a search can
 /// prune the subtree from the manifest alone. Files pin their bytes eagerly (so a
-/// deleted file still reads — C-1); a per-file token is minted only lazily, when a
-/// consumer needs a standalone reference to one file.
+/// deleted file still reads — C-1) and are addressed by name within their node
+/// (`read --file`); a file is not itself a token, so a folder of thousands mints
+/// as a handful of nodes, not thousands of tokens.
 ///
 /// The `bloom` is the lowercase-hex wire form of a fixed-size filter (parsed into
 /// the typed structure by the consumer, `waggle-tree::Bloom`); keeping it a string

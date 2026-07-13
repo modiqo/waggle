@@ -123,7 +123,7 @@ Performance is a design input here, not an afterthought. The budget:
 |---|---|---|
 | serve (`read` overview, edge or local) | **zero parsing; one CAS get** — within noise of today | outline precomputed at mint; render is a budget-fit over an already-flat structure |
 | mint, single file | extraction ≤ **5 ms / kLOC** on one core; total mint overhead < 15% over snapshot-only | one parse, one query pass, arena output; tree dropped before return |
-| mint `--tree` (≤ 200 files) | wall-clock ≈ snapshot cost, not snapshot + N·parse | extraction parallel across a bounded blocking pool; appends stay sequential (the committer owns order) |
+| mint `--tree` (indexed; thousands of files) | wall-clock ≈ snapshot cost, not snapshot + N·parse | extraction parallel across a bounded blocking pool; appends stay sequential (the committer owns order) |
 | memory | peak = one tree + one arena per in-flight file; **no retained trees, no global index** | parse → extract → drop; outline ≈ 40 B/symbol + one shared name buffer |
 | startup | zero until first code mint | grammars linked, queries compiled lazily, once per process |
 

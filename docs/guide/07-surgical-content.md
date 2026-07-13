@@ -179,19 +179,19 @@ pointer returns the valid roots; a token with no readable content says
 
 ## Coverage: proof the tree was read
 
-For any lineage root (a `--tree` mint or a bundle), the per-child
-funnels already know which files were consumed — `coverage` turns that
-into proof, with misses NAMED:
+For a `--tree` mint, each read records which file it served, so
+`coverage` turns that into a **per-file** proof, with misses NAMED:
 
 ```sh
 waggle coverage --token <root>
-#  read 2/3 · run 0/3 · complete: false
+#  files 2/3 · complete: false
 #  unread: [.../notes.md]      <- what the review skipped
 ```
 
-Three honest levels: `unread` / `read` (bytes served — a deep search
-over the root counts, because it really reads every file) / `run` (the
-consumer recorded use — the strong, intentional bar). It's receipts,
-not surveillance (payload-free, I-1), and receipts turn
+A file counts as read when its bytes were served — a `read --file`, or a
+`search` hit that returned from it (a broad grep that sweeps a file but
+returns nothing does not stamp it). A tree minted `--require files:all`
+also carries a `met` verdict: false while any file is unread. It's
+receipts, not surveillance (payload-free, I-1), and receipts turn
 enforcement-grade when the handoff is SEALED (`waggle-tmux mint --seal`)
 or remote — where the token is the only door.

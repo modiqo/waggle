@@ -77,11 +77,11 @@ you can't make of a filesystem path:
 
 ```bash
 waggle mint --target file://$PWD/src --tree --require files:all   # → PxL8mQ2v
-waggle read --token PxL8mQ2v                        # the projection: one child token per file
-waggle read --token PxL8mQ2v --section Retry        # fan the lens out over every child
-waggle search --token PxL8mQ2v --pattern "def retry"  # or grep the tree; hits stamp their file
+waggle read --token PxL8mQ2v                        # the table of contents: files by name, subdirs by token
+waggle read --token PxL8mQ2v --file retry.py        # open one file by name
+waggle search --token PxL8mQ2v --pattern "def retry"  # or grep the whole tree in one call; hits stamp their file
 waggle coverage --token PxL8mQ2v
-# → { "read": "3/4", "met": false, "requires": "files:all" }
+# → { "files": "3/4", "met": false, "requires": "files:all" }
 ```
 
 `read` is the **consumer's** ledger, not the reader's: a search that
