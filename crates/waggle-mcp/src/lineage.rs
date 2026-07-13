@@ -262,17 +262,26 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
             }
         }
         let complete = files > 0 && read == files;
+        let mut result = json!({
+            "token": root.as_str(),
+            "kind": "tree",
+            "files": format!("{read}/{files}"),
+            "nodes": format!("{read_nodes}/{nodes}"),
+            "total_files": total_files,
+            "total_bytes": total_bytes,
+            "complete": complete,
+            "unread": unread,
+        });
+        // A tree minted `--require files:all` carries a COMPLETENESS contract on its
+        // root. Without it, `complete` is a fact an orchestrator may consult; with
+        // it, `met` is a verdict it can refuse an answer on — the same gate the flat
+        // path applies, now proven per file rather than per node.
+        if requires_all_files(Some(view)) {
+            result["met"] = json!(complete);
+            result["requires"] = json!(crate::contract_args::TREE_ALL);
+        }
         Envelope::ok(
-            json!({
-                "token": root.as_str(),
-                "kind": "tree",
-                "files": format!("{read}/{files}"),
-                "nodes": format!("{read_nodes}/{nodes}"),
-                "total_files": total_files,
-                "total_bytes": total_bytes,
-                "complete": complete,
-                "unread": unread,
-            }),
+            result,
             vec![NextCall {
                 tool: "search".into(),
                 args: json!({ "token": root.as_str(), "pattern": "<regex>" }),

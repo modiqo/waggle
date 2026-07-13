@@ -61,7 +61,7 @@ fn check_next(env: &waggle_mcp::Envelope) {
 /// carries the searchable text, not the harness.
 #[test]
 fn opaque_html_is_extracted_and_searchable_with_provenance() {
-    let dir = std::env::temp_dir().join(format!("waggle-extract-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("waggle-html-extract-{}", std::process::id()));
     std::fs::remove_dir_all(&dir).ok();
     std::fs::create_dir_all(&dir).unwrap();
     let file = dir.join("briefing.html");
@@ -378,7 +378,7 @@ fn binary_target_with_extracted_content_the_pdf_story() {
     // Doc 18 §7: the harness extracted the PDF once at mint; the token
     // serves surgical access to the extraction forever, while the target
     // stays the original binary.
-    let dir = std::env::temp_dir().join(format!("waggle-extract-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("waggle-pdf-extract-{}", std::process::id()));
     std::fs::remove_dir_all(&dir).ok();
     std::fs::create_dir_all(&dir).unwrap();
     let pdf = dir.join("q3-report.pdf");
@@ -852,5 +852,113 @@ fn coverage_is_per_file_over_a_tree() {
             .await;
         assert_eq!(after.result["files"], "3/3", "search served all: {after:?}");
         assert_eq!(after.result["complete"], true);
+    });
+}
+
+/// `mint --tree --require files:all` puts a completeness GATE on the tree: coverage
+/// reports `met` (a verdict an orchestrator can refuse on), flipping false→true as
+/// the last file is read. A plain `--tree` carries no such verdict.
+#[test]
+fn files_all_gate_on_a_tree_flips_met_when_the_last_file_is_read() {
+    pollster::block_on(async {
+        let dir = tempfile::tempdir().unwrap();
+        let docs = dir.path().join("review_me");
+        std::fs::create_dir_all(&docs).unwrap();
+        std::fs::write(docs.join("a.md"), "content alpha\n").unwrap();
+        std::fs::write(docs.join("b.md"), "content beta\n").unwrap();
+        let handler = handler_with_blobs(dir.path());
+        let mut e = entropy();
+        let root = handler
+            .dispatch(
+                "mint",
+                &json!({ "target": format!("file://{}", docs.display()),
+                         "tree": true, "require": "files:all" }),
+                Timestamp::from_unix_ms(1),
+                &mut e,
+            )
+            .await
+            .result["token"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+
+        // Nothing read: the contract is declared and unmet.
+        let before = handler
+            .dispatch(
+                "coverage",
+                &json!({ "token": root }),
+                Timestamp::from_unix_ms(2),
+                &mut e,
+            )
+            .await;
+        assert_eq!(before.result["requires"], "files:all", "{before:?}");
+        assert_eq!(
+            before.result["met"], false,
+            "unread tree cannot be met: {before:?}"
+        );
+
+        // Read one file — still short, still unmet.
+        handler
+            .dispatch(
+                "read",
+                &json!({ "token": root, "file": "a.md" }),
+                Timestamp::from_unix_ms(3),
+                &mut e,
+            )
+            .await;
+        let mid = handler
+            .dispatch(
+                "coverage",
+                &json!({ "token": root }),
+                Timestamp::from_unix_ms(4),
+                &mut e,
+            )
+            .await;
+        assert_eq!(mid.result["met"], false, "one of two read: {mid:?}");
+
+        // Read the second — the gate flips to met.
+        handler
+            .dispatch(
+                "read",
+                &json!({ "token": root, "file": "b.md" }),
+                Timestamp::from_unix_ms(5),
+                &mut e,
+            )
+            .await;
+        let done = handler
+            .dispatch(
+                "coverage",
+                &json!({ "token": root }),
+                Timestamp::from_unix_ms(6),
+                &mut e,
+            )
+            .await;
+        assert_eq!(done.result["met"], true, "whole tree read: {done:?}");
+
+        // A plain --tree (no contract) reports completeness as a fact, never a verdict.
+        let plain = handler
+            .dispatch(
+                "mint",
+                &json!({ "target": format!("file://{}", docs.display()), "tree": true }),
+                Timestamp::from_unix_ms(7),
+                &mut e,
+            )
+            .await
+            .result["token"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        let cov = handler
+            .dispatch(
+                "coverage",
+                &json!({ "token": plain }),
+                Timestamp::from_unix_ms(8),
+                &mut e,
+            )
+            .await;
+        assert!(
+            cov.result.get("met").is_none(),
+            "no contract, no verdict: {cov:?}"
+        );
     });
 }
