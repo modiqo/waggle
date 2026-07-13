@@ -181,6 +181,12 @@ def indexed_text(it: dict) -> str:
 
 def contract_for(it: dict) -> list[str]:
     k, path = it["region_kind"], it["path"]
+    # A PDF is now extracted by waggle itself, and its extraction's line numbers
+    # differ from the reference .txt's — a lines: contract derived from the .txt
+    # would name the wrong region and make the gate reject correct answers. The
+    # PDF task is a single needle; no contract is needed or honest here.
+    if it["modality"] == "pdf":
+        return []
     if k == "sections" and path.endswith(".md"):
         out: list[str] = []
         for r in it["region"]:
@@ -209,7 +215,17 @@ def mint(it: dict) -> str:
             a += ["--require", "files:all"]
         return wag(a).get("token", "")
     args = ["mint", "--target", it["path"], *contract_for(it)]
-    if it.get("content"):
+    # A PDF has a deterministic text layer, so waggle extracts it ITSELF at mint
+    # (--snapshot) — the token carries the searchable text, and the harness never
+    # hands over a .txt. This is the honest test of the capability: earlier the
+    # corpus spoon-fed waggle `--content doc.txt`, which measured who was given the
+    # transcript. Voice and video carry no text layer; waggle does not transcribe
+    # (that needs a model), so their transcript still rides via --content — the
+    # realistic deployment where something transcribed once and the token carries
+    # it — plus --attach for a consumer that wants to listen.
+    if it["modality"] == "pdf":
+        args += ["--snapshot"]
+    elif it.get("content"):
         args += ["--content", it["content"]]
         if it["modality"] in ("voice", "video"):
             args += ["--attach", it["path"]]
