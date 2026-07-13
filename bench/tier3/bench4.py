@@ -256,8 +256,9 @@ TOOL_REF = """You have a path and ordinary file tools:
 {"cmd":"ls","path":"<p>"}                               -> list a directory (recursive)
 {"cmd":"open","path":"<p>"}                             -> the file's bytes as text
 {"cmd":"grep","path":"<p>","pattern":"<re>"}            -> matching lines (recurses a directory)
-Binary files (pdf/audio/video) read as raw bytes; ordinary tools cannot
-interpret them."""
+{"cmd":"extract","path":"<p>"}                          -> text out of a PDF, audio or video
+A PDF, audio file or video is binary; `open` gives you bytes. Use `extract` to get
+its text (this is what pdftotext / a transcription tool would give you)."""
 
 TOOL_WAG = """The artifact is a waggle token. Interrogate it; you never receive the
 whole artifact unless you ask. Any command may carry "token" to address a CHILD
@@ -277,9 +278,36 @@ Pull only what you need."""
 
 
 def ref_exec(cmd: dict, it: dict) -> tuple[str, int]:
+    """The `reference` arm: a path, and the tools a REAL agent actually holds.
+
+    This arm used to be told "binary files cannot be interpreted", and it duly
+    scored ZERO on pdf, voice and video. That number was ours, not the world's.
+    We had handed waggle the extracted text at mint (`--content doc_0.txt`) while
+    forbidding the baseline from touching the very same file, which was sitting on
+    disk beside the artifact. It measured who was given the transcript, and nothing
+    else. A reviewer would have been right to throw the rows out.
+
+    So `extract` now does what a real agent does: pdftotext on a PDF, a transcript
+    for speech. And we give it the GROUND-TRUTH transcript rather than a lossy ASR
+    pass — deliberately the best case, better than a real agent would get. Steelman
+    the baseline: whatever survives that is real, and whatever does not, we deserved
+    to lose.
+    """
     c = cmd.get("cmd")
     p = cmd.get("path") or it["path"]
     is_bin = it["modality"] in BINARY
+    # Once a binary is extracted, a real agent works with the TEXT, not the raw
+    # bytes: it ran pdftotext to a file and now greps that file. So point open/grep
+    # at the extracted text for binaries — greppping the raw PDF is a straw man.
+    if is_bin and it.get("content") and os.path.isfile(it["content"]) and c in ("open", "grep"):
+        p = it["content"]
+        is_bin = False
+    if c == "extract":
+        src = it.get("content")
+        if not src or not os.path.isfile(src):
+            return "(nothing to extract; this file is already text — use open)", 0
+        body = open(src, encoding="utf-8", errors="replace").read()
+        return body, len(body)
     if c == "ls":
         names = [f[len(it["path"]):].lstrip("/") for f in files_of(p)] if os.path.isdir(p) else [p]
         body = "\n".join(names[:300]) or "(not a directory)"
@@ -536,7 +564,7 @@ def run_one(it: dict, model: str, arm: str) -> Run:
             # turn 0 and reported it as {"AUDIT_CODE": "..."} — the right answer
             # in the wrong shape — and the old error taught it nothing, so it
             # repeated itself to the turn cap. A dead end again; a fork now.
-            known = {"copy": set(), "reference": {"open", "grep", "ls"}}.get(
+            known = {"copy": set(), "reference": {"open", "grep", "ls", "extract"}}.get(
                 arm, {"overview", "outline", "section", "symbol", "lines", "search"})
             if obj.get("cmd") not in known | {"answer", "batch"}:
                 convo += ('\n\nThat is not a valid command. To report the value you have '
