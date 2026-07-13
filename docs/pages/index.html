@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./assets/styles.css?v=7">
+    <link rel="stylesheet" href="./assets/styles.css?v=9">
   </head>
   <body>
     <header class="site-header">
@@ -58,6 +58,24 @@
           <li>
             <span class="tut-n">1</span>
             <div class="tut-c">
+              <h3>Set it up. The server starts itself.</h3>
+              <pre class="cmd"><span class="p">$</span> <span class="k">brew</span> install modiqo/homebrew-tap/waggle-cli   <span class="c"># or the curl one-liner below</span>
+<span class="p">$</span> <span class="k">claude</span> mcp add waggle -- <span class="k">waggle</span> serve --stdio   <span class="c"># same line in Codex &amp; Cursor</span></pre>
+              <div class="out">
+                <span class="ol">$</span> <span class="k">waggle</span> <span class="ol">daemon status</span>
+                &nbsp;&nbsp;<span class="good">running</span> <span class="ol">&middot; 1 connection &middot; ~/.waggle/waggle.db</span>
+              </div>
+              <p class="say">One binary, one line into your harness.
+              <code>waggle serve --stdio</code> <strong>is</strong> the MCP server &mdash; your
+              harness launches it, and it auto-starts a shared background daemon on first use.
+              Nothing to run, nothing to keep alive.</p>
+            </div>
+          </li>
+
+
+          <li>
+            <span class="tut-n">2</span>
+            <div class="tut-c">
               <h3>Name it. The folder never moves.</h3>
               <pre class="cmd"><span class="p">$</span> <span class="k">waggle</span> mint <span class="k">--target</span> ./runbooks <span class="k">--tree</span> <span class="k">--require</span> <span class="s">files:all</span></pre>
               <div class="out">
@@ -71,7 +89,7 @@
           </li>
 
           <li>
-            <span class="tut-n">2</span>
+            <span class="tut-n">3</span>
             <div class="tut-c">
               <h3>The subagent resolves it &mdash; and sees a map, not 20&nbsp;KB.</h3>
               <pre class="cmd"><span class="p">$</span> <span class="k">waggle</span> read <span class="k">--token</span> <span class="tokd">4x82KC93</span></pre>
@@ -90,7 +108,7 @@
           </li>
 
           <li>
-            <span class="tut-n">3</span>
+            <span class="tut-n">4</span>
             <div class="tut-c">
               <h3>Now query <em>through</em> the token.</h3>
               <pre class="cmd"><span class="p">$</span> <span class="k">waggle</span> read <span class="k">--token</span> <span class="tokd">4x82KC93</span> <span class="k">--section</span> <span class="s">"Retry Policy"</span></pre>
@@ -110,7 +128,7 @@
           </li>
 
           <li class="last">
-            <span class="tut-n">4</span>
+            <span class="tut-n">5</span>
             <div class="tut-c">
               <h3>And then the line no other handoff can produce.</h3>
               <pre class="cmd"><span class="p">$</span> <span class="k">waggle</span> coverage <span class="k">--token</span> <span class="tokd">4x82KC93</span></pre>
