@@ -65,7 +65,7 @@ pub use fold::{
 pub use log::{Change, LogRecord};
 pub use manifest::{
     apply_change, AttributionManifest, Constraint, Disposition, Extraction, MatchExpr, ModalitySet,
-    Posture, SignatureBlock, Variant, VariantBody, MANIFEST_SCHEMA_VERSION,
+    Posture, SignatureBlock, TreeNode, Variant, VariantBody, MANIFEST_SCHEMA_VERSION,
 };
 pub use matcher::{select_variant, Selected};
 pub use mint::{mint, MintError, MintOptions, MintSpec};

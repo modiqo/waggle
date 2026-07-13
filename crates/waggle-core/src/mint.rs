@@ -63,6 +63,7 @@ pub struct MintSpec {
     contract: Option<crate::Contract>,
     outline: Option<crate::MediaRef>,
     extraction: Option<crate::Extraction>,
+    tree: Option<crate::TreeNode>,
     labels: std::collections::BTreeMap<String, String>,
     ttl_ms: Option<u64>,
 }
@@ -83,6 +84,7 @@ impl MintSpec {
             contract: None,
             outline: None,
             extraction: None,
+            tree: None,
             labels: std::collections::BTreeMap::new(),
             ttl_ms: None,
         }
@@ -180,6 +182,15 @@ impl MintSpec {
         self
     }
 
+    /// Attach a tree directory node (design doc: tree-scale): the index, trigram
+    /// index, and Bloom summary for a directory minted `--tree`. Signed with the
+    /// core.
+    #[must_use]
+    pub fn tree(mut self, tree: crate::TreeNode) -> Self {
+        self.tree = Some(tree);
+        self
+    }
+
     /// Expire the token `ttl_ms` after mint.
     #[must_use]
     pub fn ttl_ms(mut self, ttl_ms: u64) -> Self {
@@ -229,6 +240,7 @@ pub fn mint(
         contract: spec.contract,
         outline: spec.outline,
         extraction: spec.extraction,
+        tree: spec.tree,
         signature: None, // hosts with an identity sign after mint (trust)
         variants,
         version: 1,
