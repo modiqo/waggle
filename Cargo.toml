@@ -34,6 +34,7 @@ ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "net", "io-util", "macros", "time", "sync"] }
 
 waggle-core = { path = "crates/waggle-core", version = "0.4.0" }
+waggle-tree = { path = "crates/waggle-tree", version = "0.4.0" }
 waggle-ops = { path = "crates/waggle-ops", version = "0.4.0" }
 waggle-agent = { path = "crates/waggle-agent", version = "0.4.0" }
 waggle-social = { path = "crates/waggle-social", version = "0.4.0" }

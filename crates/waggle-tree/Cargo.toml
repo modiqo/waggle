@@ -1,0 +1,18 @@
+[package]
+name = "waggle-tree"
+description = "Pure, deterministic index and search primitives for directory trees (design doc: tree-scale). A Merkle directory index, a trigram inverted index, and a union-composable Bloom summary — sans-I/O, so the daemon and the edge can both build and query them. Traversal and storage live in waggle-mcp."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme.workspace = true
+homepage.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

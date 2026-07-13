@@ -2338,6 +2338,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "waggle-tree"
+version = "0.4.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "wait-timeout"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
