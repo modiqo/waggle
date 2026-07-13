@@ -338,6 +338,21 @@ impl<S: Store, B: BlobSink> Handler<S, B> {
         }
         if let Some(args) = root_args {
             spec = crate::discovery::apply_tags(spec, args);
+            // A completeness contract rides on the ROOT node: `--require files:all`
+            // declares that this delegation needs the WHOLE tree, and `coverage`
+            // then refuses to call it met while any file is unread. A folder has no
+            // single text, so a `section:` requirement (which would need one) is
+            // rejected here — only `files:all` is meaningful over a tree.
+            match crate::contract_args::parse_contract(args, || {
+                Err(Envelope::err(
+                    "require: a folder has no single text — only `files:all` applies to a --tree mint",
+                    vec![],
+                ))
+            }) {
+                Ok(Some(contract)) => spec = spec.contract(contract),
+                Ok(None) => {}
+                Err(e) => return Err(e),
+            }
         }
         let mut manifest = waggle_core::mint(spec, &MintOptions::default(), &mut *entropy, now)
             .map_err(|e| Envelope::err(e.to_string(), vec![]))?;
