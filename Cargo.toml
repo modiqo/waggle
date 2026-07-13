@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/*", "edge-worker", "xtask", "bench"]
 
 [workspace.package]
-version = "0.5.1"
+version = "0.5.2"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT OR Apache-2.0"
@@ -33,13 +33,13 @@ loom = "0.7"
 ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "net", "io-util", "macros", "time", "sync"] }
 
-waggle-core = { path = "crates/waggle-core", version = "0.5.1" }
-waggle-tree = { path = "crates/waggle-tree", version = "0.5.1" }
-waggle-ops = { path = "crates/waggle-ops", version = "0.5.1" }
-waggle-agent = { path = "crates/waggle-agent", version = "0.5.1" }
-waggle-social = { path = "crates/waggle-social", version = "0.5.1" }
-waggle-store = { path = "crates/waggle-store", version = "0.5.1" }
-waggle-store-sqlite = { path = "crates/waggle-store-sqlite", version = "0.5.1" }
+waggle-core = { path = "crates/waggle-core", version = "0.5.2" }
+waggle-tree = { path = "crates/waggle-tree", version = "0.5.2" }
+waggle-ops = { path = "crates/waggle-ops", version = "0.5.2" }
+waggle-agent = { path = "crates/waggle-agent", version = "0.5.2" }
+waggle-social = { path = "crates/waggle-social", version = "0.5.2" }
+waggle-store = { path = "crates/waggle-store", version = "0.5.2" }
+waggle-store-sqlite = { path = "crates/waggle-store-sqlite", version = "0.5.2" }
 
 [workspace.lints.rust]
 missing_docs = "deny"
