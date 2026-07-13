@@ -15,17 +15,17 @@ on:
       plan:
         required: true
         type: string
-    secrets:
-      CARGO_REGISTRY_TOKEN:
-        required: true
+    # NOTE: CARGO_REGISTRY_TOKEN is intentionally NOT declared here. The dist
+    # caller passes `secrets: inherit`, which makes every repo secret available in
+    # the `secrets` context without declaration. Declaring it `required` alongside
+    # `inherit` is a known GitHub combination that delivers an EMPTY value — which
+    # is exactly what failed the first v0.5.1 attempt.
 
 jobs:
   crates-io:
     runs-on: ubuntu-latest
     # Never push a prerelease tag (v1.2.3-rc.1) to crates.io.
     if: ${{ !fromJson(inputs.plan).announcement_is_prerelease }}
-    env:
-      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -33,6 +33,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Publish public crates (dependency-ordered)
-        # --workspace publishes each publishable crate in topological order,
-        # waiting for the index between crates; --locked pins the resolved graph.
-        run: cargo publish --workspace --locked
+        env:
+          # Set on the step (inherited from the caller). Guard first so an empty
+          # token fails in one second, not after a full workspace verify build.
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          if [ -z "${CARGO_REGISTRY_TOKEN}" ]; then
+            echo "::error::CARGO_REGISTRY_TOKEN is empty — the secret did not reach this job"
+            exit 1
+          fi
+          # --workspace publishes each publishable crate in topological order,
+          # waiting for the index between crates; --locked pins the resolved graph.
+          cargo publish --workspace --locked
