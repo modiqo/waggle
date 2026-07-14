@@ -14,7 +14,7 @@ homepage.workspace = true
 
 [dependencies]
 waggle-core = { workspace = true }
-waggle-store = { path = "../waggle-store", version = "0.5.2" }
+waggle-store = { path = "../waggle-store", version = "0.5.3" }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 pollster = { workspace = true }

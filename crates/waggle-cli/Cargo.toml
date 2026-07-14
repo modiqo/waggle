@@ -19,9 +19,9 @@ path = "src/main.rs"
 [dependencies]
 waggle-core = { workspace = true }
 waggle-ops = { workspace = true }
-waggle-mcp = { path = "../waggle-mcp", version = "0.5.2", features = ["code-lens", "doc-extract"] }
-waggle-store = { path = "../waggle-store", version = "0.5.2" }
-waggle-store-sqlite = { path = "../waggle-store-sqlite", version = "0.5.2" }
+waggle-mcp = { path = "../waggle-mcp", version = "0.5.3", features = ["code-lens", "doc-extract"] }
+waggle-store = { path = "../waggle-store", version = "0.5.3" }
+waggle-store-sqlite = { path = "../waggle-store-sqlite", version = "0.5.3" }
 clap = { workspace = true }
 serde_json = { workspace = true }
 pollster = { workspace = true }
