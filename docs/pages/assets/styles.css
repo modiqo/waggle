@@ -256,6 +256,6 @@ pre .m { color: #d98070; }
 /* The hero handoff figure: an orchestrator mints a token, hands it to cheaper
    sub-agents, and gets a verified receipt back. Wide and short so it reads in one
    glance without pushing the CTA below the fold. */
-.hero-figure { max-width:940px; margin:30px auto 30px; }
+.hero-figure { max-width:1020px; margin:26px auto 26px; }
 .hero-figure object, .hero-figure img { width:100%; height:auto; display:block; pointer-events:none; }
 @media (max-width:520px){ .hero-figure{ margin:20px auto } }
