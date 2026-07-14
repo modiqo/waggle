@@ -38,10 +38,10 @@
           You hand it your files; waggle tells you which it actually opened.
           <strong>Trust the answer, or send it back.</strong>
         </p>
-        <div class="waggle-anim" aria-hidden="true" title="a file, waggled into a 30-byte link">
-          <span class="wa-src">your&nbsp;files</span>
-          <span class="wa-arrow">&rarr;</span>
-          <span class="wa-chip"><span class="wa-dot"></span><span class="wa-token" id="waToken">4x82KC93</span></span>
+        <div class="hero-figure">
+          <object type="image/svg+xml" data="./assets/handoff.svg" aria-label="An orchestrator mints a ~30-byte token for its files and hands it to cheaper sub-agents, which resolve the files through the token; a receipt converges back to the orchestrator verifying they read 3 of 3 — met.">
+            <img src="./assets/handoff.svg" alt="An orchestrator mints a token, hands it to sub-agents that read the files, and gets back a verified receipt.">
+          </object>
         </div>
         <div class="hero-actions">
           <a class="btn btn-primary" href="#install">Install</a>
@@ -486,31 +486,5 @@
         </p>
       </div>
     </footer>
-    <script>
-      // Waggle the token: shimmer characters, re-roll with a pulse. Motion is the
-      // metaphor. Holds still when the visitor prefers reduced motion.
-      (function () {
-        var el = document.getElementById('waToken');
-        if (!el) return;
-        var reduce = window.matchMedia &&
-          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (reduce) return;
-        var A = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        var N = 8, chars = el.textContent.split(''), tick = 0;
-        function rc() { return A[(Math.random() * A.length) | 0]; }
-        setInterval(function () {
-          tick++;
-          var k = 1 + (Math.random() < 0.4 ? 1 : 0);
-          for (var i = 0; i < k; i++) chars[(Math.random() * N) | 0] = rc();
-          if (tick % 42 === 0) {           // periodically re-roll the whole token
-            for (var j = 0; j < N; j++) chars[j] = rc();
-            var chip = el.parentNode;
-            chip.classList.add('wa-pulse');
-            setTimeout(function () { chip.classList.remove('wa-pulse'); }, 380);
-          }
-          el.textContent = chars.join('');
-        }, 60);
-      })();
-    </script>
   </body>
 </html>

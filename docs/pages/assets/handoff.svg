@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" width="1000" height="300" font-family="'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace">
+  <style>
+    text { font-family: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; }
+    .ink{fill:#141414} .soft{fill:#2e2f34} .muted{fill:#6a6b70} .faint{fill:#9b9ca1}
+    .honey{fill:#b8791a} .green{fill:#1f7a3f} .b{font-weight:600}
+
+    /* One loop = 8s. Four phases: mint · hand-off · resolve · converge. */
+    .flow  { offset-path: path('M 230 150 L 862 150'); offset-rotate: 0deg;
+             animation: flow 8s cubic-bezier(.5,0,.5,1) infinite; }
+    .conv  { offset-path: path('M 901 196 C 901 264 330 280 156 194'); offset-rotate: 0deg;
+             animation: conv 8s cubic-bezier(.5,0,.5,1) infinite; }
+    .tokpop { transform-box: fill-box; transform-origin: center; animation: tokpop 8s infinite; }
+    .r-mint   { transform-box: fill-box; transform-origin: center; animation: rmint 8s infinite; }
+    .r-verify { transform-box: fill-box; transform-origin: center; animation: rverify 8s infinite; }
+    .readline { animation: readline 8s infinite; }
+    .badge  { transform-box: fill-box; transform-origin: center; animation: badge 8s infinite; }
+    .ph     { fill:#b3b3ad; }
+    .ph.p1  { animation: p1 8s infinite; } .ph.p2 { animation: p2 8s infinite; }
+    .ph.p3  { animation: p3 8s infinite; } .ph.p4 { animation: p4 8s infinite; }
+
+    @keyframes flow {
+      0%{offset-distance:0%;opacity:0} 2%{opacity:1}
+      22%{offset-distance:29%} 26%{offset-distance:29%}
+      46%{offset-distance:70%} 50%{offset-distance:70%}
+      58%{offset-distance:100%;opacity:1} 62%{opacity:0} 100%{offset-distance:100%;opacity:0} }
+    @keyframes conv {
+      0%,58%{offset-distance:0%;opacity:0} 62%{opacity:1}
+      86%{offset-distance:100%;opacity:1} 90%{opacity:0} 100%{opacity:0} }
+    @keyframes tokpop { 0%,16%{transform:scale(1)} 21%{transform:scale(1.07)} 27%{transform:scale(1)} 100%{transform:scale(1)} }
+    @keyframes rmint { 0%{opacity:0;transform:scale(1)} 2%{opacity:.85} 13%{opacity:0;transform:scale(1.07)} 100%{opacity:0} }
+    @keyframes rverify { 0%,82%{opacity:0;transform:scale(1)} 85%{opacity:.85} 97%{opacity:0;transform:scale(1.07)} 100%{opacity:0} }
+    @keyframes readline { 0%,49%{stroke:#c9c9c4} 54%{stroke:#b8791a} 63%{stroke:#c9c9c4} 100%{stroke:#c9c9c4} }
+    @keyframes badge { 0%{opacity:1;transform:scale(1)} 4%{opacity:0} 78%{opacity:0;transform:scale(.82)} 87%{opacity:1;transform:scale(1)} 100%{opacity:1;transform:scale(1)} }
+    @keyframes p1 { 0%{fill:#b8791a} 18%{fill:#b8791a} 21%,100%{fill:#b3b3ad} }
+    @keyframes p2 { 0%,20%{fill:#b3b3ad} 23%{fill:#b8791a} 44%{fill:#b8791a} 47%,100%{fill:#b3b3ad} }
+    @keyframes p3 { 0%,46%{fill:#b3b3ad} 49%{fill:#b8791a} 58%{fill:#b8791a} 61%,100%{fill:#b3b3ad} }
+    @keyframes p4 { 0%,58%{fill:#b3b3ad} 62%{fill:#1f7a3f} 89%{fill:#1f7a3f} 93%,100%{fill:#b3b3ad} }
+
+    @media (prefers-reduced-motion: reduce) {
+      .flow,.conv,.tokpop,.r-mint,.r-verify,.readline,.ph { animation: none; }
+      .flow,.conv,.r-mint,.r-verify { opacity: 0; }
+      .badge { animation: none; opacity: 1; transform: none; }
+      .ph.p4 { fill:#1f7a3f; }
+    }
+  </style>
+  <defs>
+    <marker id="rg" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 1 L9 5 L0 9" fill="none" stroke="#b8791a" stroke-width="1.6"/>
+    </marker>
+    <marker id="vg" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 1 L9 5 L0 9" fill="none" stroke="#1f7a3f" stroke-width="1.6"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1000" height="300" fill="#ffffff"/>
+
+  <!-- phase legend -->
+  <g font-size="14" text-anchor="middle" class="b" letter-spacing="0.5">
+    <text class="ph p1" x="300" y="34">mint</text>
+    <text class="faint" x="405" y="34">·</text>
+    <text class="ph p2" x="470" y="34">hand-off</text>
+    <text class="faint" x="560" y="34">·</text>
+    <text class="ph p3" x="628" y="34">resolve</text>
+    <text class="faint" x="700" y="34">·</text>
+    <text class="ph p4" x="772" y="34">converge</text>
+  </g>
+
+  <!-- static wires -->
+  <g stroke-width="2" fill="none">
+    <line x1="230" y1="150" x2="332" y2="150" stroke="#e3d3ac" marker-end="url(#rg)"/>
+    <line x1="494" y1="150" x2="570" y2="150" stroke="#e3d3ac" marker-end="url(#rg)"/>
+    <line x1="756" y1="150" x2="858" y2="150" stroke="#e3d3ac" marker-end="url(#rg)"/>
+  </g>
+  <g font-size="13" text-anchor="middle" class="honey">
+    <text x="281" y="136">mint</text><text x="532" y="136">hand off</text><text x="807" y="136">reads</text>
+  </g>
+
+  <!-- ORCHESTRATOR -->
+  <rect class="r-mint"   x="44" y="106" width="188" height="88" rx="8" fill="none" stroke="#b8791a" stroke-width="2"/>
+  <rect class="r-verify" x="44" y="106" width="188" height="88" rx="8" fill="none" stroke="#1f7a3f" stroke-width="2"/>
+  <rect x="46" y="108" width="184" height="84" rx="7" fill="#faf3e6" stroke="#b8791a" stroke-width="1.7"/>
+  <circle cx="80" cy="140" r="7" fill="#b8791a"/>
+  <text x="146" y="146" text-anchor="middle" font-size="16" class="ink b">orchestrator</text>
+  <text x="138" y="168" text-anchor="middle" font-size="12" class="faint">the capable model</text>
+
+  <!-- TOKEN -->
+  <g class="tokpop">
+    <rect x="340" y="126" width="152" height="50" rx="9" fill="#b8791a"/>
+    <text x="416" y="158" text-anchor="middle" font-size="16" fill="#ffffff" class="b">&#9671; 4x82KC93</text>
+  </g>
+  <text x="416" y="197" text-anchor="middle" font-size="12.5" class="muted">30 bytes &#183; names, not bytes</text>
+
+  <!-- SUB-AGENTS (cascade = many) -->
+  <rect x="572" y="110" width="150" height="42" rx="7" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <rect x="586" y="121" width="150" height="42" rx="7" fill="#fafafa" stroke="#e6e6e2" stroke-width="1.5"/>
+  <rect x="600" y="132" width="150" height="42" rx="7" fill="#f6f6f4" stroke="#e6e6e2" stroke-width="1.6"/>
+  <circle cx="624" cy="153" r="5" fill="#9b9ca1"/>
+  <text x="682" y="158" text-anchor="middle" font-size="13.5" class="soft b">sub-agents</text>
+  <text x="675" y="197" text-anchor="middle" font-size="12" class="faint">cheaper models</text>
+
+  <!-- THE FILES -->
+  <rect x="890" y="110" width="68" height="86" rx="4" fill="#ffffff" stroke="#e6e6e2" stroke-width="1.5"/>
+  <rect x="878" y="118" width="68" height="86" rx="4" fill="#fafafa" stroke="#e6e6e2" stroke-width="1.5"/>
+  <rect x="866" y="126" width="68" height="86" rx="4" fill="#f6f6f4" stroke="#e6e6e2" stroke-width="1.6"/>
+  <g class="readline" stroke="#c9c9c4" stroke-width="1.6" stroke-linecap="round">
+    <line x1="880" y1="148" x2="920" y2="148"/><line x1="880" y1="162" x2="920" y2="162"/><line x1="880" y1="176" x2="906" y2="176"/>
+  </g>
+  <text x="900" y="230" text-anchor="middle" font-size="12.5" class="muted">the files</text>
+
+  <!-- VERIFY arc (static) + receipt -->
+  <path d="M 901 196 C 901 264 330 280 156 194" fill="none" stroke="#1f7a3f" stroke-width="2"
+        stroke-dasharray="1 8" stroke-linecap="round" marker-end="url(#vg)"/>
+  <text x="250" y="238" text-anchor="middle" font-size="13" class="green">verify</text>
+  <g class="badge">
+    <rect x="372" y="232" width="204" height="36" rx="8" fill="#eef6f0" stroke="#1f7a3f" stroke-width="1.6"/>
+    <text x="474" y="256" text-anchor="middle" font-size="15" class="green b">&#10003; read 3/3 &#183; met</text>
+  </g>
+
+  <!-- MOVING PARTICLES -->
+  <g class="flow"><circle r="12" fill="#f2dcae"/><circle r="6.5" fill="#b8791a"/></g>
+  <g class="conv"><circle r="11" fill="#d7ebdd"/><circle r="6" fill="#1f7a3f"/></g>
+</svg>
