@@ -14,6 +14,12 @@
   this needs neither.
 </p>
 
+<a href="https://trendshift.io/repositories/82635?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-82635" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/82635/weekly?language=Rust" alt="modiqo%2Fwaggle | Trendshift" width="250" height="55"/></a>
+
+<a href="https://trendshift.io/repositories/82635?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-82635" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/82635/daily?language=Rust" alt="modiqo%2Fwaggle | Trendshift" width="250" height="55"/></a>
+
+
+
 <p align="center">
   <a href="#the-problem">The problem</a> ·
   <a href="#how-it-works">How it works</a> ·
